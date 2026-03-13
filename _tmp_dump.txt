@@ -1,0 +1,375 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { STATUS_COLORS, STATUS_COLOR_PARTS } from "@/lib/orderStatus";
+import type { EventApi, EventContentArg, EventInput } from "@fullcalendar/core";
+
+type CalendarClientProps = { track: "A" | "B" };
+type CalendarEventResponse = { events?: EventInput[] };
+
+type Status = "INKOMMANDE" | "PAGAENDE" | "LEVERANS" | "AVSLUTAD" | "PALACK";
+type Label =
+  | "BOKAD_TID"
+  | "KAN_FLYTTAS"
+  | "LUNCH"
+  | "SEMESTER"
+  | "TRAFIKVERKET"
+  | "UNDER_VECKAN"
+  | "UTFORT_ARBETE";
+
+type ColorSpec = { bg: string; text: string; border: string };
+
+const STATUS_BADGE: Record<Extract<Status, "PAGAENDE" | "PALACK" | "AVSLUTAD">, string> = {
+  PAGAENDE: `border ${STATUS_COLORS.PAGAENDE}`,
+  PALACK: `border ${STATUS_COLORS.PALACK}`,
+  AVSLUTAD: `border ${STATUS_COLORS.AVSLUTAD}`,
+};
+
+const STATUS_DOT: Record<Extract<Status, "PAGAENDE" | "PALACK" | "AVSLUTAD">, string> = {
+  PAGAENDE: STATUS_COLOR_PARTS.PAGAENDE.bg,
+  PALACK: STATUS_COLOR_PARTS.PALACK.bg,
+  AVSLUTAD: STATUS_COLOR_PARTS.AVSLUTAD.bg,
+};
+
+const LABEL_COLORS: Record<Label, ColorSpec> = {
+  BOKAD_TID:    { bg: "bg-[#E74B56]", text: "text-white", border: "border-[#C63B45]" },
+  KAN_FLYTTAS:  { bg: "bg-[#0F6B2E]", text: "text-white", border: "border-[#0A4D20]" },
+  LUNCH:        { bg: "bg-[#FFD91A]", text: "text-[#5B4700]", border: "border-[#E0B600]" },
+  SEMESTER:     { bg: "bg-[#FF7A00]", text: "text-[#5B2C00]", border: "border-[#E06600]" },
+  TRAFIKVERKET: { bg: "bg-[#8E6CE0]", text: "text-white", border: "border-[#704FC5]" },
+  UNDER_VECKAN: { bg: "bg-[#4CD964]", text: "text-[#0F3F16]", border: "border-[#34B44C]" },
+  UTFORT_ARBETE:{ bg: "bg-[#B0BEC5]", text: "text-[#263238]", border: "border-[#90A4AE]" },
+};
+
+const LABEL_TW = Object.fromEntries(
+  Object.entries(LABEL_COLORS).map(([key, spec]) => [
+    key,
+    `border ${spec.bg} ${spec.text} ${spec.border}`,
+  ])
+) as Record<Label, string>;
+
+const LABEL_DOT = Object.fromEntries(
+  Object.entries(LABEL_COLORS).map(([key, spec]) => [
+    key,
+    spec.bg,
+  ])
+) as Record<Label, string>;
+
+const LABEL_ORDER: Label[] = [
+  "BOKAD_TID",
+  "KAN_FLYTTAS",
+  "LUNCH",
+  "SEMESTER",
+  "TRAFIKVERKET",
+  "UNDER_VECKAN",
+  "UTFORT_ARBETE",
+];
+
+function labelNice(k: Label) {
+  switch (k) {
+    case "BOKAD_TID": return "Bokad tid";
+    case "KAN_FLYTTAS": return "Kan flyttas";
+    case "LUNCH": return "Lunch";
+    case "SEMESTER": return "Semester";
+    case "TRAFIKVERKET": return "TRAFIKVERKET";
+    case "UNDER_VECKAN": return "Under veckan";
+        case "UTFORT_ARBETE": return "Utfort arbete";
+  }
+}
+
+export default function CalendarClient({ track }: CalendarClientProps) {
+  const [events, setEvents] = useState<EventInput[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Context menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [menuEventId, setMenuEventId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/calendar?track=${track}`, { cache: "no-store" });
+      const json: CalendarEventResponse = await res.json();
+      setEvents(Array.isArray(json.events) ? json.events : []);
+    } catch (err) {
+      console.error("Failed to load calendar events", err);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [track]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // Helpers: menu open/close and outside click
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    setMenuEventId(null);
+  }, []);
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!menuOpen) return;
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) closeMenu();
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") closeMenu(); };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [menuOpen, closeMenu]);
+
+  /* === Persisters === */
+  // Only PAGAENDE / AVSLUTAD are allowed via calendar
+  // ✅ Allow PALACK here (type + behavior)
+const setEventStatus = useCallback(
+  async (eventId: string, next: Extract<Status, "PAGAENDE" | "PALACK" | "AVSLUTAD">) => {
+    setEvents(prev =>
+      prev.map(e =>
+        String(e.id) === String(eventId)
+          ? { ...e, extendedProps: { ...(e.extendedProps || {}), status: next } }
+          : e
+      )
+    );
+    try {
+      const res = await fetch(`/api/calendar/${encodeURIComponent(eventId)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next, track }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await load();
+    } catch (err) {
+      console.error("Failed to set status", err);
+      await load();
+    } finally {
+      closeMenu();
+    }
+  },
+  [track, load, closeMenu]
+);
+
+
+  // Calendar-only label
+  const setCalendarLabel = useCallback(
+    async (eventId: string, label: Label | null) => {
+      setEvents(prev =>
+        prev.map(e =>
+          String(e.id) === String(eventId)
+            ? { ...e, extendedProps: { ...(e.extendedProps || {}), label } }
+            : e
+        )
+      );
+      try {
+        const res = await fetch(`/api/calendar/${encodeURIComponent(eventId)}/label`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label, track }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await load();
+      } catch (err) {
+        console.error("Failed to set calendar label", err);
+        await load();
+      } finally {
+        closeMenu();
+      }
+    },
+    [track, load, closeMenu]
+  );
+
+  /* === Calendar renderers === */
+  const renderEventContent = useCallback((arg: EventContentArg) => {
+    const location = (arg.event.extendedProps?.location as string | null) ?? null;
+    const synthetic = Boolean(arg.event.extendedProps?.synthetic);
+    return (
+      <div className="flex flex-col px-1 py-1 leading-tight gap-0.5">
+        {arg.timeText && (
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+            {arg.timeText}
+          </span>
+        )}
+        <span className="text-xs font-medium text-slate-900">{arg.event.title}</span>
+        {location ? <span className="text-[10px] text-slate-600 truncate">{location}</span> : null}
+        {synthetic ? <span className="text-[10px] text-amber-700">Planerat (utan kalenderpost)</span> : null}
+      </div>
+    );
+  }, []);
+
+  // Decide color: status (only PAGAENDE/AVSLUTAD) otherwise calendar label, then synthetic overlay
+  const eventClassNames = useCallback((arg: any) => {
+    const classes: string[] = ["rounded-xl", "font-semibold"];
+    const status = arg.event.extendedProps?.status as Status | undefined;
+    const label  = arg.event.extendedProps?.label  as Label  | undefined;
+\n    if (status && (status === "PAGAENDE" || status === "PALACK" || status === "AVSLUTAD")) {
+\n      classes.push(STATUS_BADGE[status as keyof typeof STATUS_BADGE]);
+    } else if (label) {
+      classes.push(LABEL_TW[label]);
+    }
+
+    if (arg.event.extendedProps?.synthetic) {
+      classes.push("border", "border-amber-400", "bg-amber-50", "text-amber-900");
+    }
+    return classes;
+  }, []);
+
+  // Right-click open menu
+  const eventDidMount = useCallback((arg: { el: HTMLElement; event: EventApi }) => {
+    const handler = (ev: MouseEvent) => {
+      ev.preventDefault();
+      setMenuEventId(arg.event.id);
+      setMenuPos({ x: ev.clientX, y: ev.clientY });
+      setMenuOpen(true);
+    };
+    arg.el.addEventListener("contextmenu", handler);
+    return () => arg.el.removeEventListener("contextmenu", handler);
+  }, []);
+
+  // Drag/drop allowed only for non-synthetic events
+  const allowEventMutation = useCallback((dropInfo: any, draggedEvent: any) => {
+    return !draggedEvent.extendedProps?.synthetic;
+  }, []);
+
+  const onEventDrop = useCallback(
+    async (info: any) => {
+      const { id, start, end } = info.event;
+      try {
+        const res = await fetch(`/api/calendar/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            start: start?.toISOString() ?? null,
+            end: end?.toISOString() ?? null,
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await load();
+      } catch (err) {
+        console.error("Failed to update calendar event", err);
+        info.revert();
+      }
+    },
+    [load]
+  );
+
+  return (
+    <div className="p-4 relative">
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Kalender - Spår {track}</h1>
+        {loading && <span className="text-sm text-gray-500">Laddar...</span>}
+      </div>
+
+{/* Legend — include PALACK */}
+<div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+  <span className="text-[11px] text-slate-500 mr-2">Status:</span>
+  {(["PAGAENDE","PALACK","AVSLUTAD"] as const).map(s => (
+    <span key={s} className={`px-2 py-1 rounded-full ${STATUS_BADGE[s]}`}>{s}</span>
+  ))}
+  <span className="text-[11px] text-slate-500 mx-2">•</span>
+  <span className="text-[11px] text-slate-500 mr-2">Etiketter:</span>
+  {LABEL_ORDER.map(l => (
+    <span key={l} className={`px-2 py-1 rounded-full ${LABEL_TW[l]}`}>{labelNice(l)}</span>
+  ))}
+  <span className="ml-auto text-xs text-slate-500">Högerklicka på en händelse för att ändra</span>
+</div>
+
+
+      <FullCalendar
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        initialView="timeGridWeek"
+        headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
+        buttonText={{ today: "Idag", month: "Månad", week: "Vecka", day: "Dag" }}
+        titleFormat={{ month: "short", day: "numeric" }}
+        dayHeaderFormat={{ weekday: "short", day: "numeric" }}
+        slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+
+        events={events}
+        height="80vh"
+        nowIndicator
+        editable
+        eventDrop={onEventDrop}
+        eventResize={onEventDrop}
+        eventContent={renderEventContent}
+        eventClassNames={eventClassNames}
+        eventAllow={allowEventMutation}
+        eventDidMount={eventDidMount}
+      />
+
+      {/* Context menu */}
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          className="absolute z-50 min-w-[220px] rounded-lg border border-border bg-white shadow-lg overflow-hidden"
+          style={{ left: menuPos.x, top: menuPos.y }}
+          role="menu"
+        >
+         <div className="px-3 py-2 text-xs text-slate-500 border-b">Sätt status</div>
+
+<button
+  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+  onClick={() => menuEventId && setEventStatus(menuEventId, "PAGAENDE")}
+  role="menuitem"
+>
+  <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_DOT.PAGAENDE}`} />
+  <span className="font-medium">Pågående</span>
+</button>
+
+<button
+  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+  onClick={() => menuEventId && setEventStatus(menuEventId, "PALACK")}
+  role="menuitem"
+>
+  <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_DOT.PALACK}`} />
+  <span className="font-medium">På lack</span>
+</button>
+
+<button
+  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+  onClick={() => menuEventId && setEventStatus(menuEventId, "AVSLUTAD")}
+  role="menuitem"
+>
+  <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_DOT.AVSLUTAD}`} />
+  <span className="font-medium">Utfört arbete</span>
+</button>
+
+          <div className="px-3 py-2 text-xs text-slate-500 border-y">Kalenderetikett</div>
+          {LABEL_ORDER.map((k) => (
+            <button
+              key={k}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+              onClick={() => menuEventId && setCalendarLabel(menuEventId, k)}
+              role="menuitem"
+            >
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${LABEL_DOT[k]}`} />
+              <span className="font-medium">{labelNice(k)}</span>
+            </button>
+          ))}
+          <div className="border-t">
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              onClick={() => menuEventId && setCalendarLabel(menuEventId, null)}
+            >
+              Rensa etikett
+            </button>
+          </div>
+          <div className="border-t">
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              onClick={closeMenu}
+            >
+              Stäng
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
