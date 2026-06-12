@@ -1,0 +1,26 @@
+<svg width="640" height="640" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aurora" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <radialGradient id="pulse" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fdf4ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="640" rx="48" fill="#030712"/>
+  <g opacity="0.4">
+    <circle cx="180" cy="190" r="140" fill="#f472b6" filter="url(#blur)"/>
+    <circle cx="460" cy="450" r="170" fill="#38bdf8" filter="url(#blur)"/>
+  </g>
+  <path d="M200 500 C220 320 240 160 320 120 C400 80 420 240 440 360 C460 480 500 540 520 560 L120 560 Z" fill="url(#aurora)" opacity="0.9"/>
+  <circle cx="320" cy="280" r="180" fill="url(#pulse)" opacity="0.8"/>
+  <path d="M240 520 L320 80 L400 520 Z" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="4" stroke-linecap="round" stroke-dasharray="12 16"/>
+  <circle cx="320" cy="120" r="28" fill="#fff" opacity="0.85"/>
+  <circle cx="320" cy="120" r="16" fill="#f97316" opacity="0.9"/>
+</svg>

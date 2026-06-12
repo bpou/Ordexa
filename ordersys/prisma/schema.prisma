@@ -1,0 +1,272 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SALJARE
+  A_TEAM
+  B_TEAM
+  C_TEAM
+  D_TEAM
+  ADMIN
+}
+
+enum Track {
+  A
+  B
+  C
+  D
+  SHARED
+}
+
+enum TrackStatus {
+  INKOMMANDE
+  PAGAENDE
+  LEVERANS
+  AVSLUTAD
+  PALACK        
+}
+
+enum CalendarLabel {
+  BOKAD_TID
+  KAN_FLYTTAS
+  LUNCH
+  SEMESTER
+  TRAFIKVERKET
+  UNDER_VECKAN
+  UTFORT_ARBETE
+}
+
+
+enum EventVisibility {
+  PUBLIC
+  PERSONAL
+}
+
+
+enum DeliveryMethod {
+  MONTAGE
+  HAMTAS
+  UTKORNING
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  image        String?
+  passwordHash String?
+  role         Role     @default(SALJARE)
+
+  // For Auth.js / NextAuth
+  emailVerified DateTime?
+  /// Encrypted TOTP secret (AES-256-GCM, see src/lib/totp-secrets.ts)
+  totpSecret     String?
+  /// Encrypted pending TOTP secret when MFA setup is in progress
+  totpTempSecret String?
+  totpEnabled  Boolean  @default(false)
+  totpEnabledAt DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  ordersCreated Order[] @relation("OrderCreatedBy")
+  timeEntries   OrderTrackTimeEntry[] @relation("TimeEntryUser")
+  timeEntriesCreated OrderTrackTimeEntry[] @relation("TimeEntryCreatedBy")
+}
+
+model Order {
+  orderNumber     String         @id
+  title           String
+  customerName    String?
+  dueDate         DateTime?
+  deliveryMethod  String?
+  deliveryAddress String?
+  notes           String?
+  createdById     String?
+  createdBy       User?         @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdByName   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  tracks          OrderTrack[]
+  files           File[]
+  events          CalendarEvent[]
+  timeEntries     OrderTrackTimeEntry[]
+  fortnox         FortnoxOrderLink?
+  billingConfirmedAt DateTime?
+}
+
+// OrderTrack
+model OrderTrack {
+  id             String      @id @default(cuid())
+  orderId        String
+  order          Order       @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  track          Track
+  status         TrackStatus @default(INKOMMANDE)
+  colorHex       String?
+  plannedStartAt DateTime?
+  plannedEndAt   DateTime?
+  actualStartAt  DateTime?
+  actualEndAt    DateTime?
+  assignee       String?
+  timeSpentMinutes Int      @default(0)
+
+  calendarLabel  CalendarLabel?    // Optional label mirrored from calendar UI
+  timeEntries    OrderTrackTimeEntry[]
+
+  @@unique([orderId, track])
+  @@index([track, status], map: "ordertrack_track_status_idx")
+}
+
+model OrderTrackTimeEntry {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  track         Track
+  orderTrack    OrderTrack @relation(fields: [orderId, track], references: [orderId, track], onDelete: Cascade)
+  minutes       Int
+  userId        String?
+  user          User?    @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: SetNull)
+  userName      String
+  userImage     String?
+  createdById   String?
+  createdBy     User?    @relation("TimeEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String
+  createdByImage String?
+  createdAt     DateTime @default(now())
+
+  @@index([orderId, track, createdAt])
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id      String   @id @default(cuid())
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  track   Track
+  start   DateTime
+  end     DateTime
+  title   String
+  notes   String?
+}
+
+model PersonalCalendarEvent {
+  id          String           @id @default(cuid())
+  track       Track
+  title       String
+  label       CalendarLabel?
+  notes       String?
+  allDay      Boolean          @default(false)
+
+  // single-instance
+  start       DateTime?
+  end         DateTime?
+
+  // simple recurrence (weekly/daily via daysOfWeek)
+  weeklyDays  String?    // JSON string like ["1","3","5"]; 0=Sun..6=Sat (FullCalendar)
+  startRecur  DateTime?
+  endRecur    DateTime?
+  startTime   String?
+  endTime     String?
+
+  visibility  EventVisibility @default(PUBLIC)
+  ownerUserId String?         // required when visibility = PERSONAL
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([track, visibility, ownerUserId])
+}
+model File {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  track      Track    // Required enum
+  filename   String
+  url        String
+  uploadedBy String?
+  uploadedById String?
+  uploadedByName String?
+  uploadedByImage String?
+  createdAt  DateTime @default(now())
+}
+
+model FortnoxConnection {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique        // Ensure tenantId stays unique
+  accessToken  String
+  refreshToken String
+  scope        String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model FortnoxOrderLink {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  documentNumber String
+  createdAt      DateTime @default(now())
+}
+
+model CustomerReference {
+  id             String   @id @default(cuid())
+  customerNumber String
+  tenantId       String?
+  name           String
+  email          String?
+  phone          String?
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, customerNumber])
+}
+
+/* ---------- NextAuth-modeller ---------- */
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+
+

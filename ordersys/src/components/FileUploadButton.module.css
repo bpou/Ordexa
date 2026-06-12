@@ -1,0 +1,62 @@
+.container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+.folder {
+  width: 100px;
+  height: 80px;
+  position: relative;
+}
+.back-side {
+  width: 80px;
+  height: 60px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  position: absolute;
+  bottom: 0;
+  left: 10px;
+}
+.front-side {
+  width: 80px;
+  height: 60px;
+  background-color: #e0e0e0;
+  border: 1px solid #ccc;
+  border-radius: 5px 5px 0 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.tip {
+  width: 20px;
+  height: 10px;
+  background-color: #e0e0e0;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  position: absolute;
+  top: -10px;
+  left: 0;
+}
+.cover {
+  /* Optional styling for cover */
+}
+.custom-file-upload {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #333;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.title {
+  display: none;
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Lager_1" data-name="Lager 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 206.69 191.51">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-linecap: round;
+        stroke-width: 8px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke: #008d36;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        stroke-width: 10px;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="cls-2" d="M74.68,111.29L6.17,179.8c-2.81,2.81-.13,7.54,3.73,6.58l56.38-14.1c3.84-.96,6.44-4.52,6.19-8.47-.32-4.96,1.7-12.74,12.04-23.08l9.82-9.82"/>
+    <path class="cls-2" d="M139.57-9.23h0c15.32,0,27.76,12.44,27.76,27.76v124.94h-55.53V18.53c0-15.32,12.44-27.76,27.76-27.76Z" transform="translate(88.34 -79.03) rotate(45)"/>
+  </g>
+  <polyline class="cls-1" points="63.79 140.72 53.97 150.54 44.16 160.36"/>
+</svg>
