@@ -11,7 +11,7 @@
     "refactor:tailwind-aliases": "node scripts/refactor-tailwind-aliases.mjs",
     "test": "vitest run",
     "create-admin": "node scripts/create-admin.mjs",
-    "seed:demo": "node scripts/seed-demo.mjs",
+    "seed:demo": "node scripts/seed-demo-data.mjs",
     "minio:up": "docker compose -f infra/minio/docker-compose.yml up -d",
     "minio:down": "docker compose -f infra/minio/docker-compose.yml down -v",
     "minio:logs": "docker compose -f infra/minio/docker-compose.yml logs -f"
