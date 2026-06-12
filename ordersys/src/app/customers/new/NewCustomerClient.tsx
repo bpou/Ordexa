@@ -524,7 +524,7 @@ function findNextAvailableCustomerNumber(existingNumbers: Set<number>) {
 }
 
 function getFieldGridClass(tab: TabKey, field: FieldConfig): string {
-  const key = field.key;
+  const key: keyof FormState = field.key;
   if (field.kind === "textarea") return "md:col-span-12";
 
   if (tab === "grunduppgifter") {
@@ -586,15 +586,6 @@ function getFieldGridClass(tab: TabKey, field: FieldConfig): string {
   if (key === "salesAccount") return "md:col-span-1 md:col-start-7 md:row-start-4";
 
   if (
-    key === "termsOfDelivery" ||
-    key === "wayOfDelivery" ||
-    key === "invoiceDiscount" ||
-    key === "invoiceAdministrationFee" ||
-    key === "invoiceFreight" ||
-    key === "showPriceVATIncluded" ||
-    key === "vatNumber" ||
-    key === "vatType" ||
-    key === "salesAccount" ||
     key === "project" ||
     key === "costCenter" ||
     key === "gln" ||

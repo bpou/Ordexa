@@ -359,6 +359,7 @@ export default function OrderTrackClient({
       </div>
     );
   if (!data) return <div className="p-6">Ingen data</div>;
+  const orderNumber = encodeURIComponent(String(data.orderNumber));
 
   // Block view if montage not allowed
   if (false && montageBlocked) {
@@ -378,13 +379,13 @@ export default function OrderTrackClient({
           </p>
           <div className="mt-4 flex gap-2">
             <a
-              href={`/orders/${encodeURIComponent(String(data.orderNumber))}/track/B`}
+              href={`/orders/${orderNumber}/track/B`}
               className="inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
             >
               Öppna Verkstad (Spår B)
             </a>
             <a
-              href={`/orders/${encodeURIComponent(String(data.orderNumber))}`}
+              href={`/orders/${orderNumber}`}
               className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
             >
               Tillbaka till order
