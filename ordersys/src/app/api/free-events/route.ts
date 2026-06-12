@@ -5,6 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { EventVisibility } from "@prisma/client";
 import { APP_TRACKS, type AppTrack, normalizeTrack } from "@/lib/tracks";
+import {
+  isOutlookSchemaMissingError,
+  upsertPersonalEventToOutlook,
+} from "@/lib/outlook";
 
 /* =========================
    Local types (match your UI)
@@ -191,6 +195,14 @@ export async function POST(req: Request) {
         },
       });
 
+      try {
+        await upsertPersonalEventToOutlook(created.id);
+      } catch (error) {
+        if (!isOutlookSchemaMissingError(error)) {
+          console.error("Outlook push for created personal event failed:", error);
+        }
+      }
+
       return NextResponse.json({ ok: true, created });
     }
 
@@ -266,20 +278,34 @@ export async function POST(req: Request) {
       );
     }
 
-    await prisma.personalCalendarEvent.createMany({
-      data: toCreate.map((e) => ({
-        title: e.title,
-        start: e.start,
-        end: e.end,
-        allDay: e.allDay,
-        label: e.label,
-        track: e.track,
-        visibility: e.visibility,
-        ownerUserId: e.ownerUserId,
-      })),
-    });
+    const createdRows = await prisma.$transaction(
+      toCreate.map((e) =>
+        prisma.personalCalendarEvent.create({
+          data: {
+            title: e.title,
+            start: e.start,
+            end: e.end,
+            allDay: e.allDay,
+            label: e.label,
+            track: e.track,
+            visibility: e.visibility,
+            ownerUserId: e.ownerUserId,
+          },
+        })
+      )
+    );
 
-    return NextResponse.json({ ok: true, createdCount: toCreate.length });
+    for (const created of createdRows) {
+      try {
+        await upsertPersonalEventToOutlook(created.id);
+      } catch (error) {
+        if (!isOutlookSchemaMissingError(error)) {
+          console.error("Outlook push for recurring personal event failed:", error);
+        }
+      }
+    }
+
+    return NextResponse.json({ ok: true, createdCount: createdRows.length });
   } catch (err: any) {
     console.error(err);
     return NextResponse.json(

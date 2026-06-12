@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -62,6 +62,7 @@ type OrderData = {
   orderNumber: string | number;
   title: string;
   customerName?: string | null;
+  notes?: string | null;
   tracks: {
     track: Track;
     status: TrackStatus;
@@ -260,13 +261,6 @@ function TrackCard({
           >
             {timeLabel}
           </motion.div>
-          {totalRows.length ? (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {totalRows.slice(0, 2).map((row) => (
-                <PersonPill key={row.key} name={row.name} image={row.image} detail={formatMinutesLabel(row.minutes)} />
-              ))}
-            </div>
-          ) : null}
         </div>
 
         <button
@@ -463,11 +457,6 @@ function TrackCard({
           <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
             Tid per person
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {totalRows.map((row) => (
-              <PersonPill key={row.key} name={row.name} image={row.image} detail={formatMinutesLabel(row.minutes)} />
-            ))}
-          </div>
           <div className="space-y-1 pt-1">
             {visibleTimeEntries.slice(0, 3).map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-2 text-xs text-neutral-500">
@@ -499,6 +488,11 @@ export default function OrderPage() {
   const [track, setTrack] = useState<TrackType>("SHARED");
   const [uploadTrackPopoverOpen, setUploadTrackPopoverOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesSavedAt, setNotesSavedAt] = useState<string | null>(null);
+  const lastSavedNotesRef = useRef("");
   const [statusError, setStatusError] = useState<string | null>(null);
   const [updatingStatuses, setUpdatingStatuses] = useState<Set<string>>(new Set());
   const [savingTimeTracks, setSavingTimeTracks] = useState<Set<Track>>(new Set());
@@ -544,6 +538,9 @@ export default function OrderPage() {
       }
 
       setData(order);
+      lastSavedNotesRef.current = order.notes ?? "";
+      setNotesDraft(order.notes ?? "");
+      setNotesError(null);
     } catch (e: any) {
       console.error(e);
       setErr("Tekniskt fel nÃ¤r order skulle hÃ¤mtas.");
@@ -646,6 +643,47 @@ export default function OrderPage() {
     );
   }
 
+  async function saveNotes(nextNotes: string) {
+    if (!orderId) return;
+    setNotesError(null);
+    setSavingNotes(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: nextNotes }),
+      });
+
+      const text = await res.text();
+      const payload = text ? JSON.parse(text) : null;
+
+      if (!res.ok) {
+        setNotesError(payload?.error || "Kunde inte spara anteckningarna.");
+        return;
+      }
+
+      const savedNotes = payload?.order?.notes ?? "";
+      lastSavedNotesRef.current = savedNotes;
+      setData((prev) => (prev ? { ...prev, notes: savedNotes } : prev));
+      setNotesSavedAt(payload?.order?.updatedAt ?? new Date().toISOString());
+    } catch {
+      setNotesError("Tekniskt fel vid sparande av anteckningarna.");
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!orderId) return;
+    if (notesDraft.trim() === lastSavedNotesRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      void saveNotes(notesDraft);
+    }, 700);
+
+    return () => clearTimeout(timeoutId);
+  }, [notesDraft, orderId]);
+
   async function setStatus(t: Track, status: TrackStatus) {
     if (!orderId) return;
     setStatusError(null);
@@ -745,9 +783,18 @@ export default function OrderPage() {
         typeof payload?.track?.timeSpentMinutes === "number"
           ? payload.track.timeSpentMinutes
           : null;
+      const nextEntry = payload?.entry ? (payload.entry as TimeEntry) : null;
+      const replacedEntryIds = Array.isArray(payload?.replacedEntryIds)
+        ? (payload.replacedEntryIds as string[])
+        : [];
 
       setData((prev) => {
         if (!prev) return prev;
+        const remainingEntries = (prev.timeEntries ?? []).filter((entry) => {
+          if (replacedEntryIds.includes(entry.id)) return false;
+          if (nextEntry && entry.id === nextEntry.id) return false;
+          return true;
+        });
         return {
           ...prev,
           tracks: prev.tracks.map((row) =>
@@ -759,7 +806,7 @@ export default function OrderPage() {
                 }
               : row
           ),
-          timeEntries: payload?.entry ? [payload.entry as TimeEntry, ...(prev.timeEntries ?? [])] : prev.timeEntries,
+          timeEntries: nextEntry ? [nextEntry, ...remainingEntries] : remainingEntries,
         };
       });
     } catch {
@@ -967,6 +1014,44 @@ export default function OrderPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-neutral-200/90 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]">
+        <div className="mb-3 border-b border-neutral-100 pb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.26em] text-neutral-600">
+            Anteckningar
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Extra kostnader, tillägg och intern information för ordern.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <textarea
+            value={notesDraft}
+            onChange={(e) => {
+              setNotesDraft(e.target.value);
+              if (notesError) setNotesError(null);
+            }}
+            rows={6}
+            placeholder="Skriv anteckningar här..."
+            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-neutral-300 focus:ring-2 focus:ring-neutral-200"
+          />
+
+          <div className="text-xs text-neutral-500">
+            {savingNotes
+              ? "Sparar anteckningar..."
+              : notesSavedAt
+                ? `Senast sparad ${new Date(notesSavedAt).toLocaleString("sv-SE")}`
+                : "Autosparar när du skriver."}
+          </div>
+
+          {notesError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {notesError}
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <AnimatePresence>

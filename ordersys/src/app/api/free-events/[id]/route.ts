@@ -3,6 +3,11 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  isOutlookSchemaMissingError,
+  removePersonalEventFromOutlook,
+  upsertPersonalEventToOutlook,
+} from "@/lib/outlook";
 
 /* ---------- helpers ---------- */
 const iso = z.string().datetime();
@@ -11,6 +16,18 @@ function safeDate(s?: string) {
   if (!s) return undefined;
   const d = new Date(s);
   return isNaN(d.getTime()) ? undefined : d;
+}
+
+function formatOutlookWriteError(error: unknown) {
+  const message = String(
+    (error as { message?: string } | null | undefined)?.message ?? error ?? "Outlook sync failed"
+  );
+
+  if (message.includes("Access is denied")) {
+    return "Outlook saknar skrivbehörighet. Koppla från och anslut Outlook igen för att godkänna kalenderåtkomst.";
+  }
+
+  return message;
 }
 
 /* ---------- schemas ---------- */
@@ -54,7 +71,16 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
 
     const existing = await prisma.personalCalendarEvent.findUnique({
       where: { id },
-      select: { id: true, ownerUserId: true, visibility: true },
+      select: {
+        id: true,
+        ownerUserId: true,
+        visibility: true,
+        start: true,
+        end: true,
+        title: true,
+        allDay: true,
+        label: true,
+      },
     });
 
     if (!existing) {
@@ -98,6 +124,36 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       data,
     });
 
+    try {
+      if (updated.visibility === "PERSONAL" && updated.ownerUserId) {
+        await upsertPersonalEventToOutlook(updated.id);
+      } else {
+        await removePersonalEventFromOutlook(updated.id);
+      }
+    } catch (error) {
+      if (!isOutlookSchemaMissingError(error)) {
+        console.error("Outlook sync after personal event update failed:", error);
+
+        await prisma.personalCalendarEvent.update({
+          where: { id },
+          data: {
+            start: existing.start,
+            end: existing.end,
+            title: existing.title,
+            allDay: existing.allDay,
+            label: existing.label,
+            visibility: existing.visibility,
+            ownerUserId: existing.ownerUserId,
+          },
+        });
+
+        return NextResponse.json(
+          { error: formatOutlookWriteError(error) },
+          { status: 502 }
+        );
+      }
+    }
+
     return NextResponse.json({ ok: true, updated });
   } catch (err: any) {
     console.error("PATCH /free-events/[id] failed:", err);
@@ -127,6 +183,14 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
 
     if (existing.visibility === "PERSONAL" && existing.ownerUserId && existing.ownerUserId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    try {
+      await removePersonalEventFromOutlook(id);
+    } catch (error) {
+      if (!isOutlookSchemaMissingError(error)) {
+        console.error("Outlook sync before personal event delete failed:", error);
+      }
     }
 
     await prisma.personalCalendarEvent.delete({ where: { id } });

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { EventVisibility } from "@prisma/client";
+import { syncOutlookCalendarForUser } from "@/lib/outlook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,12 @@ export async function GET(req: Request) {
     
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      await syncOutlookCalendarForUser(userId);
+    } catch (syncError) {
+      console.error("Outlook personal calendar sync error:", syncError);
     }
 
     const { searchParams } = new URL(req.url);

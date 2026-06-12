@@ -1,0 +1,729 @@
+[dev] Local: http://localhost:3000
+[dev] Network: http://192.168.50.146:3000
+[dev] NextAuth URL: http://192.168.50.146:3000
+   ▲ Next.js 15.5.19 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+Creating turbopack project { dir: 'C:\\Users\\lucka\\Desktop\\Ordina\\ordersys', testMode: true }
+ ✓ Compiled middleware in 276ms
+ ✓ Ready in 2.8s
+ ○ Compiling /api/calendar ...
+ ✓ Compiled /api/calendar in 2.4s
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."track" = CAST($1::text AS "public"."Track") AND ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($3::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $4))) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $5
+ GET /api/free-events?track=A 200 in 4183ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."title", "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."notes", "public"."CalendarEvent"."track"::text FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."track" = CAST($1::text AS "public"."Track") ORDER BY "public"."CalendarEvent"."start" ASC OFFSET $2
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."track" = CAST($1::text AS "public"."Track") AND ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($3::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $4))) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $5
+ GET /api/free-events?track=A 200 in 4443ms
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2) OFFSET $3
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."title", "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."notes", "public"."CalendarEvent"."track"::text FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."track" = CAST($1::text AS "public"."Track") ORDER BY "public"."CalendarEvent"."start" ASC OFFSET $2
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2) OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE ("public"."OrderTrack"."orderId" IN ($1,$2) AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) OFFSET $4
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE ("public"."OrderTrack"."orderId" IN ($1,$2) AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) OFFSET $4
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" LEFT JOIN "public"."Order" AS "j0" ON ("j0"."orderNumber") = ("public"."OrderTrack"."orderId") WHERE ("public"."OrderTrack"."track" = CAST($1::text AS "public"."Track") AND "public"."OrderTrack"."plannedStartAt" IS NOT NULL AND "public"."OrderTrack"."plannedEndAt" IS NOT NULL AND "public"."OrderTrack"."status" <> CAST($2::text AS "public"."TrackStatus") AND ("j0"."billingConfirmedAt" IS NULL AND ("j0"."orderNumber" IS NOT NULL))) OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" LEFT JOIN "public"."Order" AS "j0" ON ("j0"."orderNumber") = ("public"."OrderTrack"."orderId") WHERE ("public"."OrderTrack"."track" = CAST($1::text AS "public"."Track") AND "public"."OrderTrack"."plannedStartAt" IS NOT NULL AND "public"."OrderTrack"."plannedEndAt" IS NOT NULL AND "public"."OrderTrack"."status" <> CAST($2::text AS "public"."TrackStatus") AND ("j0"."billingConfirmedAt" IS NULL AND ("j0"."orderNumber" IS NOT NULL))) OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2,$3,$4,$5,$6) OFFSET $7
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2,$3,$4,$5,$6) OFFSET $7
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+ GET /api/calendar?track=A 200 in 4474ms
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+ GET /api/calendar?track=A 200 in 4471ms
+ ✓ Compiled /api/orders/[id] in 339ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query UPDATE "public"."Order" SET "notes" = $1, "updatedAt" = $2 WHERE ("public"."Order"."orderNumber" = $3 AND 1=1) RETURNING "public"."Order"."orderNumber", "public"."Order"."notes", "public"."Order"."updatedAt"
+ PATCH /api/orders/DM-79991 200 in 2207ms
+ ○ Compiling /orders/[id] ...
+ ✓ Compiled /orders/[id] in 4.8s
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /orders/DM-79991 200 in 7029ms
+ ✓ Compiled /api/users in 247ms
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 413ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 652ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query UPDATE "public"."Order" SET "notes" = $1, "updatedAt" = $2 WHERE ("public"."Order"."orderNumber" = $3 AND 1=1) RETURNING "public"."Order"."orderNumber", "public"."Order"."notes", "public"."Order"."updatedAt"
+ PATCH /api/orders/DM-79991 200 in 476ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query UPDATE "public"."Order" SET "notes" = $1, "updatedAt" = $2 WHERE ("public"."Order"."orderNumber" = $3 AND 1=1) RETURNING "public"."Order"."orderNumber", "public"."Order"."notes", "public"."Order"."updatedAt"
+ PATCH /api/orders/DM-79991 200 in 394ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /orders/DM-79991 200 in 443ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 452ms
+Prisma connected to database successfully
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 444ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled /api/orders/[id]/tracks/[track]/status in 265ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."OrderTrack" ("id","orderId","track","status","timeSpentMinutes") VALUES ($1,$2,CAST($3::text AS "public"."Track"),CAST($4::text AS "public"."TrackStatus"),$5) ON CONFLICT ("orderId","track") DO UPDATE SET "status" = CAST($6::text AS "public"."TrackStatus") WHERE (("public"."OrderTrack"."orderId" = $7 AND "public"."OrderTrack"."track" = CAST($8::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text, "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt"
+ POST /api/orders/DM-79991/tracks/D/status 200 in 1584ms
+Prisma connected to database successfully
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 406ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled /api/orders/[id]/tracks/[track]/time in 212ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = ("public"."OrderTrack"."timeSpentMinutes" + $1) WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 1612ms
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."title", "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."notes", "public"."CalendarEvent"."track"::text FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."track" = CAST($1::text AS "public"."Track") ORDER BY "public"."CalendarEvent"."start" ASC OFFSET $2
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2) OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE ("public"."OrderTrack"."orderId" IN ($1,$2) AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) OFFSET $4
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" LEFT JOIN "public"."Order" AS "j0" ON ("j0"."orderNumber") = ("public"."OrderTrack"."orderId") WHERE ("public"."OrderTrack"."track" = CAST($1::text AS "public"."Track") AND "public"."OrderTrack"."plannedStartAt" IS NOT NULL AND "public"."OrderTrack"."plannedEndAt" IS NOT NULL AND "public"."OrderTrack"."status" <> CAST($2::text AS "public"."TrackStatus") AND ("j0"."billingConfirmedAt" IS NULL AND ("j0"."orderNumber" IS NOT NULL))) OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2,$3,$4,$5,$6) OFFSET $7
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+ GET /api/calendar?track=A 200 in 410ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."title", "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."notes", "public"."CalendarEvent"."track"::text FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."track" = CAST($1::text AS "public"."Track") ORDER BY "public"."CalendarEvent"."start" ASC OFFSET $2
+prisma:query SELECT 1
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2) OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."track" = CAST($1::text AS "public"."Track") AND ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($3::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $4))) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $5
+ GET /api/free-events?track=A 200 in 825ms
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE ("public"."OrderTrack"."orderId" IN ($1,$2) AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) OFFSET $4
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."track" = CAST($1::text AS "public"."Track") AND ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($3::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $4))) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $5
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."track" = CAST($1::text AS "public"."Track") AND ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($3::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $4))) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $5
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."title", "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."notes", "public"."CalendarEvent"."track"::text FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."track" = CAST($1::text AS "public"."Track") ORDER BY "public"."CalendarEvent"."start" ASC OFFSET $2
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+ GET /api/free-events?track=A 200 in 847ms
+ GET /api/free-events?track=D 200 in 797ms
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" LEFT JOIN "public"."Order" AS "j0" ON ("j0"."orderNumber") = ("public"."OrderTrack"."orderId") WHERE ("public"."OrderTrack"."track" = CAST($1::text AS "public"."Track") AND "public"."OrderTrack"."plannedStartAt" IS NOT NULL AND "public"."OrderTrack"."plannedEndAt" IS NOT NULL AND "public"."OrderTrack"."status" <> CAST($2::text AS "public"."TrackStatus") AND ("j0"."billingConfirmedAt" IS NULL AND ("j0"."orderNumber" IS NOT NULL))) OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1,$2,$3,$4,$5,$6) OFFSET $7
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+ GET /api/calendar?track=A 200 in 857ms
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE ("public"."OrderTrack"."orderId" IN ($1) AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."status"::text, "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" LEFT JOIN "public"."Order" AS "j0" ON ("j0"."orderNumber") = ("public"."OrderTrack"."orderId") WHERE ("public"."OrderTrack"."track" = CAST($1::text AS "public"."Track") AND "public"."OrderTrack"."plannedStartAt" IS NOT NULL AND "public"."OrderTrack"."plannedEndAt" IS NOT NULL AND "public"."OrderTrack"."status" <> CAST($2::text AS "public"."TrackStatus") AND ("j0"."billingConfirmedAt" IS NULL AND ("j0"."orderNumber" IS NOT NULL))) OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."deliveryAddress", "public"."Order"."createdByName", "public"."Order"."createdById" FROM "public"."Order" WHERE "public"."Order"."orderNumber" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."name" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+ GET /api/calendar?track=D 200 in 817ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = ("public"."OrderTrack"."timeSpentMinutes" + $1) WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 440ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled in 880ms
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 424ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = ("public"."OrderTrack"."timeSpentMinutes" + $1) WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 418ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 500ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+          INSERT INTO "OrderTrackTimeEntry"
+            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
+          VALUES
+            ($1, $2, $3::"Track", $4, $5, $6, $7, $8, $9, $10, $11)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/C/time 200 in 439ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled in 841ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /orders/DM-79991 200 in 1388ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 471ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 598ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /orders/DM-79991 200 in 333ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 483ms
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 484ms
+Prisma connected to database successfully
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/C/time 200 in 516ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+            DELETE FROM "OrderTrackTimeEntry"
+            WHERE "id" = $1
+          
+prisma:query 
+          DELETE FROM "OrderTrackTimeEntry"
+          WHERE "id" IN ($1)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/C/time 200 in 600ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+            DELETE FROM "OrderTrackTimeEntry"
+            WHERE "id" = $1
+          
+prisma:query 
+          DELETE FROM "OrderTrackTimeEntry"
+          WHERE "id" IN ($1,$2,$3)
+        
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 394ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 385ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+            UPDATE "OrderTrackTimeEntry"
+            SET
+              "minutes" = $1,
+              "userName" = $2,
+              "userImage" = $3,
+              "createdById" = $4,
+              "createdByName" = $5,
+              "createdByImage" = $6,
+              "createdAt" = $7
+            WHERE "id" = $8
+          
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 454ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND "public"."Order"."billingConfirmedAt" IS NULL) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes" FROM "public"."OrderTrack" WHERE (("public"."OrderTrack"."orderId" = $1 AND "public"."OrderTrack"."track" = CAST($2::text AS "public"."Track")) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query 
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = $1
+          AND "track" = $2::"Track"
+          AND "userId" = $3
+        ORDER BY "createdAt" DESC
+      
+prisma:query UPDATE "public"."OrderTrack" SET "timeSpentMinutes" = $1 WHERE (("public"."OrderTrack"."orderId" = $2 AND "public"."OrderTrack"."track" = CAST($3::text AS "public"."Track")) AND 1=1) RETURNING "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."timeSpentMinutes"
+prisma:query 
+            UPDATE "OrderTrackTimeEntry"
+            SET
+              "minutes" = $1,
+              "userName" = $2,
+              "userImage" = $3,
+              "createdById" = $4,
+              "createdByName" = $5,
+              "createdByImage" = $6,
+              "createdAt" = $7
+            WHERE "id" = $8
+          
+prisma:query COMMIT
+ POST /api/orders/DM-79991/tracks/D/time 200 in 400ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query UPDATE "public"."Order" SET "notes" = $1, "updatedAt" = $2 WHERE ("public"."Order"."orderNumber" = $3 AND 1=1) RETURNING "public"."Order"."orderNumber", "public"."Order"."notes", "public"."Order"."updatedAt"
+ PATCH /api/orders/DM-79991 200 in 395ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled in 860ms
+prisma:query SELECT 1
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 370ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 556ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled in 765ms
+ ✓ Compiled in 867ms
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT 1
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 426ms
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+ GET /api/orders/DM-79991 200 in 415ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ✓ Compiled in 1195ms
+ ✓ Compiled in 847ms
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query UPDATE "public"."Order" SET "notes" = $1, "updatedAt" = $2 WHERE ("public"."Order"."orderNumber" = $3 AND 1=1) RETURNING "public"."Order"."orderNumber", "public"."Order"."notes", "public"."Order"."updatedAt"
+ PATCH /api/orders/DM-79991 200 in 382ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /orders/DM-79991 200 in 1115ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE ("public"."Order"."orderNumber" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1) ORDER BY "public"."File"."createdAt" DESC OFFSET $2
+prisma:query 
+        SELECT "id", "uploadedBy", "uploadedById", "uploadedByName", "uploadedByImage"
+        FROM "File"
+        WHERE "id" IN ($1)
+      
+prisma:query 
+    SELECT
+      "id",
+      "orderId",
+      "track",
+      "minutes",
+      "userId",
+      "userName",
+      "userImage",
+      "createdById",
+      "createdByName",
+      "createdByImage",
+      "createdAt"
+    FROM "OrderTrackTimeEntry"
+    WHERE "orderId" = $1
+    ORDER BY "createdAt" DESC
+  
+prisma:query SELECT 1
+ GET /api/orders/DM-79991 200 in 440ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."name", "public"."User"."email", "public"."User"."image", "public"."User"."role"::text FROM "public"."User" WHERE 1=1 ORDER BY "public"."User"."name" ASC, "public"."User"."email" ASC OFFSET $1
+ GET /api/users 200 in 461ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+ ○ Compiling / ...
+ ✓ Compiled / in 1173ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 1353ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."visibility" = CAST($1::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $3)) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $4
+ GET /api/free-events 200 in 483ms
+ ○ Compiling /api/orders ...
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."PersonalCalendarEvent"."id", "public"."PersonalCalendarEvent"."track"::text, "public"."PersonalCalendarEvent"."title", "public"."PersonalCalendarEvent"."label"::text, "public"."PersonalCalendarEvent"."notes", "public"."PersonalCalendarEvent"."allDay", "public"."PersonalCalendarEvent"."start", "public"."PersonalCalendarEvent"."end", "public"."PersonalCalendarEvent"."weeklyDays", "public"."PersonalCalendarEvent"."startRecur", "public"."PersonalCalendarEvent"."endRecur", "public"."PersonalCalendarEvent"."startTime", "public"."PersonalCalendarEvent"."endTime", "public"."PersonalCalendarEvent"."visibility"::text, "public"."PersonalCalendarEvent"."ownerUserId", "public"."PersonalCalendarEvent"."createdAt", "public"."PersonalCalendarEvent"."updatedAt" FROM "public"."PersonalCalendarEvent" WHERE ("public"."PersonalCalendarEvent"."visibility" = CAST($1::text AS "public"."EventVisibility") OR ("public"."PersonalCalendarEvent"."visibility" = CAST($2::text AS "public"."EventVisibility") AND "public"."PersonalCalendarEvent"."ownerUserId" = $3)) ORDER BY "public"."PersonalCalendarEvent"."start" ASC OFFSET $4
+ GET /api/free-events 200 in 530ms
+ ✓ Compiled /api/orders in 904ms
+prisma:query SELECT 1
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE 1=1 ORDER BY "public"."Order"."createdAt" DESC OFFSET $1
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT 1
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."dueDate", "public"."Order"."deliveryMethod", "public"."Order"."deliveryAddress", "public"."Order"."notes", "public"."Order"."createdById", "public"."Order"."createdByName", "public"."Order"."createdAt", "public"."Order"."updatedAt", "public"."Order"."billingConfirmedAt" FROM "public"."Order" WHERE 1=1 ORDER BY "public"."Order"."createdAt" DESC OFFSET $1
+prisma:query SELECT "public"."FortnoxOrderLink"."id", "public"."FortnoxOrderLink"."orderId", "public"."FortnoxOrderLink"."documentNumber", "public"."FortnoxOrderLink"."createdAt" FROM "public"."FortnoxOrderLink" WHERE "public"."FortnoxOrderLink"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."OrderTrack"."id", "public"."OrderTrack"."orderId", "public"."OrderTrack"."track"::text, "public"."OrderTrack"."status"::text, "public"."OrderTrack"."colorHex", "public"."OrderTrack"."plannedStartAt", "public"."OrderTrack"."plannedEndAt", "public"."OrderTrack"."actualStartAt", "public"."OrderTrack"."actualEndAt", "public"."OrderTrack"."assignee", "public"."OrderTrack"."timeSpentMinutes", "public"."OrderTrack"."calendarLabel"::text FROM "public"."OrderTrack" WHERE "public"."OrderTrack"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."track"::text, "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."title", "public"."CalendarEvent"."notes" FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."FortnoxOrderLink"."id", "public"."FortnoxOrderLink"."orderId", "public"."FortnoxOrderLink"."documentNumber", "public"."FortnoxOrderLink"."createdAt" FROM "public"."FortnoxOrderLink" WHERE "public"."FortnoxOrderLink"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."image", "public"."User"."passwordHash", "public"."User"."role"::text, "public"."User"."emailVerified", "public"."User"."totpSecret", "public"."User"."totpTempSecret", "public"."User"."totpEnabled", "public"."User"."totpEnabledAt" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+prisma:query SELECT "public"."CalendarEvent"."id", "public"."CalendarEvent"."orderId", "public"."CalendarEvent"."track"::text, "public"."CalendarEvent"."start", "public"."CalendarEvent"."end", "public"."CalendarEvent"."title", "public"."CalendarEvent"."notes" FROM "public"."CalendarEvent" WHERE "public"."CalendarEvent"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+ GET /api/orders 200 in 1359ms
+prisma:query SELECT "public"."File"."id", "public"."File"."orderId", "public"."File"."track"::text, "public"."File"."filename", "public"."File"."url", "public"."File"."uploadedBy", "public"."File"."uploadedById", "public"."File"."uploadedByName", "public"."File"."uploadedByImage", "public"."File"."createdAt" FROM "public"."File" WHERE "public"."File"."orderId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) OFFSET $18
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."image", "public"."User"."passwordHash", "public"."User"."role"::text, "public"."User"."emailVerified", "public"."User"."totpSecret", "public"."User"."totpTempSecret", "public"."User"."totpEnabled", "public"."User"."totpEnabledAt" FROM "public"."User" WHERE "public"."User"."id" IN ($1,$2) OFFSET $3
+ GET /api/orders 200 in 1362ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."updatedAt" FROM "public"."Order" WHERE ("public"."Order"."billingConfirmedAt" IS NULL AND EXISTS(SELECT "t0"."orderId" FROM "public"."OrderTrack" AS "t0" WHERE ("t0"."track" = CAST($1::text AS "public"."Track") AND "t0"."status" = CAST($2::text AS "public"."TrackStatus") AND ("public"."Order"."orderNumber") = ("t0"."orderId") AND "t0"."orderId" IS NOT NULL)) AND EXISTS(SELECT "t1"."orderId" FROM "public"."OrderTrack" AS "t1" WHERE ("t1"."track" = CAST($3::text AS "public"."Track") AND "t1"."status" = CAST($4::text AS "public"."TrackStatus") AND ("public"."Order"."orderNumber") = ("t1"."orderId") AND "t1"."orderId" IS NOT NULL))) ORDER BY "public"."Order"."updatedAt" DESC OFFSET $5
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/orders/completed 200 in 1242ms
+prisma:query SELECT "public"."Order"."orderNumber", "public"."Order"."title", "public"."Order"."customerName", "public"."Order"."updatedAt" FROM "public"."Order" WHERE ("public"."Order"."billingConfirmedAt" IS NULL AND EXISTS(SELECT "t0"."orderId" FROM "public"."OrderTrack" AS "t0" WHERE ("t0"."track" = CAST($1::text AS "public"."Track") AND "t0"."status" = CAST($2::text AS "public"."TrackStatus") AND ("public"."Order"."orderNumber") = ("t0"."orderId") AND "t0"."orderId" IS NOT NULL)) AND EXISTS(SELECT "t1"."orderId" FROM "public"."OrderTrack" AS "t1" WHERE ("t1"."track" = CAST($3::text AS "public"."Track") AND "t1"."status" = CAST($4::text AS "public"."TrackStatus") AND ("public"."Order"."orderNumber") = ("t1"."orderId") AND "t1"."orderId" IS NOT NULL))) ORDER BY "public"."Order"."updatedAt" DESC OFFSET $5
+ GET /api/orders/completed 200 in 1566ms
+ ✓ Compiled middleware in 2ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 647ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 292ms
+ ✓ Compiled middleware in 2ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 573ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 449ms
+ ✓ Compiled middleware in 2ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 829ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 381ms
+ ✓ Compiled middleware in 2ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 419ms
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET / 200 in 218ms
+ ✓ Compiled /api/auth/[...nextauth] in 187ms
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+Prisma connected to database successfully
+Using DATABASE_URL: postgresql://postgres:***@localhost:5432/ordersys?schema=public
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."role"::text, "public"."User"."totpEnabled", "public"."User"."image", "public"."User"."name" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ GET /api/auth/session 200 in 1576ms
+Prisma connected to database successfully

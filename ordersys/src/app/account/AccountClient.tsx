@@ -7,9 +7,11 @@ import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   Bell,
+  Link2,
   Check,
   LogOut,
   Mail,
+  RefreshCw,
   Upload,
   X,
   ZoomIn,
@@ -55,6 +57,16 @@ type FortnoxConnectionStatus = {
   expiresAt: string | null;
   updatedAt: string | null;
   error?: string;
+};
+
+type OutlookConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  displayName: string | null;
+  providerEmail: string | null;
+  expiresAt: string | null;
+  lastSyncedAt: string | null;
+  syncError: string | null;
 };
 
 const notificationDefaults = {
@@ -109,6 +121,10 @@ export default function AccountClient({ user }: AccountClientProps) {
   const [fortnoxBusy, setFortnoxBusy] = useState(false);
   const [fortnoxStatusLoading, setFortnoxStatusLoading] = useState(true);
   const [fortnoxStatus, setFortnoxStatus] = useState<FortnoxConnectionStatus | null>(null);
+  const [outlookBusy, setOutlookBusy] = useState(false);
+  const [outlookStatusLoading, setOutlookStatusLoading] = useState(true);
+  const [outlookStatus, setOutlookStatus] = useState<OutlookConnectionStatus | null>(null);
+  const [outlookMessage, setOutlookMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -135,6 +151,26 @@ export default function AccountClient({ user }: AccountClientProps) {
         console.error("Kunde inte ladda MFA-status", error);
       } finally {
         if (!cancelled) setMfaStatusLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/account/outlook/connection", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setOutlookStatus(data as OutlookConnectionStatus);
+      } catch (error) {
+        console.error("Kunde inte ladda Outlook-status", error);
+      } finally {
+        if (!cancelled) setOutlookStatusLoading(false);
       }
     })();
     return () => {
@@ -441,6 +477,61 @@ export default function AccountClient({ user }: AccountClientProps) {
     window.location.href = "/api/fortnox/oauth/start";
   }
 
+  async function refreshOutlookStatus() {
+    const res = await fetch("/api/account/outlook/connection", { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error("Kunde inte hämta Outlook-status.");
+    }
+    const data = (await res.json()) as OutlookConnectionStatus;
+    setOutlookStatus(data);
+  }
+
+  function connectOutlook() {
+    setOutlookBusy(true);
+    window.location.href = "/api/account/outlook/oauth/start";
+  }
+
+  async function syncOutlook() {
+    setOutlookBusy(true);
+    setOutlookMessage(null);
+    try {
+      const res = await fetch("/api/account/outlook/sync", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOutlookMessage({ kind: "error", text: data?.error ?? "Kunde inte synka Outlook-kalendern." });
+        return;
+      }
+      await refreshOutlookStatus();
+      setOutlookMessage({ kind: "success", text: "Outlook-kalendern synkades." });
+    } catch (error) {
+      console.error("Outlook sync error", error);
+      setOutlookMessage({ kind: "error", text: "Ett oväntat fel uppstod." });
+    } finally {
+      setOutlookBusy(false);
+    }
+  }
+
+  async function disconnectOutlook() {
+    if (!window.confirm("Vill du koppla bort Outlook och ta bort synkade kalenderposter?")) return;
+    setOutlookBusy(true);
+    setOutlookMessage(null);
+    try {
+      const res = await fetch("/api/account/outlook/connection", { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOutlookMessage({ kind: "error", text: data?.error ?? "Kunde inte koppla bort Outlook." });
+        return;
+      }
+      await refreshOutlookStatus();
+      setOutlookMessage({ kind: "success", text: "Outlook-kopplingen togs bort." });
+    } catch (error) {
+      console.error("Outlook disconnect error", error);
+      setOutlookMessage({ kind: "error", text: "Ett oväntat fel uppstod." });
+    } finally {
+      setOutlookBusy(false);
+    }
+  }
+
   const fortnoxRenewal = useMemo(() => {
     if (!fortnoxStatus?.expiresAt) return null;
     const date = new Date(fortnoxStatus.expiresAt);
@@ -473,6 +564,19 @@ export default function AccountClient({ user }: AccountClientProps) {
       remainingLabel,
     };
   }, [fortnoxStatus?.expiresAt]);
+
+  const outlookRenewal = useMemo(() => {
+    if (!outlookStatus?.expiresAt) return null;
+    const date = new Date(outlookStatus.expiresAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString("sv-SE", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [outlookStatus?.expiresAt]);
 
   const headerAnimation = {
     hidden: { opacity: 0, y: 16 },
@@ -870,6 +974,68 @@ export default function AccountClient({ user }: AccountClientProps) {
                     ? "Koppla om Fortnox"
                     : "Koppla Fortnox"}
               </Button>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-foreground">Outlook-kalender</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Koppla din Outlook-kalender och synka händelser till din personliga kalender i Ordexa.
+              </p>
+              <div className="mt-3 space-y-1 rounded-lg border border-border/70 bg-background px-3 py-2 text-xs text-muted-foreground">
+                {outlookStatusLoading ? (
+                  <p>Hämtar Outlook-status...</p>
+                ) : !outlookStatus?.configured ? (
+                  <p>Outlook är inte konfigurerat på den här miljön ännu.</p>
+                ) : outlookStatus.connected ? (
+                  <>
+                    <p>
+                      Konto:{" "}
+                      <span className="font-medium text-foreground">
+                        {outlookStatus.displayName || outlookStatus.providerEmail || "Outlook"}
+                      </span>
+                    </p>
+                    {outlookStatus.providerEmail ? <p>E-post: {outlookStatus.providerEmail}</p> : null}
+                    <p>Synkas till din personliga kalender som privata poster.</p>
+                    <p>Token giltig till: {outlookRenewal || "Okänt"}</p>
+                    <p>
+                      Senaste synk:{" "}
+                      {outlookStatus.lastSyncedAt
+                        ? new Date(outlookStatus.lastSyncedAt).toLocaleString("sv-SE")
+                        : "Inte synkad ännu"}
+                    </p>
+                    {outlookStatus.syncError ? (
+                      <p className="text-red-600">Senaste fel: {outlookStatus.syncError}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p>Ingen Outlook-koppling hittades.</p>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={connectOutlook} disabled={outlookBusy || !outlookStatus?.configured}>
+                  <Link2 className="h-4 w-4" aria-hidden />
+                  {outlookStatus?.connected ? "Koppla om Outlook" : "Koppla Outlook"}
+                </Button>
+                {outlookStatus?.connected ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => void syncOutlook()} disabled={outlookBusy}>
+                      <RefreshCw className="h-4 w-4" aria-hidden />
+                      Synka nu
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => void disconnectOutlook()} disabled={outlookBusy}>
+                      Koppla bort
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+              {outlookMessage ? (
+                <p
+                  className={`mt-3 text-xs ${
+                    outlookMessage.kind === "error" ? "text-red-600" : "text-emerald-600"
+                  }`}
+                >
+                  {outlookMessage.text}
+                </p>
+              ) : null}
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
               <p className="text-sm font-semibold text-foreground">Inloggade enheter</p>

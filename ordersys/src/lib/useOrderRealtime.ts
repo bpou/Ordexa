@@ -18,6 +18,7 @@ export function useOrderRealtime<TCreated = any, TDeleted = { id: string }>(
     if (!orderId) return;
 
     const p = getPusher();
+    if (!p) return;
     const channelName = `order-${orderId}`;
     const ch = p.subscribe(channelName);
 

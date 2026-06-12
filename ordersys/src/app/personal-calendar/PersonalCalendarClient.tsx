@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -15,6 +16,7 @@ import CalendarSkin from "@/components/calendar/CalendarSkin";
 import { OrdinaLogoSpinner } from "@/components/OrdinaLoader";
 import svLocale from "@fullcalendar/core/locales/sv";
 import { MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { getPusher } from "@/lib/pusher-client";
 
 /* =========================
    Util: safe JSON
@@ -45,6 +47,12 @@ async function safeJson<T = any>(
    Types
  ========================= */
 type CalendarEventResponse = { events?: EventInput[] };
+type OutlookConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  lastSyncedAt?: string | null;
+  error?: string;
+};
 
 type Label =
   | "BOKAD_TID"
@@ -238,6 +246,9 @@ export default function PersonalCalendarClient() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [outlookSyncing, setOutlookSyncing] = useState(false);
+  const [outlookConnection, setOutlookConnection] =
+    useState<OutlookConnectionStatus | null>(null);
   const [currentView, setCurrentView] =
     useState<CalendarView>("timeGridWorkWeek");
   const [toolbarTitle, setToolbarTitle] = useState<string>("");
@@ -321,9 +332,144 @@ export default function PersonalCalendarClient() {
     }
   }, []);
 
+  const loadOutlookConnection = useCallback(async () => {
+    try {
+      const connectionRes = await fetch("/api/account/outlook/connection", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+
+      const connection = await safeJson<OutlookConnectionStatus>(
+        connectionRes,
+        { configured: false, connected: false }
+      );
+      setOutlookConnection(connection);
+
+      setOutlookConnection(connection);
+
+      if (!connectionRes.ok) {
+        setActionError(connection.error ?? "Kunde inte läsa Outlook-status.");
+      }
+    } catch (error: any) {
+      setOutlookConnection({ configured: false, connected: false });
+      setActionError(error?.message ?? "Kunde inte läsa Outlook-status.");
+    }
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadOutlookConnection();
+  }, [loadOutlookConnection]);
+
+  useEffect(() => {
+    const refreshCalendar = () => {
+      if (document.visibilityState === "hidden") return;
+      void load();
+      void loadOutlookConnection();
+    };
+
+    const intervalId = window.setInterval(refreshCalendar, 5 * 60 * 1000);
+
+    window.addEventListener("focus", refreshCalendar);
+    document.addEventListener("visibilitychange", refreshCalendar);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshCalendar);
+      document.removeEventListener("visibilitychange", refreshCalendar);
+    };
+  }, [load, loadOutlookConnection]);
+
+  useEffect(() => {
+    const pusher = getPusher();
+    if (!pusher) return;
+
+    const fetchSessionAndSubscribe = async () => {
+      const res = await fetch("/api/auth/session", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      }).catch(() => null);
+      const session = await safeJson<{ user?: { id?: string | null } }>(res, {});
+      const userId = session.user?.id?.trim();
+      if (!userId) return;
+
+      const channel = pusher.subscribe(`user-${userId}-calendar`);
+      const handleRefresh = () => {
+        void load();
+        void loadOutlookConnection();
+      };
+
+      channel.bind("calendar:refresh", handleRefresh);
+
+      return () => {
+        channel.unbind("calendar:refresh", handleRefresh);
+        pusher.unsubscribe(`user-${userId}-calendar`);
+      };
+    };
+
+    let cleanup: (() => void) | undefined;
+    void fetchSessionAndSubscribe().then((fn) => {
+      cleanup = fn;
+    });
+
+    return () => {
+      cleanup?.();
+    };
+  }, [load, loadOutlookConnection]);
+
+  const handleOutlookSync = useCallback(async () => {
+    if (outlookSyncing) return;
+
+    setOutlookSyncing(true);
+    setActionError(null);
+
+    try {
+      const connectionRes = await fetch("/api/account/outlook/connection", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const connection = await safeJson<OutlookConnectionStatus>(
+        connectionRes,
+        { configured: false, connected: false }
+      );
+
+      if (!connectionRes.ok) {
+        setActionError(connection.error ?? "Kunde inte läsa Outlook-status.");
+        return;
+      }
+
+      if (!connection.configured) {
+        setActionError("Outlook är inte konfigurerat på den här miljön ännu.");
+        return;
+      }
+
+      if (!connection.connected) {
+        window.location.href = "/api/account/outlook/oauth/start";
+        return;
+      }
+
+      const syncRes = await fetch("/api/account/outlook/sync", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const syncData = await safeJson<{ error?: string }>(syncRes, {});
+
+      if (!syncRes.ok) {
+        setActionError(syncData.error ?? "Kunde inte synka Outlook-kalendern.");
+        return;
+      }
+
+      await load();
+      await loadOutlookConnection();
+    } catch (error: any) {
+      setActionError(error?.message ?? "Kunde inte starta Outlook-synken.");
+    } finally {
+      setOutlookSyncing(false);
+    }
+  }, [load, loadOutlookConnection, outlookSyncing]);
 
   /* ===== Create free event ===== */
   const handleSaveFreeEvent = useCallback(async () => {
@@ -684,9 +830,57 @@ export default function PersonalCalendarClient() {
     <div className="relative p-4">
       <div className="mb-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          
           <div className="flex items-center gap-2">
-
+            {outlookConnection?.configured && outlookConnection.connected ? (
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-left shadow-[0_0_0_1px_rgba(186,230,253,0.35)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-inner shadow-sky-100">
+                  <Image
+                    src="/OUTLOOK.png"
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 object-contain"
+                    priority
+                  />
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-semibold text-slate-900">
+                    Outlook ansluten
+                  </span>
+                  <span className="text-xs text-sky-700">
+                    Kalendern uppdateras automatiskt
+                  </span>
+                </span>
+              </div>
+            ) : null}
+            {(!outlookConnection?.configured || !outlookConnection.connected) ? (
+            <button
+              type="button"
+              onClick={() => void handleOutlookSync()}
+              disabled={outlookSyncing}
+              className="inline-flex items-center gap-3 rounded-2xl border border-sky-200/80 bg-white px-4 py-3 text-left shadow-[0_0_0_1px_rgba(186,230,253,0.4),0_10px_30px_rgba(56,189,248,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(125,211,252,0.55),0_14px_36px_rgba(56,189,248,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label="Anslut Outlook"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 shadow-inner shadow-sky-100">
+                <Image
+                  src="/OUTLOOK.png"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                  priority
+                />
+              </span>
+              <span className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">
+                  Anslut Outlook
+                </span>
+                <span className="text-xs text-sky-700">
+                  Importera dina kalenderhändelser
+                </span>
+              </span>
+            </button>
+            ) : null}
           </div>
         </div>
 
@@ -718,6 +912,12 @@ export default function PersonalCalendarClient() {
             })}
           </div>
           <div className="ml-auto flex items-center gap-2 text-sm text-neutral-500">
+            {outlookSyncing && (
+              <div className="flex items-center gap-2">
+                <OrdinaLogoSpinner size={20} />
+                <span>Synkar Outlook</span>
+              </div>
+            )}
             {loading && (
               <div className="flex items-center gap-2">
                 <OrdinaLogoSpinner size={20} />

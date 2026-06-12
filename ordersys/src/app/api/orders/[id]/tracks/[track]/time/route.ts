@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
-import { Role, type Track } from "@prisma/client";
+import { Prisma, Role, type Track } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,6 +10,12 @@ import { canManageTrack } from "@/lib/permissions";
 type Params = { id: string; track: string };
 
 const MAX_MINUTES_PER_REQUEST = 24 * 60; // 24 hours
+
+type ExistingUserEntry = {
+  id: string;
+  minutes: number;
+  createdAt: Date;
+};
 
 export async function POST(
   req: Request,
@@ -106,37 +112,93 @@ export async function POST(
       select: { orderId: true, track: true, timeSpentMinutes: true },
     });
 
-    if (minutes > 0) {
-      const updated = await prisma.$transaction(async (tx) => {
-        const track = existing
-          ? await tx.orderTrack.update({
-              where: {
-                orderId_track: { orderId: order.orderNumber, track: trackKey },
-              },
-              data: { timeSpentMinutes: { increment: minutes } },
-              select: { orderId: true, track: true, timeSpentMinutes: true },
-            })
-          : await tx.orderTrack.create({
-              data: {
-                orderId: order.orderNumber,
-                track: trackKey,
-                timeSpentMinutes: minutes,
-              },
-              select: { orderId: true, track: true, timeSpentMinutes: true },
-            });
+    const updated = await prisma.$transaction(async (tx) => {
+      const existingEntries = await tx.$queryRaw<ExistingUserEntry[]>`
+        SELECT "id", "minutes", "createdAt"
+        FROM "OrderTrackTimeEntry"
+        WHERE "orderId" = ${order.orderNumber}
+          AND "track" = ${trackKey}::"Track"
+          AND "userId" = ${targetUser.id}
+        ORDER BY "createdAt" DESC
+      `;
 
-        const entry = {
+      const canonicalEntry = existingEntries[0] ?? null;
+      const duplicateIds = existingEntries.slice(1).map((entry) => entry.id);
+      const currentUserMinutes = existingEntries.reduce((sum, entry) => sum + entry.minutes, 0);
+      const appliedDelta = minutes > 0 ? minutes : Math.max(-currentUserMinutes, minutes);
+      const nextUserMinutes = Math.max(0, currentUserMinutes + appliedDelta);
+      const currentTrackMinutes = existing?.timeSpentMinutes ?? 0;
+      const nextTrackMinutes = Math.max(0, currentTrackMinutes + appliedDelta);
+
+      const track = existing
+        ? await tx.orderTrack.update({
+            where: {
+              orderId_track: { orderId: order.orderNumber, track: trackKey },
+            },
+            data: { timeSpentMinutes: nextTrackMinutes },
+            select: { orderId: true, track: true, timeSpentMinutes: true },
+          })
+        : await tx.orderTrack.create({
+            data: {
+              orderId: order.orderNumber,
+              track: trackKey,
+              timeSpentMinutes: nextTrackMinutes,
+            },
+            select: { orderId: true, track: true, timeSpentMinutes: true },
+          });
+
+      const entryTimestamp = new Date();
+      const createdByName = sessionUser?.name ?? sessionUser?.email ?? "Okand anvandare";
+
+      let entry = null;
+
+      if (canonicalEntry) {
+        if (nextUserMinutes === 0) {
+          await tx.$executeRaw`
+            DELETE FROM "OrderTrackTimeEntry"
+            WHERE "id" = ${canonicalEntry.id}
+          `;
+        } else {
+          await tx.$executeRaw`
+            UPDATE "OrderTrackTimeEntry"
+            SET
+              "minutes" = ${nextUserMinutes},
+              "userName" = ${targetUser.name ?? targetUser.email},
+              "userImage" = ${targetUser.image},
+              "createdById" = ${createdById},
+              "createdByName" = ${createdByName},
+              "createdByImage" = ${sessionUser?.image ?? null},
+              "createdAt" = ${entryTimestamp}
+            WHERE "id" = ${canonicalEntry.id}
+          `;
+
+          entry = {
+            id: canonicalEntry.id,
+            orderId: order.orderNumber,
+            track: trackKey,
+            minutes: nextUserMinutes,
+            userId: targetUser.id,
+            userName: targetUser.name ?? targetUser.email,
+            userImage: targetUser.image,
+            createdById,
+            createdByName,
+            createdByImage: sessionUser?.image ?? null,
+            createdAt: entryTimestamp,
+          };
+        }
+      } else if (nextUserMinutes > 0) {
+        entry = {
           id: randomUUID(),
           orderId: order.orderNumber,
           track: trackKey,
-          minutes,
+          minutes: nextUserMinutes,
           userId: targetUser.id,
           userName: targetUser.name ?? targetUser.email,
           userImage: targetUser.image,
           createdById,
-          createdByName: sessionUser?.name ?? sessionUser?.email ?? "Okand anvandare",
+          createdByName,
           createdByImage: sessionUser?.image ?? null,
-          createdAt: new Date(),
+          createdAt: entryTimestamp,
         };
 
         await tx.$executeRaw`
@@ -145,61 +207,25 @@ export async function POST(
           VALUES
             (${entry.id}, ${entry.orderId}, ${entry.track}::"Track", ${entry.minutes}, ${entry.userId}, ${entry.userName}, ${entry.userImage}, ${entry.createdById}, ${entry.createdByName}, ${entry.createdByImage}, ${entry.createdAt})
         `;
+      }
 
-        return { track, entry };
-      });
-
-      return NextResponse.json({ ok: true, track: updated.track, entry: updated.entry, minutesAdded: minutes });
-    }
-
-    const currentMinutes = existing?.timeSpentMinutes ?? 0;
-    const appliedDelta = Math.max(-currentMinutes, minutes); // both are <= 0
-    const nextMinutes = Math.max(0, currentMinutes + appliedDelta);
-
-    const updated = await prisma.$transaction(async (tx) => {
-      const track = existing
-        ? await tx.orderTrack.update({
-            where: {
-              orderId_track: { orderId: order.orderNumber, track: trackKey },
-            },
-            data: { timeSpentMinutes: nextMinutes },
-            select: { orderId: true, track: true, timeSpentMinutes: true },
-          })
-        : {
-            orderId: order.orderNumber,
-            track: trackKey,
-            timeSpentMinutes: 0,
-          };
-
-      const entry = appliedDelta === 0
-        ? null
-        : {
-            id: randomUUID(),
-            orderId: order.orderNumber,
-            track: trackKey,
-            minutes: appliedDelta,
-            userId: targetUser.id,
-            userName: targetUser.name ?? targetUser.email,
-            userImage: targetUser.image,
-            createdById,
-            createdByName: sessionUser?.name ?? sessionUser?.email ?? "Okand anvandare",
-            createdByImage: sessionUser?.image ?? null,
-            createdAt: new Date(),
-          };
-
-      if (entry) {
+      if (duplicateIds.length > 0) {
         await tx.$executeRaw`
-          INSERT INTO "OrderTrackTimeEntry"
-            ("id", "orderId", "track", "minutes", "userId", "userName", "userImage", "createdById", "createdByName", "createdByImage", "createdAt")
-          VALUES
-            (${entry.id}, ${entry.orderId}, ${entry.track}::"Track", ${entry.minutes}, ${entry.userId}, ${entry.userName}, ${entry.userImage}, ${entry.createdById}, ${entry.createdByName}, ${entry.createdByImage}, ${entry.createdAt})
+          DELETE FROM "OrderTrackTimeEntry"
+          WHERE "id" IN (${Prisma.join(duplicateIds)})
         `;
       }
 
-      return { track, entry };
+      return { track, entry, appliedDelta, replacedEntryIds: duplicateIds };
     });
 
-    return NextResponse.json({ ok: true, track: updated.track, entry: updated.entry, minutesAdded: appliedDelta });
+    return NextResponse.json({
+      ok: true,
+      track: updated.track,
+      entry: updated.entry,
+      minutesAdded: updated.appliedDelta,
+      replacedEntryIds: updated.replacedEntryIds,
+    });
   } catch (error) {
     console.error(
       `[orders/${orderId}/tracks/${normalizedTrack}/time]`,
