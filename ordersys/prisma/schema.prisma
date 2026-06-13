@@ -101,6 +101,7 @@ model CalendarEvent {
   title   String
   notes   String?
   order   Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+  outlookTrackSync OutlookTrackCalendarSync?
 }
 
 model PersonalCalendarEvent {
@@ -147,6 +148,8 @@ model OutlookCalendarConnection {
   webhookSubscriptionId String?
   user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncedEvents          OutlookCalendarSync[]
+  trackSyncedEvents     OutlookTrackCalendarSync[]
+  trackSubscriptions    OutlookTrackCalendarSubscription[]
 
   @@index([providerEmail])
 }
@@ -165,6 +168,39 @@ model OutlookCalendarSync {
 
   @@unique([connectionId, externalEventId])
   @@index([connectionId, lastSeenAt])
+}
+
+model OutlookTrackCalendarSync {
+  id              String                    @id @default(cuid())
+  connectionId    String
+  track           Track
+  calendarId      String
+  externalEventId String
+  calendarEventId String                    @unique
+  lastSeenAt      DateTime                  @default(now())
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  connection      OutlookCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calendarEvent   CalendarEvent             @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, calendarId, externalEventId])
+  @@index([track, calendarId, lastSeenAt])
+}
+
+model OutlookTrackCalendarSubscription {
+  id             String                    @id @default(cuid())
+  connectionId   String
+  track          Track
+  calendarId     String
+  subscriptionId String                    @unique
+  clientState    String
+  expiresAt      DateTime
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  connection     OutlookCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, track])
+  @@index([calendarId, expiresAt])
 }
 
 model File {

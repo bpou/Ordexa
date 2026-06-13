@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
+import { pusherServer } from "@/lib/pusher-server";
+import { upsertTrackEventToOutlook } from "@/lib/outlook";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +113,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return event;
   });
+
+  try {
+    await upsertTrackEventToOutlook(updated.id);
+  } catch (error) {
+    console.error(`Failed to sync track event ${updated.id} to Outlook:`, error);
+  }
+
+  try {
+    await pusherServer.trigger(`track-${updated.track}-calendar`, "calendar:refresh", {
+      source: "ordexa",
+      at: new Date().toISOString(),
+      track: updated.track,
+    });
+  } catch (error) {
+    console.error(`Failed to push track calendar refresh for ${updated.track}:`, error);
+  }
 
   return NextResponse.json({
     ok: true,

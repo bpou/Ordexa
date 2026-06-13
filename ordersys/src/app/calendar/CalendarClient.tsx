@@ -20,6 +20,7 @@ import {
   type AppTrack,
 } from "@/lib/tracks";
 import { MapPin, ChevronLeft, ChevronRight, Eye, EyeOff, CalendarRange } from "lucide-react";
+import { getPusher } from "@/lib/pusher-client";
 // Drag and drop imports
 import { CalendarDragDropProvider } from "@/components/calendar/CalendarDragDropProvider";
 import { DragDropState } from "@/components/calendar/DragDropState";
@@ -833,6 +834,24 @@ export default function CalendarClient({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const pusher = getPusher();
+    if (!pusher) return;
+
+    const channelName = `track-${track}-calendar`;
+    const channel = pusher.subscribe(channelName);
+    const handleRefresh = () => {
+      void load();
+    };
+
+    channel.bind("calendar:refresh", handleRefresh);
+
+    return () => {
+      channel.unbind("calendar:refresh", handleRefresh);
+      pusher.unsubscribe(channelName);
+    };
+  }, [load, track]);
 
   // Handle calendar refresh after event creation
   const handleCalendarRefresh = useCallback(() => {

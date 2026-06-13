@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { Track, TrackStatus, CalendarLabel } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
+import { ensureTrackOutlookSubscription } from "@/lib/outlook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,12 @@ export async function GET(req: NextRequest) {
   }
   if (!role || !canAccessCalendarTrack(role, trackFilter)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    await ensureTrackOutlookSubscription(trackFilter, req.nextUrl.origin);
+  } catch (error) {
+    console.error(`Failed to ensure Outlook subscription for track ${trackFilter}:`, error);
   }
 
   const events: EventRow[] = await prisma.calendarEvent.findMany({

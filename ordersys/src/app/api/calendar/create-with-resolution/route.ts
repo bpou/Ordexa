@@ -4,6 +4,11 @@ import type { Track } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
 import type { AppTrack } from "@/lib/tracks";
+import { pusherServer } from "@/lib/pusher-server";
+import {
+  ensureTrackOutlookSubscription,
+  upsertTrackEventToOutlook,
+} from "@/lib/outlook";
 import type {
   EventCreationData,
   EventConflict,
@@ -104,6 +109,15 @@ export async function POST(req: NextRequest) {
     }
     if (!role || !canAccessCalendarTrack(role, normalizedTrack as Track)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    try {
+      await ensureTrackOutlookSubscription(normalizedTrack as Track, req.nextUrl.origin);
+    } catch (error) {
+      console.error(
+        `Failed to ensure Outlook subscription for track ${normalizedTrack}:`,
+        error
+      );
     }
 
     // Check for conflicts again (server-side validation)
@@ -223,6 +237,27 @@ export async function POST(req: NextRequest) {
         console.error('Failed to update order track:', orderTrackError);
         warnings.push('Kunde inte koppla till ordern');
       }
+    }
+
+    try {
+      await upsertTrackEventToOutlook(calendarEvent.id);
+    } catch (error) {
+      console.error(`Failed to sync new track event ${calendarEvent.id} to Outlook:`, error);
+      warnings.push("Outlook-synk misslyckades");
+    }
+
+    try {
+      await pusherServer.trigger(
+        `track-${normalizedTrack}-calendar`,
+        "calendar:refresh",
+        {
+          source: "ordexa",
+          at: new Date().toISOString(),
+          track: normalizedTrack,
+        }
+      );
+    } catch (error) {
+      console.error(`Failed to push track calendar refresh for ${normalizedTrack}:`, error);
     }
 
     // Prepare response
