@@ -125,6 +125,9 @@ export default function AccountClient({ user }: AccountClientProps) {
   const [outlookStatusLoading, setOutlookStatusLoading] = useState(true);
   const [outlookStatus, setOutlookStatus] = useState<OutlookConnectionStatus | null>(null);
   const [outlookMessage, setOutlookMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  const [outlookCalendars, setOutlookCalendars] = useState<any[]>([]);
+  const [outlookCalendarsLoading, setOutlookCalendarsLoading] = useState(false);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string>("primary");
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -167,6 +170,9 @@ export default function AccountClient({ user }: AccountClientProps) {
         const data = await res.json();
         if (cancelled) return;
         setOutlookStatus(data as OutlookConnectionStatus);
+        if (data.connected) {
+          fetchOutlookCalendars();
+        }
       } catch (error) {
         console.error("Kunde inte ladda Outlook-status", error);
       } finally {
@@ -177,6 +183,39 @@ export default function AccountClient({ user }: AccountClientProps) {
       cancelled = true;
     };
   }, []);
+
+  const fetchOutlookCalendars = async () => {
+    setOutlookCalendarsLoading(true);
+    try {
+      const res = await fetch("/api/account/outlook/calendars", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.calendars) {
+        setOutlookCalendars(data.calendars);
+        setSelectedCalendarId(data.currentCalendarId || "primary");
+      }
+    } catch (error) {
+      console.error("Kunde inte ladda Outlook-kalendrar", error);
+    } finally {
+      setOutlookCalendarsLoading(false);
+    }
+  };
+
+  const updateSelectedCalendar = async (calendarId: string) => {
+    setSelectedCalendarId(calendarId);
+    try {
+      const res = await fetch("/api/account/outlook/calendars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calendarId }),
+      });
+      if (res.ok) {
+        setOutlookMessage({ kind: "success", text: "Kalender uppdaterad. En ny synk kommer att användas." });
+      }
+    } catch (error) {
+      setOutlookMessage({ kind: "error", text: "Kunde inte uppdatera kalender." });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -994,7 +1033,31 @@ export default function AccountClient({ user }: AccountClientProps) {
                       </span>
                     </p>
                     {outlookStatus.providerEmail ? <p>E-post: {outlookStatus.providerEmail}</p> : null}
-                    <p>Synkas till din personliga kalender som privata poster.</p>
+                    {outlookStatus.connected && (
+                      <div className="mt-2">
+                        <label className="block text-xs font-medium text-foreground">Välj Outlook-kalender att synka:</label>
+                        <select
+                          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                          value={selectedCalendarId}
+                          onChange={(e) => void updateSelectedCalendar(e.target.value)}
+                          disabled={outlookCalendarsLoading || outlookBusy}
+                        >
+                          {outlookCalendarsLoading ? (
+                            <option>Laddar kalendrar...</option>
+                          ) : (
+                            <>
+                              <option value="primary">Standardkalender (Primary)</option>
+                              {outlookCalendars.map((cal) => (
+                                <option key={cal.id} value={cal.id}>
+                                  {cal.name || "Namnlös kalender"} {cal.isDefaultCalendar ? "(Standard)" : ""}
+                                </option>
+                              ))}
+                            </>
+                          )}
+                        </select>
+                      </div>
+                    )}
+                    <p className="mt-2">Synkas till din personliga kalender som privata poster på Spår B (Verkstad).</p>
                     <p>Token giltig till: {outlookRenewal || "Okänt"}</p>
                     <p>
                       Senaste synk:{" "}

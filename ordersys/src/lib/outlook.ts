@@ -53,6 +53,13 @@ type GraphSubscription = {
   clientState?: string;
 };
 
+type GraphCalendar = {
+  id?: string;
+  name?: string | null;
+  color?: string | null;
+  isDefaultCalendar?: boolean;
+};
+
 type GraphEvent = {
   id?: string;
   iCalUId?: string;
@@ -283,7 +290,7 @@ async function refreshOutlookTokens(connectionId: string) {
   });
 }
 
-async function getValidAccessToken(connectionId: string) {
+export async function getValidAccessToken(connectionId: string) {
   const connection = await prisma.outlookCalendarConnection.findUnique({
     where: { id: connectionId },
   });
@@ -363,6 +370,18 @@ export async function fetchOutlookProfile(accessToken: string) {
     providerEmail: profile.mail || profile.userPrincipalName || null,
     displayName: profile.displayName ?? null,
   };
+}
+
+export async function fetchOutlookCalendars(accessToken: string) {
+  const response = await graphFetch<{ value?: GraphCalendar[] }>("/me/calendars", accessToken);
+  return response.value || [];
+}
+
+export async function updateOutlookCalendarId(connectionId: string, calendarId: string) {
+  await prisma.outlookCalendarConnection.update({
+    where: { id: connectionId },
+    data: { calendarId },
+  });
 }
 
 function getSubscriptionExpirationDate() {
@@ -818,7 +837,7 @@ async function upsertLocalPersonalEventFromGraph(
         allDay: isAllDay,
         start,
         end,
-        track: Track.SHARED,
+        track: Track.B,
         visibility: EventVisibility.PERSONAL,
         ownerUserId: userId,
       },
@@ -837,7 +856,7 @@ async function upsertLocalPersonalEventFromGraph(
 
   const personalEvent = await prisma.personalCalendarEvent.create({
     data: {
-      track: Track.SHARED,
+      track: Track.B,
       title,
       label: null,
       notes,
@@ -1150,7 +1169,7 @@ export async function syncOutlookCalendarForUser(
             allDay: isAllDay,
             start,
             end,
-            track: Track.SHARED,
+            track: Track.B,
             visibility: EventVisibility.PERSONAL,
             ownerUserId: userId,
           },
@@ -1170,7 +1189,7 @@ export async function syncOutlookCalendarForUser(
 
       const personalEvent = await prisma.personalCalendarEvent.create({
         data: {
-          track: Track.SHARED,
+          track: Track.B,
           title,
           label: null,
           notes,
