@@ -4,16 +4,12 @@ import { Prisma } from "@prisma/client";
 import type { OrderTrack } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { s3PresignGetUrl } from "@/lib/s3";
+import { getStoredFileUrl } from "@/lib/file-storage";
 
 export const runtime = "nodejs";
 const FILE_URL_TTL_SEC = 600;
 
 type Ctx = { params: Promise<{ id: string }> };
-
-function looksLikeAbsoluteUrl(value: string) {
-  return /^https?:\/\//i.test(value);
-}
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const { id: orderId } = await ctx.params;
@@ -33,7 +29,6 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         orderBy: { createdAt: "desc" },
       });
 
-  const now = Date.now();
   const fileUploaders = files.length
     ? await prisma.$queryRaw<
         Array<{
@@ -55,16 +50,17 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     files.map(async (f) => {
       const key = f.url;
       let url = key;
-      if (!looksLikeAbsoluteUrl(key)) {
-        try {
-          url = await s3PresignGetUrl(key, FILE_URL_TTL_SEC);
-        } catch (error) {
-          console.warn(`[orders/${orderId}] Could not presign file URL`, {
-            fileId: f.id,
-            filename: f.filename,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+      let expiresAt: number | undefined;
+      try {
+        const stored = await getStoredFileUrl(key, FILE_URL_TTL_SEC);
+        url = stored.url;
+        expiresAt = stored.expiresAt ?? undefined;
+      } catch (error) {
+        console.warn(`[orders/${orderId}] Could not resolve file URL`, {
+          fileId: f.id,
+          filename: f.filename,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
       const uploader = uploaderByFileId.get(f.id);
       return {
@@ -73,7 +69,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         url,
         track: f.track as "A" | "B" | "C" | "D" | "SHARED",
         createdAt: f.createdAt.toISOString(),
-        expiresAt: now + FILE_URL_TTL_SEC * 1000,
+        expiresAt,
         uploadedBy: uploader?.uploadedByName ?? uploader?.uploadedBy ?? null,
         uploadedById: uploader?.uploadedById ?? null,
         uploadedByName: uploader?.uploadedByName ?? uploader?.uploadedBy ?? null,

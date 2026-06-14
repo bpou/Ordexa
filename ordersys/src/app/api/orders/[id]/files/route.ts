@@ -4,15 +4,13 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Track, Role } from "@prisma/client";
 import { pusherServer } from "@/lib/pusher-server";
-import { s3UploadObject, s3PresignGetUrl } from "@/lib/s3";
+import { uploadStoredFile } from "@/lib/file-storage";
 import path from "path";
 import { randomUUID } from "crypto";
 import { normalizeTrack } from "@/lib/tracks";
 import { canManageTrack } from "@/lib/permissions";
 
 export const runtime = "nodejs";
-
-const FILE_URL_TTL_SEC = 600; // 10 min
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -71,7 +69,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const { base, ext } = sanitize(file.name);
     const key = `orders/${orderId}/${randomUUID()}-${base}${ext || ""}`;
 
-    await s3UploadObject({
+    const upload = await uploadStoredFile({
       key,
       body: buf,
       contentType: file.type || "application/octet-stream",
@@ -81,7 +79,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       data: {
         orderId,
         filename: `${base}${ext || ""}`,
-        url: key,
+        url: upload.key,
         track: trackForSave,
       },
     });
@@ -101,14 +99,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       WHERE "id" = ${saved.id}
     `;
 
-    const signedUrl = await s3PresignGetUrl(key, FILE_URL_TTL_SEC);
     const payload = {
       id: saved.id,
       filename: saved.filename,
-      url: signedUrl,
+      url: upload.url,
       track: saved.track,
       createdAt: saved.createdAt.toISOString(),
-      expiresAt: Date.now() + FILE_URL_TTL_SEC * 1000,
+      expiresAt: upload.expiresAt ?? undefined,
       uploadedBy,
       uploadedById,
       uploadedByName,

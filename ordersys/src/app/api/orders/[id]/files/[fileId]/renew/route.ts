@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { s3PresignGetUrl } from "@/lib/s3";
+import { getStoredFileUrl } from "@/lib/file-storage";
 
 export const runtime = "nodejs";
 const FILE_URL_TTL_SEC = 600;
@@ -21,11 +21,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       select: { id: true, url: true }, // url = S3 key
     });
 
-    const now = Date.now();
     const urls = await Promise.all(
       rows.map(async (r) => {
-        const url = await s3PresignGetUrl(r.url, FILE_URL_TTL_SEC);
-        return { id: r.id, url, expiresAt: now + FILE_URL_TTL_SEC * 1000 };
+        const stored = await getStoredFileUrl(r.url, FILE_URL_TTL_SEC);
+        return { id: r.id, url: stored.url, expiresAt: stored.expiresAt ?? Date.now() + 3_600_000 };
       })
     );
 

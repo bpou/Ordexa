@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { canDeleteOrderFiles } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
-import { s3DeleteObject } from "@/lib/s3";
+import { deleteStoredFile } from "@/lib/file-storage";
 
 export const runtime = "nodejs";
 
@@ -32,9 +32,9 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
 
     // Attempt to delete the backing S3 object, but swallow missing-object errors.
     try {
-      await s3DeleteObject(file.url);
+      await deleteStoredFile(file.url);
     } catch (e) {
-      console.warn("S3 delete warning:", e);
+      console.warn("File storage delete warning:", e);
     }
 
     await prisma.file.delete({ where: { id: fileId } });

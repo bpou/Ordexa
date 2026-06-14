@@ -5,6 +5,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  deleteStoredFile,
+  isVercelBlobConfigured,
+  uploadStoredFile,
+} from "@/lib/file-storage";
 
 export const runtime = "nodejs";
 
@@ -69,18 +74,28 @@ export async function POST(req: Request) {
   }
 
   const uploadDir = getUploadDir();
-  await mkdir(uploadDir, { recursive: true });
-
   const filename = `${userId}-${randomUUID()}${extension}`;
-  const relativeUrl = `${PROFILE_UPLOAD_URL_PREFIX}${filename}`;
-  const destination = path.join(uploadDir, filename);
   const buffer = Buffer.from(await file.arrayBuffer());
+  let imageUrl: string;
 
-  await writeFile(destination, buffer);
+  if (isVercelBlobConfigured()) {
+    const uploaded = await uploadStoredFile({
+      key: `profiles/${filename}`,
+      body: buffer,
+      contentType: file.type,
+    });
+    imageUrl = uploaded.url;
+  } else {
+    await mkdir(uploadDir, { recursive: true });
+    const relativeUrl = `${PROFILE_UPLOAD_URL_PREFIX}${filename}`;
+    const destination = path.join(uploadDir, filename);
+    await writeFile(destination, buffer);
+    imageUrl = relativeUrl;
+  }
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { image: relativeUrl },
+    data: { image: imageUrl },
     select: { image: true },
   });
 
@@ -88,6 +103,12 @@ export async function POST(req: Request) {
   if (previousPath) {
     try {
       await unlink(previousPath);
+    } catch {
+      // Best effort cleanup only; a missing old avatar should not fail upload.
+    }
+  } else if (current.image?.includes(".blob.vercel-storage.com/")) {
+    try {
+      await deleteStoredFile(current.image);
     } catch {
       // Best effort cleanup only; a missing old avatar should not fail upload.
     }

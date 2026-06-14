@@ -6,7 +6,7 @@ import { Prisma, type Role, type Track, type TrackStatus } from "@prisma/client"
 import { normalizeTrack } from "@/lib/tracks";
 import { authOptions } from "@/lib/auth";
 import { canManageTrack } from "@/lib/permissions";
-import { s3PresignGetUrl } from "@/lib/s3";
+import { getStoredFileUrl } from "@/lib/file-storage";
 
 type Params = { track: string };
 
@@ -99,7 +99,7 @@ export async function GET(
         files: await Promise.all(
           row.order.files.map(async (file) => ({
             ...file,
-            url: await s3PresignGetUrl(file.url, FILE_URL_TTL_SEC),
+            url: (await getStoredFileUrl(file.url, FILE_URL_TTL_SEC)).url,
             uploadedBy: uploaderByFileId.get(file.id)?.uploadedBy ?? null,
             uploadedByName: uploaderByFileId.get(file.id)?.uploadedByName ?? null,
             uploadedByImage: uploaderByFileId.get(file.id)?.uploadedByImage ?? null,
