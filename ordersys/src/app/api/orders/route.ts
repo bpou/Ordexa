@@ -6,6 +6,7 @@ import { Track } from "@prisma/client";
 import { createFortnoxOrder, uploadFortnoxOrderConfirmation } from "@/lib/fortnox";
 import { upsertTrackEventToOutlook } from "@/lib/outlook";
 import { pusherServer } from "@/lib/pusher-server";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 
 // ====== Planerings-hjälpare (öppettider 07–16) ======
 const WORK_START_HOUR = 7;   // 07:00
@@ -141,7 +142,7 @@ export async function GET(req: NextRequest) {
 
   const validStatuses = ["INKOMMANDE","PAGAENDE","LEVERANS","AVSLUTAD"] as const;
 
-  const where: any = {};
+  const where: any = { ...onlyRealFortnoxOrders };
   if (track || status) {
     if (track && track !== "A" && track !== "B") {
       return NextResponse.json({ error: "Invalid track" }, { status: 400 });
@@ -253,16 +254,13 @@ export async function POST(req: NextRequest) {
       Price: Number(r.price ?? 0),
       Unit: r.unit || "st",
     }));
-  } else {
-    // default
-    rows = [
-      {
-        Description: title,
-        OrderedQuantity: 1,
-        Price: 0,
-        Unit: "st",
-      },
-    ];
+  }
+
+  if (!rows?.length) {
+    return NextResponse.json(
+      { error: "Minst en riktig Fortnox-rad kravs." },
+      { status: 400 }
+    );
   }
 
 

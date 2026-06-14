@@ -1,5 +1,5 @@
-// src/app/api/orders/archived/route.ts
 import { NextResponse } from "next/server";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -9,14 +9,15 @@ export const revalidate = 0;
 export async function GET() {
   const orders = await prisma.order.findMany({
     where: {
-      billingConfirmedAt: { not: null }, // ⬅️ arkiverade ordrar
+      ...onlyRealFortnoxOrders,
+      billingConfirmedAt: { not: null },
     },
     orderBy: { billingConfirmedAt: "desc" },
     select: {
       orderNumber: true,
       title: true,
       customerName: true,
-      billingConfirmedAt: true
+      billingConfirmedAt: true,
     },
   });
 

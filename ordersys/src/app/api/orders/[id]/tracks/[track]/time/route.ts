@@ -6,6 +6,7 @@ import { normalizeTrack } from "@/lib/tracks";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canManageTrack } from "@/lib/permissions";
+import { onlyActiveOrders } from "@/lib/filters";
 
 type Params = { id: string; track: string };
 
@@ -84,7 +85,7 @@ export async function POST(
 
   try {
     const order = await prisma.order.findFirst({
-      where: { orderNumber: orderId, billingConfirmedAt: null },
+      where: { orderNumber: orderId, ...onlyActiveOrders },
       select: { orderNumber: true },
     });
 

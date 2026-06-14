@@ -9,6 +9,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { normalizeTrack } from "@/lib/tracks";
 import { canManageTrack } from "@/lib/permissions";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     if (!orderId || !file) {
       return NextResponse.json({ error: "Missing orderId or file" }, { status: 400 });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
+      select: { orderNumber: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     const normalizedTrack =

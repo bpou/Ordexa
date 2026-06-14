@@ -1,5 +1,6 @@
 // src/app/api/calendar/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { onlyActiveOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import type { Track, TrackStatus, CalendarLabel } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest) {
       plannedEndAt: { not: null },
       status: { not: "AVSLUTAD" },
       order: {
-        billingConfirmedAt: null,
+        ...onlyActiveOrders,
         events: {
           none: {
             track: trackFilter,
@@ -158,7 +159,7 @@ export async function GET(req: NextRequest) {
   }
 
   const events: EventRow[] = await prisma.calendarEvent.findMany({
-    where: { track: trackFilter },
+    where: { track: trackFilter, order: onlyActiveOrders },
     select: {
       id: true,
       title: true,
@@ -203,7 +204,7 @@ export async function GET(req: NextRequest) {
       plannedStartAt: { not: null },
       plannedEndAt: { not: null },
       status: { not: "AVSLUTAD" },
-      order: { billingConfirmedAt: null },
+      order: onlyActiveOrders,
     },
     select: {
       orderId: true,

@@ -7,6 +7,7 @@ import {
 } from "@/components/dashboard-content-config";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { authOptions } from "@/lib/auth";
+import { onlyActiveOrders } from "@/lib/filters";
 import { type TrackStatus } from "@/lib/orderStatus";
 import { prisma } from "@/lib/prisma";
 import { APP_TRACKS, isAppTrack, type AppTrack } from "@/lib/tracks";
@@ -56,7 +57,7 @@ export default async function DashboardOverviewCards() {
   const visibleTracks = DASHBOARD_PERMS[role].tracks;
 
   const rawOrders = await prisma.order.findMany({
-    where: { billingConfirmedAt: null },
+    where: onlyActiveOrders,
     select: {
       dueDate: true,
       tracks: {

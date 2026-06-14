@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canManageBilling } from "@/lib/permissions";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export async function GET() {
 
   const orders = await prisma.order.findMany({
     where: {
+      ...onlyRealFortnoxOrders,
       ...(role === Role.SALJARE ? { createdById: userId } : {}),
       billingConfirmedAt: null,                     // ⬅️ ännu inte arkiverad
       AND: [

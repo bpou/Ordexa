@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import type { OrderTrack } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { getStoredFileUrl } from "@/lib/file-storage";
 
@@ -14,20 +15,19 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const { id: orderId } = await ctx.params;
 
-  const order = await prisma.order.findUnique({
-    where: { orderNumber: orderId },
+  const order = await prisma.order.findFirst({
+    where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
     include: {
       tracks: true,
       files: { orderBy: { createdAt: "desc" } },
     },
   });
 
-  const files = order
-    ? order.files
-    : await prisma.file.findMany({
-        where: { orderId },
-        orderBy: { createdAt: "desc" },
-      });
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  const files = order.files;
 
   const fileUploaders = files.length
     ? await prisma.$queryRaw<
@@ -79,17 +79,13 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   );
 
   const tracks =
-    order?.tracks?.map((t: OrderTrack) => ({
+    order.tracks.map((t: OrderTrack) => ({
       track: t.track,
       status: t.status,
       plannedStartAt: t.plannedStartAt?.toISOString() ?? null,
       plannedEndAt: t.plannedEndAt?.toISOString() ?? null,
       timeSpentMinutes: t.timeSpentMinutes ?? 0,
-    })) ??
-    ([
-      { track: "A", status: "INKOMMANDE", plannedStartAt: null, plannedEndAt: null, timeSpentMinutes: 0 },
-      { track: "B", status: "INKOMMANDE", plannedStartAt: null, plannedEndAt: null, timeSpentMinutes: 0 },
-    ] as const);
+    }));
 
   const timeEntries = await prisma.$queryRaw<
     Array<{
@@ -130,14 +126,14 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
   return NextResponse.json({
     order: {
-      orderNumber: order?.orderNumber ?? orderId,
-      title: order?.title ?? `Order ${orderId}`,
-      customerName: order?.customerName ?? null,
-      notes: order?.notes ?? null,
+      orderNumber: order.orderNumber,
+      title: order.title,
+      customerName: order.customerName ?? null,
+      notes: order.notes ?? null,
       tracks,
       timeEntries: serializedTimeEntries,
       files: signed,
-      billingConfirmedAt: order?.billingConfirmedAt?.toISOString() ?? null,
+      billingConfirmedAt: order.billingConfirmedAt?.toISOString() ?? null,
     },
   });
 }

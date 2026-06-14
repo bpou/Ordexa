@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TrackStatus } from "@prisma/client";
 import { APP_TRACKS, normalizeTrack, type AppTrack } from "@/lib/tracks";
+import { onlyActiveOrders } from "@/lib/filters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const normalizedTrack = normalizeTrack(searchParams.get("track") ?? undefined);
 
   const whereBase = {
-    order: { billingConfirmedAt: null },
+    order: onlyActiveOrders,
   } as const;
 
   const where = normalizedTrack
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
     const tracks = await prisma.orderTrack.findMany({
       where: {
         track: { in: [...APP_TRACKS] },
-        order: { billingConfirmedAt: null },
+        order: onlyActiveOrders,
       },
       select: { orderId: true, track: true, status: true },
     });

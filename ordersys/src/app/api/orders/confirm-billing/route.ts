@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canManageBilling } from "@/lib/permissions";
+import { onlyActiveOrders } from "@/lib/filters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
 
   await prisma.order.updateMany({
     where: {
+      ...onlyActiveOrders,
       orderNumber: { in: orderNumbers },
       ...(role === Role.SALJARE ? { createdById: userId } : {}),
     },

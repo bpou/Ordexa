@@ -7,6 +7,7 @@ import { normalizeTrack } from "@/lib/tracks";
 import { authOptions } from "@/lib/auth";
 import { canManageTrack } from "@/lib/permissions";
 import { getStoredFileUrl } from "@/lib/file-storage";
+import { onlyActiveOrders } from "@/lib/filters";
 
 type Params = { track: string };
 
@@ -41,9 +42,7 @@ export async function GET(
     rows = await prisma.orderTrack.findMany({
       where: {
         track: normalized as Track,
-        order: {
-          billingConfirmedAt: null,
-        },
+        order: onlyActiveOrders,
       },
       include: {
         order: {

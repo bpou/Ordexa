@@ -17,6 +17,7 @@ import {
 } from "@/components/dashboard-content-config";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { authOptions } from "@/lib/auth";
+import { onlyActiveOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { TRACK_SLUGS, type AppTrack } from "@/lib/tracks";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,7 @@ export default async function DashboardQuickActions({
 
   const invoiceReady = await prisma.order.count({
     where: {
-      billingConfirmedAt: null,
+      ...onlyActiveOrders,
       AND: [
         { tracks: { some: { track: "A", status: "AVSLUTAD" } } },
         { tracks: { some: { track: "B", status: "AVSLUTAD" } } },

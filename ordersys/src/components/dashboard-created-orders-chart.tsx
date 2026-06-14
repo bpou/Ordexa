@@ -6,6 +6,7 @@ import {
 } from "@/components/dashboard-content-config";
 import DashboardCreatedOrdersChartClient from "@/components/dashboard-created-orders-chart-client";
 import { authOptions } from "@/lib/auth";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 
 function formatMonthLabel(date: Date) {
@@ -44,6 +45,7 @@ export default async function DashboardCreatedOrdersChart() {
 
   const rawOrders = await prisma.order.findMany({
     where: {
+      ...onlyRealFortnoxOrders,
       createdAt: {
         gte: periodStart,
         lt: nextMonthStart,

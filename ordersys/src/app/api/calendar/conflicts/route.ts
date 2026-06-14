@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { onlyActiveOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import type { Track } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
@@ -185,6 +186,7 @@ export async function POST(req: NextRequest) {
     const existingEvents = await prisma.calendarEvent.findMany({
       where: { 
         track: normalizedTrack as Track,
+        order: onlyActiveOrders,
         // Don't include the event being checked (for updates)
         ...(eventId && { id: { not: eventId } })
       },
@@ -205,6 +207,7 @@ export async function POST(req: NextRequest) {
         plannedStartAt: { not: null },
         plannedEndAt: { not: null },
         status: { not: "AVSLUTAD" },
+        order: onlyActiveOrders,
         // Don't include the event being checked (for updates)
         ...(eventId && { orderId: { not: eventId } })
       },
