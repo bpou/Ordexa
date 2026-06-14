@@ -54,9 +54,9 @@ const sharedResponsibility = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Säkerhet | Ordina",
+  title: "Säkerhet | Ordexa",
   description:
-    "Läs hur Ordina arbetar med säkerhet: infrastruktur, kryptering, åtkomstkontroll och incidentprocesser.",
+    "Läs hur Ordexa arbetar med säkerhet: infrastruktur, kryptering, åtkomstkontroll och incidentprocesser.",
 };
 
 export default function SakerhetPage() {

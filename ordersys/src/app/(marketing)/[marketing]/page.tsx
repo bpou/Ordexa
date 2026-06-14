@@ -15,11 +15,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { marketing } = await params;
   const content = getMarketingPageContent(marketing);
   if (!content) {
-    return { title: "Ordina" };
+    return { title: "Ordexa" };
   }
 
   return {
-    title: `${content.title} | Ordina`,
+    title: `${content.title} | Ordexa`,
     description: content.description,
   };
 }

@@ -57,9 +57,9 @@ const rights = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Integritet | Ordina",
+  title: "Integritet | Ordexa",
   description:
-    "Så skyddar Ordina personuppgifter i order- och resursplanering. Läs om vilka data vi samlar in, varför och vilka rättigheter du har.",
+    "Så skyddar Ordexa personuppgifter i order- och resursplanering. Läs om vilka data vi samlar in, varför och vilka rättigheter du har.",
 };
 
 export default function IntegritetPage() {

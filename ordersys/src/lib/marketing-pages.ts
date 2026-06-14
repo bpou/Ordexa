@@ -202,7 +202,7 @@ export const MARKETING_PAGE_CONTENT: Record<MarketingPageSlug, MarketingPageCont
 
   about: {
     kicker: "Företag",
-    title: "Om Ordina",
+    title: "Om Ordexa",
     description:
       "Ordina hjälper företag inom verkstad, tillverkning och hantverk att gå från manuella listor och papper till ett digitalt, samlat orderflöde.",
     sections: [

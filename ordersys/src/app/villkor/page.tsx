@@ -41,9 +41,9 @@ const termination = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Villkor | Ordina",
+  title: "Villkor | Ordexa",
   description:
-    "Allmänna villkor för Ordina - ditt ordersystem för planering, produktion och fakturering.",
+    "Allmänna villkor för Ordexa - ditt ordersystem för planering, produktion och fakturering.",
 };
 
 export default function VillkorPage() {

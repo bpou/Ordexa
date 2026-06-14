@@ -1,7 +1,7 @@
 {
-  "name": "OrderSys",
-  "short_name": "OrderSys",
-  "description": "Order management system",
+  "name": "Ordexa",
+  "short_name": "Ordexa",
+  "description": "Ordexa order management system",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#288a65",

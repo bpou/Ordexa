@@ -5,8 +5,8 @@ import { authOptions } from "@/lib/auth";
 import AccountClient from "./AccountClient";
 
 export const metadata: Metadata = {
-  title: "Mitt konto | Ordina",
-  description: "Hantera dina personliga uppgifter, notiser och sakerhetsinstallningar i Ordina.",
+  title: "Mitt konto | Ordexa",
+  description: "Hantera dina personliga uppgifter, notiser och sakerhetsinstallningar i Ordexa.",
 };
 
 export default async function AccountPage() {

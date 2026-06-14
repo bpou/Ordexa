@@ -17,9 +17,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata = {
-  title: "Ordina",
+  title: "Ordexa",
   description:
-    "Ordina – smidigt orderhanteringssystem för hantverkare som vill följa jobb från offert till faktura.",
+    "Ordexa - smidigt orderhanteringssystem för hantverkare som vill följa jobb från offert till faktura.",
   icons: { icon: "/favicon.svg" },
 };
 

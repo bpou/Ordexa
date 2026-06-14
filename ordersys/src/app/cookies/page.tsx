@@ -33,9 +33,9 @@ const cookieInventory = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Cookies | Ordina",
+  title: "Cookies | Ordexa",
   description:
-    "Lär dig hur Ordina använder cookies för att leverera säker inloggning, bättre planering och förfinade upplevelser.",
+    "Lär dig hur Ordexa använder cookies för att leverera säker inloggning, bättre planering och förfinade upplevelser.",
 };
 
 export default function CookiesPage() {
