@@ -59,7 +59,7 @@ type Draft = {
   recurrence: "none" | "daily" | "weekly";
 };
 
-type DragHandle = "top" | "bottom" | null;
+type DragHandle = "top" | "bottom" | "middle" | null;
 
 type CalendarResponse = { events?: EventInput[] };
 
@@ -336,6 +336,15 @@ export default function OutlookCalendarClient() {
   useEffect(() => {
     if (dialogOpen) {
       setPreviewDate(new Date(draft.start));
+      const container = document.querySelector("[data-event-preview-container]") as HTMLElement | null;
+      if (!container) return;
+      const block = container.querySelector("[data-event-preview-block]") as HTMLElement | null;
+      if (!block) return;
+      const blockTop = parseFloat(block.style.top) || 0;
+      const blockHeight = parseFloat(block.style.height) || 0;
+      const containerHeight = container.clientHeight;
+      const scrollTo = blockTop - containerHeight / 2 + blockHeight / 2;
+      container.scrollTo({ top: Math.max(0, scrollTo), behavior: "smooth" });
     }
   }, [dialogOpen, draft.start]);
 
@@ -589,8 +598,8 @@ export default function OutlookCalendarClient() {
   }, [draft.id, load, saving]);
 
   const MINUTES_PER_PX = 1;
-  const PREVIEW_START_HOUR = 7;
-  const PREVIEW_HOURS = 17;
+  const PREVIEW_START_HOUR = 0;
+  const PREVIEW_HOURS = 24;
 
   const pxToMinutes = useCallback((px: number, baseHour: number) => {
     return Math.max(0, baseHour - PREVIEW_START_HOUR) * 60 + px;
@@ -604,33 +613,57 @@ export default function OutlookCalendarClient() {
     return toLocalInputValue(d);
   }, []);
 
-  const startDrag = useCallback((handle: "top" | "bottom", event: React.MouseEvent) => {
+  const startDrag = useCallback((handle: "top" | "bottom" | "middle", event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     const rect = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
     const startY = event.clientY - rect.top;
     setDragHandle(handle);
     setDragStartY(startY);
-    setDragStartValue(handle === "top" ? draft.start : draft.end);
+    if (handle === "middle") {
+      setDragStartValue(draft.start);
+    } else {
+      setDragStartValue(handle === "top" ? draft.start : draft.end);
+    }
   }, [draft.start, draft.end]);
 
   useEffect(() => {
     if (!dragHandle) return;
 
+    let scrollContainer: HTMLElement | null = null;
+    let scrollYAtStart = 0;
+
     const onMove = (event: MouseEvent) => {
       const dragEl = document.querySelector("[data-event-preview-block]") as HTMLElement | null;
       if (!dragEl) return;
-      const rect = dragEl.closest("[data-event-preview-container]")?.getBoundingClientRect();
-      if (!rect) return;
+      scrollContainer = dragEl.closest("[data-event-preview-container]") as HTMLElement | null;
+      if (!scrollContainer) return;
 
-      const currentY = event.clientY - rect.top;
+      if (scrollYAtStart === 0) {
+        scrollYAtStart = scrollContainer.scrollTop;
+      }
+
+      const rect = scrollContainer.getBoundingClientRect();
+      const currentY = event.clientY - rect.top + (scrollContainer.scrollTop - scrollYAtStart);
       const deltaPx = currentY - dragStartY;
       const deltaMinutes = Math.round(deltaPx * MINUTES_PER_PX / 15) * 15;
 
-      const baseDate = new Date(dragStartValue);
-      const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
-
-      if (dragHandle === "top") {
+      if (dragHandle === "middle") {
+        const baseDate = new Date(dragStartValue);
+        const startTotal = new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes();
+        const endTotal = new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes();
+        const duration = endTotal - startTotal;
+        const newStartMinutes = Math.max(0, Math.min(24 * 60 - duration, startTotal + deltaMinutes));
+        const newEndMinutes = newStartMinutes + duration;
+        if (newStartMinutes < 0 || newEndMinutes > 24 * 60) return;
+        setDraft((prev) => ({
+          ...prev,
+          start: minutesToLocalValue(baseDate, newStartMinutes),
+          end: minutesToLocalValue(baseDate, newEndMinutes),
+        }));
+      } else if (dragHandle === "top") {
+        const baseDate = new Date(dragStartValue);
+        const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
         const newStartMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
         const endTotalMinutes = new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes();
         if (newStartMinutes >= endTotalMinutes - 15) return;
@@ -638,7 +671,9 @@ export default function OutlookCalendarClient() {
           ...prev,
           start: minutesToLocalValue(baseDate, newStartMinutes),
         }));
-      } else {
+      } else if (dragHandle === "bottom") {
+        const baseDate = new Date(dragStartValue);
+        const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
         const newEndMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
         const startTotalMinutes = new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes();
         if (newEndMinutes <= startTotalMinutes + 15) return;
@@ -698,11 +733,9 @@ export default function OutlookCalendarClient() {
     () =>
       events.filter((e: any) => {
         const label = e.extendedProps?.label as Label | null | undefined;
-        if (label === "UTFORT_ARBETE") return false;
-        if (!label) return true;
-        return activeCalendars.includes(label);
+        return label !== "UTFORT_ARBETE";
       }),
-    [events, activeCalendars],
+    [events],
   );
 
   const eventsByLabel = useMemo(() => {
@@ -1321,13 +1354,13 @@ export default function OutlookCalendarClient() {
                 </div>
                 <div
                   data-event-preview-container
-                  className="relative h-[calc(100%-48px)] overflow-hidden select-none"
-                  style={{ cursor: dragHandle === "top" ? "ns-resize" : dragHandle === "bottom" ? "ns-resize" : "default" }}
+                  className="relative h-[calc(100%-48px)] overflow-y-auto select-none"
+                  style={{ cursor: dragHandle === "middle" ? "grabbing" : dragHandle ? "ns-resize" : "default" }}
                 >
                   {Array.from({ length: PREVIEW_HOURS }, (_, index) => index + PREVIEW_START_HOUR).map((hour) => (
                     <div key={hour} className="grid h-[60px] grid-cols-[48px_1fr] border-b border-[#d4d8de]">
                       <div className="border-r border-[#d4d8de] px-2 pt-1 text-right text-sm text-[#717b87]">
-                        {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                        {hour === 0 ? "12 AM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                       </div>
                       <div className="bg-white" />
                     </div>
@@ -1336,21 +1369,28 @@ export default function OutlookCalendarClient() {
                     data-event-preview-block
                     className="absolute left-[58px] right-5 rounded-sm bg-[#4cc773] text-sm font-semibold text-black"
                     style={{
-                      top: `${Math.max(0, (new Date(draft.start).getHours() - PREVIEW_START_HOUR) * 60 + new Date(draft.start).getMinutes())}px`,
+                      top: `${new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes()}px`,
                       height: `${Math.max(30, (new Date(draft.end).getTime() - new Date(draft.start).getTime()) / 60_000)}px`,
                     }}
                   >
                     <div
                       className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa]"
                       onMouseDown={(e) => startDrag("top", e)}
+                      aria-label="Resize start"
                     />
-                    <div className="px-2 py-1" style={{ paddingTop: "8px" }}>
+                    <div
+                      className="absolute inset-x-0 top-2 bottom-2 cursor-grab hover:bg-[#4cc77322] flex items-center justify-center"
+                      onMouseDown={(e) => startDrag("middle", e)}
+                      aria-label="Move event"
+                    />
+                    <div className="relative px-2 py-1" style={{ paddingTop: "8px" }}>
                       {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
                       {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                     </div>
                     <div
                       className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa] rounded-b-sm"
                       onMouseDown={(e) => startDrag("bottom", e)}
+                      aria-label="Resize end"
                     />
                   </div>
                 </div>
