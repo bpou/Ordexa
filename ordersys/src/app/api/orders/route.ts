@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Track } from "@prisma/client";
 import { createFortnoxOrder, uploadFortnoxOrderConfirmation } from "@/lib/fortnox";
+import { upsertTrackEventToOutlook } from "@/lib/outlook";
+import { pusherServer } from "@/lib/pusher-server";
 
 // ====== Planerings-hjälpare (öppettider 07–16) ======
 const WORK_START_HOUR = 7;   // 07:00
@@ -497,6 +499,36 @@ export async function POST(req: NextRequest) {
       },
       ...(calendarEventsData.length ? { events: { create: calendarEventsData } } : {}),
     },
+    select: {
+      orderNumber: true,
+      events: {
+        select: {
+          id: true,
+          track: true,
+        },
+      },
+    },
+  });
+
+  for (const event of order.events) {
+    try {
+      await upsertTrackEventToOutlook(event.id);
+    } catch (error) {
+      console.error(`Failed to sync created order event ${event.id} to Outlook:`, error);
+    }
+  }
+
+  const syncedTracks = Array.from(new Set(order.events.map((event) => event.track)));
+  await Promise.all(
+    syncedTracks.map((track) =>
+      pusherServer.trigger(`track-${track}-calendar`, "calendar:refresh", {
+        source: "ordexa",
+        at: new Date().toISOString(),
+        track,
+      })
+    )
+  ).catch((error) => {
+    console.error("Failed to push track calendar refresh after order creation:", error);
   });
 
   const scheduleResponse = PLANNING_TRACKS.reduce<Record<string, { start: string; end: string } | null>>(

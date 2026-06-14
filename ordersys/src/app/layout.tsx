@@ -12,6 +12,7 @@ import { AppSessionProvider } from "@/components/AppSessionProvider";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -151,6 +152,7 @@ export default async function RootLayout({
             <Footer />
           </div>
         </AppSessionProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

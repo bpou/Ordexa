@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import type { Track, TrackStatus, CalendarLabel } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
-import { ensureTrackOutlookSubscription } from "@/lib/outlook";
+import {
+  ensureTrackOutlookSubscription,
+  upsertTrackEventToOutlook,
+} from "@/lib/outlook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +84,70 @@ export async function GET(req: NextRequest) {
     await ensureTrackOutlookSubscription(trackFilter, req.nextUrl.origin);
   } catch (error) {
     console.error(`Failed to ensure Outlook subscription for track ${trackFilter}:`, error);
+  }
+
+  const missingCalendarEvents = await prisma.orderTrack.findMany({
+    where: {
+      track: trackFilter,
+      plannedStartAt: { not: null },
+      plannedEndAt: { not: null },
+      status: { not: "AVSLUTAD" },
+      order: {
+        billingConfirmedAt: null,
+        events: {
+          none: {
+            track: trackFilter,
+          },
+        },
+      },
+    },
+    select: {
+      orderId: true,
+      plannedStartAt: true,
+      plannedEndAt: true,
+      order: {
+        select: {
+          title: true,
+          customerName: true,
+          deliveryAddress: true,
+        },
+      },
+    },
+  });
+
+  for (const item of missingCalendarEvents) {
+    if (!item.plannedStartAt || !item.plannedEndAt) continue;
+
+    const baseTitle = item.order?.title ?? `Order ${item.orderId}`;
+    const title = item.order?.customerName
+      ? `${baseTitle} - ${item.order.customerName}`
+      : baseTitle;
+    const notes = item.order?.deliveryAddress ?? null;
+
+    try {
+      const created = await prisma.calendarEvent.create({
+        data: {
+          orderId: item.orderId,
+          track: trackFilter,
+          start: item.plannedStartAt,
+          end: item.plannedEndAt,
+          title,
+          notes,
+        },
+        select: { id: true },
+      });
+
+      try {
+        await upsertTrackEventToOutlook(created.id);
+      } catch (error) {
+        console.error(`Failed to sync materialized track event ${created.id} to Outlook:`, error);
+      }
+    } catch (error) {
+      console.error(
+        `Failed to materialize missing calendar event for order ${item.orderId} track ${trackFilter}:`,
+        error
+      );
+    }
   }
 
   const events: EventRow[] = await prisma.calendarEvent.findMany({

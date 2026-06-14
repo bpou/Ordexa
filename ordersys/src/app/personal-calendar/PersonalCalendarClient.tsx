@@ -50,6 +50,7 @@ type CalendarEventResponse = { events?: EventInput[] };
 type OutlookConnectionStatus = {
   configured: boolean;
   connected: boolean;
+  userManaged?: boolean;
   lastSyncedAt?: string | null;
   error?: string;
 };
@@ -341,17 +342,15 @@ export default function PersonalCalendarClient() {
 
       const connection = await safeJson<OutlookConnectionStatus>(
         connectionRes,
-        { configured: false, connected: false }
+        { configured: false, connected: false, userManaged: true }
       );
-      setOutlookConnection(connection);
-
       setOutlookConnection(connection);
 
       if (!connectionRes.ok) {
         setActionError(connection.error ?? "Kunde inte läsa Outlook-status.");
       }
     } catch (error: any) {
-      setOutlookConnection({ configured: false, connected: false });
+      setOutlookConnection({ configured: false, connected: false, userManaged: true });
       setActionError(error?.message ?? "Kunde inte läsa Outlook-status.");
     }
   }, []);
@@ -433,7 +432,7 @@ export default function PersonalCalendarClient() {
       });
       const connection = await safeJson<OutlookConnectionStatus>(
         connectionRes,
-        { configured: false, connected: false }
+        { configured: false, connected: false, userManaged: true }
       );
 
       if (!connectionRes.ok) {
@@ -443,6 +442,11 @@ export default function PersonalCalendarClient() {
 
       if (!connection.configured) {
         setActionError("Outlook är inte konfigurerat på den här miljön ännu.");
+        return;
+      }
+
+      if (connection.userManaged === false) {
+        setActionError("Spårkalendrarna hanteras av backend och kan inte synkas manuellt här.");
         return;
       }
 
@@ -848,12 +852,15 @@ export default function PersonalCalendarClient() {
                     Outlook ansluten
                   </span>
                   <span className="text-xs text-sky-700">
-                    Kalendern uppdateras automatiskt
+                    {outlookConnection.userManaged === false
+                      ? "Spårkalendrarna hanteras av backend"
+                      : "Kalendern uppdateras automatiskt"}
                   </span>
                 </span>
               </div>
             ) : null}
-            {(!outlookConnection?.configured || !outlookConnection.connected) ? (
+            {outlookConnection?.userManaged !== false &&
+            (!outlookConnection?.configured || !outlookConnection.connected) ? (
             <button
               type="button"
               onClick={() => void handleOutlookSync()}

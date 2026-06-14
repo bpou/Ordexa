@@ -6,6 +6,7 @@ import {
   ensureOutlookSubscriptionForUser,
   exchangeOutlookCodeForTokens,
   fetchOutlookProfile,
+  isManagedTrackOutlookSyncUser,
   isOutlookSchemaMissingError,
   syncOutlookCalendarForUser,
 } from "@/lib/outlook";
@@ -21,6 +22,12 @@ export async function GET(req: Request) {
 
   if (!userId) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return NextResponse.redirect(
+      new URL("/account?outlook_error=managed_track_sync", req.url)
+    );
   }
 
   const url = new URL(req.url);

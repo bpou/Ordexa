@@ -207,6 +207,20 @@ function getSharedOutlookSyncUserEmail() {
   return process.env.OUTLOOK_SHARED_SYNC_USER_EMAIL?.trim().toLowerCase() || null;
 }
 
+export async function isManagedTrackOutlookSyncUser(userId: string) {
+  const email = getSharedOutlookSyncUserEmail();
+  if (!email) {
+    return false;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  return user?.email.toLowerCase() === email;
+}
+
 function getTrackCalendarId(track: Track) {
   switch (track) {
     case Track.A:
@@ -960,7 +974,7 @@ async function upsertLocalPersonalEventFromGraph(
         allDay: isAllDay,
         start,
         end,
-        track: Track.B,
+        track: Track.SHARED,
         visibility: EventVisibility.PERSONAL,
         ownerUserId: userId,
       },
@@ -979,7 +993,7 @@ async function upsertLocalPersonalEventFromGraph(
 
   const personalEvent = await prisma.personalCalendarEvent.create({
     data: {
-      track: Track.B,
+      track: Track.SHARED,
       title,
       label: null,
       notes,
@@ -1259,6 +1273,12 @@ export async function upsertTrackEventToOutlook(calendarEventId: string) {
     return { synced: false, reason: "missing_shared_connection" as const };
   }
 
+  try {
+    await ensureTrackOutlookSubscription(event.track);
+  } catch (error) {
+    console.error(`Failed to ensure Outlook subscription for track ${event.track}:`, error);
+  }
+
   const { accessToken } = await getValidAccessToken(connection.id);
 
   if (event.outlookTrackSync?.externalEventId) {
@@ -1521,6 +1541,10 @@ export async function syncOutlookCalendarForUser(
   userId: string,
   options?: { force?: boolean }
 ): Promise<SyncResult> {
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return { connected: true, skipped: true, created: 0, updated: 0, deleted: 0 };
+  }
+
   let connection;
   try {
     connection = await prisma.outlookCalendarConnection.findUnique({
@@ -1597,7 +1621,7 @@ export async function syncOutlookCalendarForUser(
             allDay: isAllDay,
             start,
             end,
-            track: Track.B,
+            track: Track.SHARED,
             visibility: EventVisibility.PERSONAL,
             ownerUserId: userId,
           },
@@ -1617,7 +1641,7 @@ export async function syncOutlookCalendarForUser(
 
       const personalEvent = await prisma.personalCalendarEvent.create({
         data: {
-          track: Track.B,
+          track: Track.SHARED,
           title,
           label: null,
           notes,
@@ -1706,6 +1730,10 @@ export async function upsertPersonalEventToOutlook(personalEventId: string) {
 
   if (event.visibility !== EventVisibility.PERSONAL || !event.ownerUserId) {
     return { synced: false, reason: "not_personal" as const };
+  }
+
+  if (await isManagedTrackOutlookSyncUser(event.ownerUserId)) {
+    return { synced: false, reason: "managed_track_sync" as const };
   }
 
   if (!isOutlookConfigured()) {
@@ -1815,6 +1843,10 @@ export async function removePersonalEventFromOutlook(personalEventId: string) {
 
   if (!syncRow) {
     return { synced: false, reason: "not_synced" as const };
+  }
+
+  if (await isManagedTrackOutlookSyncUser(syncRow.connection.userId)) {
+    return { synced: false, reason: "managed_track_sync" as const };
   }
 
   if (!isOutlookConfigured()) {

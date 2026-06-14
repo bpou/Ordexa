@@ -6,6 +6,7 @@ import {
   clearOutlookSubscriptionForUser,
   ensureOutlookSubscriptionForUser,
   isOutlookConfigured,
+  isManagedTrackOutlookSyncUser,
   isOutlookSchemaMissingError,
 } from "@/lib/outlook";
 
@@ -21,7 +22,10 @@ export async function GET(req: Request) {
   }
 
   try {
-    await ensureOutlookSubscriptionForUser(userId, new URL(req.url).origin);
+    const userManaged = !(await isManagedTrackOutlookSyncUser(userId));
+    if (userManaged) {
+      await ensureOutlookSubscriptionForUser(userId, new URL(req.url).origin);
+    }
     const connection = await prisma.outlookCalendarConnection.findUnique({
       where: { userId },
     });
@@ -29,6 +33,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       configured: isOutlookConfigured(new URL(req.url).origin),
       connected: Boolean(connection),
+      userManaged,
       displayName: connection?.displayName ?? null,
       providerEmail: connection?.providerEmail ?? null,
       expiresAt: connection?.expiresAt?.toISOString() ?? null,
@@ -40,6 +45,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         configured: isOutlookConfigured(new URL(req.url).origin),
         connected: false,
+        userManaged: true,
         displayName: null,
         providerEmail: null,
         expiresAt: null,
@@ -63,7 +69,15 @@ export async function DELETE() {
   try {
     connection = await prisma.outlookCalendarConnection.findUnique({
       where: { userId },
-      include: { syncedEvents: true },
+      include: {
+        syncedEvents: true,
+        _count: {
+          select: {
+            trackSyncedEvents: true,
+            trackSubscriptions: true,
+          },
+        },
+      },
     });
   } catch (error) {
     if (isOutlookSchemaMissingError(error)) {
@@ -74,6 +88,18 @@ export async function DELETE() {
 
   if (!connection) {
     return NextResponse.json({ ok: true });
+  }
+
+  const isManagedTrackSync =
+    (await isManagedTrackOutlookSyncUser(userId)) ||
+    connection._count.trackSyncedEvents > 0 ||
+    connection._count.trackSubscriptions > 0;
+
+  if (isManagedTrackSync) {
+    return NextResponse.json(
+      { error: "Track Outlook calendars are managed by the backend and cannot be disconnected here." },
+      { status: 403 }
+    );
   }
 
   await clearOutlookSubscriptionForUser(userId);

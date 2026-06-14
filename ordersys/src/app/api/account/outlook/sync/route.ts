@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
   ensureOutlookSubscriptionForUser,
+  isManagedTrackOutlookSyncUser,
   isOutlookSchemaMissingError,
   syncOutlookCalendarForUser,
 } from "@/lib/outlook";
@@ -16,6 +17,13 @@ export async function POST(req: Request) {
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return NextResponse.json(
+      { error: "Track Outlook calendars are managed by the backend and cannot be manually resynced here." },
+      { status: 403 }
+    );
   }
 
   try {

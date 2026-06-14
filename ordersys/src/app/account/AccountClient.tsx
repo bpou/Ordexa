@@ -62,6 +62,7 @@ type FortnoxConnectionStatus = {
 type OutlookConnectionStatus = {
   configured: boolean;
   connected: boolean;
+  userManaged: boolean;
   displayName: string | null;
   providerEmail: string | null;
   expiresAt: string | null;
@@ -170,7 +171,7 @@ export default function AccountClient({ user }: AccountClientProps) {
         const data = await res.json();
         if (cancelled) return;
         setOutlookStatus(data as OutlookConnectionStatus);
-        if (data.connected) {
+        if (data.connected && data.userManaged !== false) {
           fetchOutlookCalendars();
         }
       } catch (error) {
@@ -526,11 +527,13 @@ export default function AccountClient({ user }: AccountClientProps) {
   }
 
   function connectOutlook() {
+    if (outlookStatus?.userManaged === false) return;
     setOutlookBusy(true);
     window.location.href = "/api/account/outlook/oauth/start";
   }
 
   async function syncOutlook() {
+    if (outlookStatus?.userManaged === false) return;
     setOutlookBusy(true);
     setOutlookMessage(null);
     try {
@@ -551,6 +554,7 @@ export default function AccountClient({ user }: AccountClientProps) {
   }
 
   async function disconnectOutlook() {
+    if (outlookStatus?.userManaged === false) return;
     if (!window.confirm("Vill du koppla bort Outlook och ta bort synkade kalenderposter?")) return;
     setOutlookBusy(true);
     setOutlookMessage(null);
@@ -616,6 +620,8 @@ export default function AccountClient({ user }: AccountClientProps) {
       minute: "2-digit",
     });
   }, [outlookStatus?.expiresAt]);
+
+  const outlookUserManaged = outlookStatus?.userManaged !== false;
 
   const headerAnimation = {
     hidden: { opacity: 0, y: 16 },
@@ -1015,7 +1021,7 @@ export default function AccountClient({ user }: AccountClientProps) {
               </Button>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-foreground">Outlook-kalender</p>
+              <p className="text-sm font-semibold text-foreground">Personlig Outlook-kalender</p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Koppla din Outlook-kalender och synka händelser till din personliga kalender i Ordexa.
               </p>
@@ -1024,6 +1030,11 @@ export default function AccountClient({ user }: AccountClientProps) {
                   <p>Hämtar Outlook-status...</p>
                 ) : !outlookStatus?.configured ? (
                   <p>Outlook är inte konfigurerat på den här miljön ännu.</p>
+                ) : !outlookUserManaged ? (
+                  <>
+                    <p>Spårkalendrarna A, B, C och D hanteras av backend.</p>
+                    <p>Den här Outlook-kopplingen kan inte synkas om eller kopplas bort här.</p>
+                  </>
                 ) : outlookStatus.connected ? (
                   <>
                     <p>
@@ -1057,7 +1068,7 @@ export default function AccountClient({ user }: AccountClientProps) {
                         </select>
                       </div>
                     )}
-                    <p className="mt-2">Synkas till din personliga kalender som privata poster på Spår B (Verkstad).</p>
+                    <p className="mt-2">Synkas till din personliga kalender som privata poster bara för ditt konto.</p>
                     <p>Token giltig till: {outlookRenewal || "Okänt"}</p>
                     <p>
                       Senaste synk:{" "}
@@ -1073,23 +1084,25 @@ export default function AccountClient({ user }: AccountClientProps) {
                   <p>Ingen Outlook-koppling hittades.</p>
                 )}
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={connectOutlook} disabled={outlookBusy || !outlookStatus?.configured}>
-                  <Link2 className="h-4 w-4" aria-hidden />
-                  {outlookStatus?.connected ? "Koppla om Outlook" : "Koppla Outlook"}
-                </Button>
-                {outlookStatus?.connected ? (
-                  <>
-                    <Button variant="outline" size="sm" onClick={() => void syncOutlook()} disabled={outlookBusy}>
-                      <RefreshCw className="h-4 w-4" aria-hidden />
-                      Synka nu
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => void disconnectOutlook()} disabled={outlookBusy}>
-                      Koppla bort
-                    </Button>
-                  </>
-                ) : null}
-              </div>
+              {outlookUserManaged ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={connectOutlook} disabled={outlookBusy || !outlookStatus?.configured}>
+                    <Link2 className="h-4 w-4" aria-hidden />
+                    {outlookStatus?.connected ? "Koppla om Outlook" : "Koppla Outlook"}
+                  </Button>
+                  {outlookStatus?.connected ? (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => void syncOutlook()} disabled={outlookBusy}>
+                        <RefreshCw className="h-4 w-4" aria-hidden />
+                        Synka nu
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => void disconnectOutlook()} disabled={outlookBusy}>
+                        Koppla bort
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
               {outlookMessage ? (
                 <p
                   className={`mt-3 text-xs ${

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { fetchOutlookCalendars, getValidAccessToken, isOutlookSchemaMissingError } from "@/lib/outlook";
+import {
+  fetchOutlookCalendars,
+  getValidAccessToken,
+  isManagedTrackOutlookSyncUser,
+  isOutlookSchemaMissingError,
+} from "@/lib/outlook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +18,13 @@ export async function GET() {
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return NextResponse.json(
+      { error: "Track Outlook calendars are managed by the backend." },
+      { status: 403 }
+    );
   }
 
   let connection;
@@ -50,6 +62,13 @@ export async function POST(req: Request) {
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return NextResponse.json(
+      { error: "Track Outlook calendars are managed by the backend." },
+      { status: 403 }
+    );
   }
 
   const { calendarId } = await req.json();

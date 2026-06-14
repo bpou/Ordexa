@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { buildOutlookAuthorizeUrl } from "@/lib/outlook";
+import { buildOutlookAuthorizeUrl, isManagedTrackOutlookSyncUser } from "@/lib/outlook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,8 +11,15 @@ const STATE_COOKIE = "ordexa_outlook_oauth_state";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (await isManagedTrackOutlookSyncUser(userId)) {
+    return NextResponse.redirect(
+      new URL("/account?outlook_error=managed_track_sync", req.url)
+    );
   }
 
   try {
