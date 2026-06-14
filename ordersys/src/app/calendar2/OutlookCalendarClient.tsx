@@ -153,6 +153,27 @@ function labelFor(value?: string | null) {
   return LABELS.find((item) => item.value === value) ?? LABELS[0];
 }
 
+function darkenHex(hex: string, amount = 0.18) {
+  const normalized = hex.replace("#", "").trim();
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((part) => part + part)
+          .join("")
+      : normalized;
+
+  if (!/^[0-9a-f]{6}$/i.test(full)) return hex;
+
+  const factor = 1 - amount;
+  const parts = [0, 2, 4].map((start) => {
+    const value = Math.max(0, Math.min(255, Math.round(parseInt(full.slice(start, start + 2), 16) * factor)));
+    return value.toString(16).padStart(2, "0");
+  });
+
+  return `#${parts.join("")}`;
+}
+
 function formatRangeTitle(date: Date, view: CalendarView) {
   if (view === "dayGridMonth") {
     return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
@@ -185,14 +206,16 @@ function normalizeEvents(events: EventInput[]) {
     const label = labelFor(event.extendedProps?.label);
     const status = event.extendedProps?.status as TrackStatus | undefined;
     const statusColor = status ? STATUS_COLOR_PARTS[status] : null;
+    const backgroundColor = statusColor?.bgHex ?? label.color;
     return {
       ...event,
       id: event.id,
-      backgroundColor: statusColor?.bgHex ?? label.color,
-      borderColor: statusColor?.borderHex ?? label.color,
+      backgroundColor,
+      borderColor: backgroundColor,
       textColor: statusColor?.textHex ?? "#ffffff",
       extendedProps: {
         ...(event.extendedProps ?? {}),
+        accentColor: darkenHex(backgroundColor),
         realId: event.extendedProps?.realId ?? event.id,
         label: event.extendedProps?.label ?? label.value,
         status,
@@ -370,10 +393,12 @@ export default function OutlookCalendarClient() {
   const setCalendarLabel = useCallback(
     async (eventId: string, persistId: string, label: Label) => {
       const color = labelFor(label);
+      const accentColor = darkenHex(color.color);
       const calendarEvent = api()?.getEventById(eventId);
       calendarEvent?.setProp("backgroundColor", color.color);
       calendarEvent?.setProp("borderColor", color.color);
       calendarEvent?.setProp("textColor", "#ffffff");
+      calendarEvent?.setExtendedProp("accentColor", accentColor);
       calendarEvent?.setExtendedProp("label", label);
       calendarEvent?.setExtendedProp("status", undefined);
 
@@ -385,7 +410,7 @@ export default function OutlookCalendarClient() {
                 backgroundColor: color.color,
                 borderColor: color.color,
                 textColor: "#ffffff",
-                extendedProps: { ...(event.extendedProps ?? {}), label, status: undefined },
+                extendedProps: { ...(event.extendedProps ?? {}), accentColor, label, status: undefined },
               }
             : event,
         ),
@@ -411,10 +436,12 @@ export default function OutlookCalendarClient() {
   const setEventStatus = useCallback(
     async (eventId: string, persistId: string, status: TrackStatus, track?: "A" | "B" | "C" | "D") => {
       const statusColor = STATUS_COLOR_PARTS[status];
+      const accentColor = darkenHex(statusColor.bgHex);
       const calendarEvent = api()?.getEventById(eventId);
       calendarEvent?.setProp("backgroundColor", statusColor.bgHex);
-      calendarEvent?.setProp("borderColor", statusColor.borderHex);
+      calendarEvent?.setProp("borderColor", statusColor.bgHex);
       calendarEvent?.setProp("textColor", statusColor.textHex);
+      calendarEvent?.setExtendedProp("accentColor", accentColor);
       calendarEvent?.setExtendedProp("status", status);
       calendarEvent?.setExtendedProp("label", null);
 
@@ -424,9 +451,9 @@ export default function OutlookCalendarClient() {
             ? {
                 ...event,
                 backgroundColor: statusColor.bgHex,
-                borderColor: statusColor.borderHex,
+                borderColor: statusColor.bgHex,
                 textColor: statusColor.textHex,
-                extendedProps: { ...(event.extendedProps ?? {}), status, label: null },
+                extendedProps: { ...(event.extendedProps ?? {}), accentColor, status, label: null },
               }
             : event,
         ),
@@ -782,7 +809,15 @@ export default function OutlookCalendarClient() {
                 };
               }}
               eventContent={(arg) => (
-                <div className="truncate px-1.5 py-1 text-[12px] leading-tight">
+                <div className="relative h-full min-h-full truncate py-1 pl-2.5 pr-1.5 text-[12px] leading-tight">
+                  <span
+                    className="absolute inset-y-0 left-0 w-1"
+                    style={{
+                      backgroundColor:
+                        (arg.event.extendedProps?.accentColor as string | undefined) ??
+                        darkenHex(arg.event.backgroundColor || "#059669"),
+                    }}
+                  />
                   {arg.view.type === "dayGridMonth" && arg.timeText ? <span className="font-semibold">{arg.timeText} </span> : null}
                   <span>{arg.event.title || "(Inget ämne)"}</span>
                 </div>
@@ -1034,7 +1069,6 @@ export default function OutlookCalendarClient() {
         }
         .outlook2 .fc-timegrid-event {
           border: 0 !important;
-          border-left: 4px solid var(--fc-event-border-color) !important;
           border-radius: 4px;
           box-shadow: none;
           margin-inline-end: 2px;
@@ -1051,7 +1085,6 @@ export default function OutlookCalendarClient() {
         .outlook2 .fc-timegrid-event:active {
           outline: 2px solid #23272f;
           outline-offset: -2px;
-          border-left-color: transparent !important;
         }
         .outlook2 .fc-daygrid-day-frame {
           min-height: 138px;
