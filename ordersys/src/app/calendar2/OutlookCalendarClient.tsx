@@ -233,7 +233,8 @@ export default function OutlookCalendarClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [eventMenu, setEventMenu] = useState<{
-    id: string;
+    eventId: string;
+    persistId: string;
     x: number;
     y: number;
     track?: "A" | "B" | "C" | "D";
@@ -270,10 +271,10 @@ export default function OutlookCalendarClient() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
     };
-    document.addEventListener("mousedown", close);
+    document.addEventListener("click", close);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", close);
+      document.removeEventListener("click", close);
       document.removeEventListener("keydown", onKey);
     };
   }, [eventMenu]);
@@ -367,8 +368,15 @@ export default function OutlookCalendarClient() {
   }, []);
 
   const setCalendarLabel = useCallback(
-    async (eventId: string, label: Label) => {
+    async (eventId: string, persistId: string, label: Label) => {
       const color = labelFor(label);
+      const calendarEvent = api()?.getEventById(eventId);
+      calendarEvent?.setProp("backgroundColor", color.color);
+      calendarEvent?.setProp("borderColor", color.color);
+      calendarEvent?.setProp("textColor", "#ffffff");
+      calendarEvent?.setExtendedProp("label", label);
+      calendarEvent?.setExtendedProp("status", undefined);
+
       setEvents((prev) =>
         prev.map((event) =>
           String(event.id) === eventId
@@ -384,13 +392,12 @@ export default function OutlookCalendarClient() {
       );
 
       try {
-        const response = await fetch(`/api/free-events/${encodeURIComponent(eventId)}`, {
+        const response = await fetch(`/api/free-events/${encodeURIComponent(persistId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ label }),
         });
         if (!response.ok) throw new Error(await response.text());
-        await load();
       } catch (err) {
         console.error("Failed to set calendar label", err);
         await load();
@@ -398,12 +405,19 @@ export default function OutlookCalendarClient() {
         setEventMenu(null);
       }
     },
-    [load],
+    [api, load],
   );
 
   const setEventStatus = useCallback(
-    async (eventId: string, status: TrackStatus, track?: "A" | "B" | "C" | "D") => {
+    async (eventId: string, persistId: string, status: TrackStatus, track?: "A" | "B" | "C" | "D") => {
       const statusColor = STATUS_COLOR_PARTS[status];
+      const calendarEvent = api()?.getEventById(eventId);
+      calendarEvent?.setProp("backgroundColor", statusColor.bgHex);
+      calendarEvent?.setProp("borderColor", statusColor.borderHex);
+      calendarEvent?.setProp("textColor", statusColor.textHex);
+      calendarEvent?.setExtendedProp("status", status);
+      calendarEvent?.setExtendedProp("label", null);
+
       setEvents((prev) =>
         prev.map((event) =>
           String(event.id) === eventId
@@ -420,22 +434,22 @@ export default function OutlookCalendarClient() {
 
       try {
         if (track) {
-          const response = await fetch(`/api/calendar/${encodeURIComponent(eventId)}/status`, {
+          const response = await fetch(`/api/calendar/${encodeURIComponent(persistId)}/status`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ status, track }),
           });
           if (!response.ok) throw new Error(await response.text());
+          await load();
         } else {
           const label = STATUS_TO_LABEL[status] ?? "BOKAD_TID";
-          const response = await fetch(`/api/free-events/${encodeURIComponent(eventId)}`, {
+          const response = await fetch(`/api/free-events/${encodeURIComponent(persistId)}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ label }),
           });
           if (!response.ok) throw new Error(await response.text());
         }
-        await load();
       } catch (err) {
         console.error("Failed to set status", err);
         await load();
@@ -443,7 +457,7 @@ export default function OutlookCalendarClient() {
         setEventMenu(null);
       }
     },
-    [load],
+    [api, load],
   );
 
   const saveDraft = useCallback(async () => {
@@ -759,7 +773,8 @@ export default function OutlookCalendarClient() {
                   event.preventDefault();
                   const track = arg.event.extendedProps?.track as "A" | "B" | "C" | "D" | undefined;
                   setEventMenu({
-                    id: String(arg.event.extendedProps?.realId ?? arg.event.id),
+                    eventId: String(arg.event.id),
+                    persistId: String(arg.event.extendedProps?.realId ?? arg.event.id),
                     x: event.clientX,
                     y: event.clientY,
                     track,
@@ -781,7 +796,7 @@ export default function OutlookCalendarClient() {
         <div
           className="fixed z-[60] min-w-[220px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
           style={{ left: eventMenu.x, top: eventMenu.y }}
-          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
           role="menu"
         >
           <div className="border-b px-3 py-2 text-xs text-muted">Sätt status</div>
@@ -790,7 +805,7 @@ export default function OutlookCalendarClient() {
               key={status}
               type="button"
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50"
-              onClick={() => void setEventStatus(eventMenu.id, status, eventMenu.track)}
+              onClick={() => void setEventStatus(eventMenu.eventId, eventMenu.persistId, status, eventMenu.track)}
               role="menuitem"
             >
               <span
@@ -807,7 +822,7 @@ export default function OutlookCalendarClient() {
               key={label.value}
               type="button"
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50"
-              onClick={() => void setCalendarLabel(eventMenu.id, label.value)}
+              onClick={() => void setCalendarLabel(eventMenu.eventId, eventMenu.persistId, label.value)}
               role="menuitem"
             >
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: label.color }} />
