@@ -698,6 +698,7 @@ export default function OutlookCalendarClient() {
     () =>
       events.filter((e: any) => {
         const label = e.extendedProps?.label as Label | null | undefined;
+        if (label === "UTFORT_ARBETE") return false;
         if (!label) return true;
         return activeCalendars.includes(label);
       }),
@@ -707,6 +708,7 @@ export default function OutlookCalendarClient() {
   const eventsByLabel = useMemo(() => {
     const map: Record<string, typeof events> = {};
     for (const label of activeCalendars) {
+      if (label === "UTFORT_ARBETE") continue;
       map[label] = events.filter((e: any) => {
         const l = e.extendedProps?.label as Label | null | undefined;
         return l === label || (!l && activeCalendars.length === 1);
