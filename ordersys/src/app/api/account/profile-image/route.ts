@@ -86,6 +86,13 @@ export async function POST(req: Request) {
     });
     imageUrl = uploaded.url;
   } else {
+    if (process.env.VERCEL) {
+      return NextResponse.json(
+        { error: "Profilbildsuppladdning saknar BLOB_READ_WRITE_TOKEN i produktion." },
+        { status: 500 }
+      );
+    }
+
     await mkdir(uploadDir, { recursive: true });
     const relativeUrl = `${PROFILE_UPLOAD_URL_PREFIX}${filename}`;
     const destination = path.join(uploadDir, filename);
