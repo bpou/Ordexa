@@ -252,7 +252,6 @@ function makeDraft(input?: Partial<Draft>): Draft {
 }
 
 export default function OutlookCalendarClient() {
-  const calendarRef = useRef<FullCalendar | null>(null);
   const [events, setEvents] = useState<EventInput[]>([]);
   const [view, setView] = useState<CalendarView>("timeGridWorkWeek");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
@@ -275,7 +274,28 @@ export default function OutlookCalendarClient() {
     track?: "A" | "B" | "C" | "D";
   } | null>(null);
 
-  const api = useCallback((): CalendarApi | null => calendarRef.current?.getApi() ?? null, []);
+  const calendarRefs = useRef<Record<string, FullCalendar | null>>({});
+
+  const setCalendarRef = (label: string) => (el: FullCalendar | null) => {
+    if (el) {
+      calendarRefs.current[label] = el;
+    } else {
+      delete calendarRefs.current[label];
+    }
+  };
+
+  const primaryLabel = activeCalendars[0];
+  const api = useCallback((): CalendarApi | null => {
+    const ref = primaryLabel ? calendarRefs.current[primaryLabel] : Object.values(calendarRefs.current)[0];
+    return ref?.getApi() ?? null;
+  }, [primaryLabel]);
+
+  const callAllApis = (fn: (api: CalendarApi) => void) => {
+    Object.values(calendarRefs.current).forEach((ref) => {
+      const calApi = ref?.getApi();
+      if (calApi) fn(calApi);
+    });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -333,39 +353,38 @@ export default function OutlookCalendarClient() {
   );
   const hiddenDays = useMemo(() => (view === "timeGridWorkWeek" ? [0, 6] : []), [view]);
 
-  const changeView = useCallback(
-    (nextView: CalendarView) => {
-      setView(nextView);
-      const calendar = api();
-      calendar?.changeView(nextView);
-      if (calendar) setAnchorDate(calendar.getDate());
-    },
-    [api],
-  );
-
   const goToday = useCallback(() => {
-    const calendar = api();
-    calendar?.today();
-    setAnchorDate(calendar?.getDate() ?? new Date());
+    callAllApis((calApi) => calApi.today());
+    const calApi = api();
+    setAnchorDate(calApi?.getDate() ?? new Date());
   }, [api]);
 
   const goPrev = useCallback(() => {
-    const calendar = api();
-    calendar?.prev();
-    setAnchorDate(calendar?.getDate() ?? addDays(anchorDate, -7));
+    callAllApis((calApi) => calApi.prev());
+    const calApi = api();
+    setAnchorDate(calApi?.getDate() ?? addDays(anchorDate, -7));
   }, [api, anchorDate]);
 
   const goNext = useCallback(() => {
-    const calendar = api();
-    calendar?.next();
-    setAnchorDate(calendar?.getDate() ?? addDays(anchorDate, 7));
+    callAllApis((calApi) => calApi.next());
+    const calApi = api();
+    setAnchorDate(calApi?.getDate() ?? addDays(anchorDate, 7));
   }, [api, anchorDate]);
 
   const goDate = useCallback(
     (date: Date) => {
-      const calendar = api();
-      calendar?.gotoDate(date);
+      callAllApis((calApi) => calApi.gotoDate(date));
       setAnchorDate(date);
+    },
+    [],
+  );
+
+  const changeView = useCallback(
+    (nextView: CalendarView) => {
+      setView(nextView);
+      callAllApis((calApi) => calApi.changeView(nextView));
+      const calApi = api();
+      if (calApi) setAnchorDate(calApi.getDate());
     },
     [api],
   );
@@ -686,6 +705,17 @@ export default function OutlookCalendarClient() {
     [events, activeCalendars],
   );
 
+  const eventsByLabel = useMemo(() => {
+    const map: Record<string, typeof events> = {};
+    for (const label of activeCalendars) {
+      map[label] = events.filter((e: any) => {
+        const l = e.extendedProps?.label as Label | null | undefined;
+        return l === label || (!l && activeCalendars.length === 1);
+      });
+    }
+    return map;
+  }, [events, activeCalendars]);
+
   const eventDrop = useCallback(
     async (arg: EventDropArg) => {
       const realId = String(arg.event.extendedProps?.realId ?? arg.event.id);
@@ -941,83 +971,115 @@ export default function OutlookCalendarClient() {
             {error ? <div className="ml-auto text-sm text-red-600">{error}</div> : null}
           </div>
 
-          <div className="min-h-0 flex-1">
-                <FullCalendar
-                  ref={calendarRef}
-                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  locale={svLocale}
-                  initialView={view}
-                  views={calendarViews}
-                  weekends={view !== "timeGridWorkWeek"}
-                  hiddenDays={hiddenDays}
-                  headerToolbar={false}
-              height="100%"
-              nowIndicator
-              selectable
-              editable
-              eventResizableFromStart
-              selectMirror
-              slotEventOverlap={false}
-              firstDay={view === "timeGridWorkWeek" ? 1 : 0}
-              allDaySlot={false}
-              slotMinTime="00:00:00"
-              slotMaxTime="24:00:00"
-              slotDuration="00:30:00"
-              slotLabelInterval="01:00"
-              slotLabelFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
-              dayHeaderContent={(arg) => {
-                const dayNumber = arg.date.getDate();
-                if (view === "dayGridMonth") return WEEKDAYS_LONG[arg.date.getDay()];
-                return (
-                  <div className="px-3 py-2 text-left">
-                    <div className="text-lg font-normal text-brand-700">{dayNumber}</div>
-                    <div className="text-xs text-[#717b87]">{WEEKDAYS_LONG[arg.date.getDay()]}</div>
+          <div className={`min-h-0 flex-1 ${
+            activeCalendars.length >= 2
+              ? "grid gap-0 xl:grid-cols-2 2xl:grid-cols-3"
+              : ""
+          }`}>
+            {(activeCalendars.length === 0 ? ["" as Label] : activeCalendars).map((label) => {
+              const labelMeta = labelFor(label);
+              const displayEvents = activeCalendars.length <= 1 ? filteredEvents : (eventsByLabel[label] ?? []);
+              return (
+                <div
+                  key={label}
+                  className={`min-h-0 border-r border-border last:border-r-0 ${activeCalendars.length >= 2 ? "flex flex-col" : ""}`}
+                >
+                  {activeCalendars.length >= 2 ? (
+                    <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
+                      <span className="h-2.5 w-2.5 rounded-full border border-transparent" style={{ backgroundColor: labelMeta.color }} />
+                      <h3 className="text-sm font-semibold capitalize">{labelMeta.label}</h3>
+                      <button
+                        type="button"
+                        onClick={() => toggleCalendarActive(label)}
+                        className="ml-auto rounded p-1 text-[#717b87] hover:bg-[#f3f2f1]"
+                        aria-label={`Ta bort ${labelMeta.label}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <div className="min-h-0 flex-1">
+                    <FullCalendar
+                      ref={setCalendarRef(label)}
+                      key={label}
+                      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                      locale={svLocale}
+                      initialView={view}
+                      views={calendarViews}
+                      weekends={view !== "timeGridWorkWeek"}
+                      hiddenDays={hiddenDays}
+                      headerToolbar={false}
+                      height="100%"
+                      nowIndicator
+                      selectable
+                      editable
+                      eventResizableFromStart
+                      selectMirror
+                      slotEventOverlap={false}
+                      firstDay={view === "timeGridWorkWeek" ? 1 : 0}
+                      allDaySlot={false}
+                      slotMinTime="00:00:00"
+                      slotMaxTime="24:00:00"
+                      slotDuration="00:30:00"
+                      slotLabelInterval="01:00"
+                      slotLabelFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
+                      dayHeaderContent={(arg) => {
+                        const dayNumber = arg.date.getDate();
+                        if (view === "dayGridMonth") return WEEKDAYS_LONG[arg.date.getDay()];
+                        return (
+                          <div className="px-3 py-2 text-left">
+                            <div className="text-lg font-normal text-brand-700">{dayNumber}</div>
+                            <div className="text-xs text-[#717b87]">{WEEKDAYS_LONG[arg.date.getDay()]}</div>
+                          </div>
+                        );
+                      }}
+                      dayCellContent={(arg) => (
+                        <div className="px-2 py-1 text-left text-sm text-[#717b87]">
+                          {arg.date.getDate() === 1 ? `${MONTHS[arg.date.getMonth()].slice(0, 3)} ${arg.date.getDate()}` : arg.date.getDate()}
+                        </div>
+                      )}
+                      datesSet={(arg) => {
+                        const nextDate = arg.view.calendar.getDate();
+                        setAnchorDate((current) => (current.getTime() === nextDate.getTime() ? current : nextDate));
+                        setView((current) => (current === arg.view.type ? current : (arg.view.type as CalendarView)));
+                      }}
+                      events={displayEvents}
+                      select={openFromSelect}
+                      eventClick={openEvent}
+                      eventDrop={eventDrop}
+                      eventResize={eventDrop as any}
+                      eventDidMount={(arg) => {
+                        arg.el.oncontextmenu = (event) => {
+                          event.preventDefault();
+                          const track = arg.event.extendedProps?.track as "A" | "B" | "C" | "D" | undefined;
+                          setEventMenu({
+                            eventId: String(arg.event.id),
+                            persistId: String(arg.event.extendedProps?.realId ?? arg.event.id),
+                            x: event.clientX,
+                            y: event.clientY,
+                            track,
+                          });
+                        };
+                      }}
+                      eventContent={(arg) => (
+                        <div className="relative h-full min-h-full truncate py-1 pl-2.5 pr-1.5 text-[12px] leading-tight">
+                          <span
+                            className="absolute inset-y-0 left-0 w-1"
+                            style={{
+                              backgroundColor:
+                                (arg.event.extendedProps?.accentColor as string | undefined) ??
+                                darkenHex(arg.event.backgroundColor || "#059669"),
+                            }}
+                          />
+                          {arg.view.type === "dayGridMonth" && arg.timeText ? <span className="font-semibold">{arg.timeText} </span> : null}
+                          <span>{arg.event.title || "(Inget ämne)"}</span>
+                        </div>
+                      )}
+                    />
                   </div>
-                );
-              }}
-              dayCellContent={(arg) => (
-                <div className="px-2 py-1 text-left text-sm text-[#717b87]">
-                  {arg.date.getDate() === 1 ? `${MONTHS[arg.date.getMonth()].slice(0, 3)} ${arg.date.getDate()}` : arg.date.getDate()}
                 </div>
-              )}
-              datesSet={(arg) => {
-                const nextDate = arg.view.calendar.getDate();
-                setAnchorDate((current) => (current.getTime() === nextDate.getTime() ? current : nextDate));
-                setView((current) => (current === arg.view.type ? current : (arg.view.type as CalendarView)));
-              }}
-              events={filteredEvents}
-              select={openFromSelect}
-              eventClick={openEvent}
-              eventDrop={eventDrop}
-              eventResize={eventDrop as any}
-              eventDidMount={(arg) => {
-                arg.el.oncontextmenu = (event) => {
-                  event.preventDefault();
-                  const track = arg.event.extendedProps?.track as "A" | "B" | "C" | "D" | undefined;
-                  setEventMenu({
-                    eventId: String(arg.event.id),
-                    persistId: String(arg.event.extendedProps?.realId ?? arg.event.id),
-                    x: event.clientX,
-                    y: event.clientY,
-                    track,
-                  });
-                };
-              }}
-              eventContent={(arg) => (
-                <div className="relative h-full min-h-full truncate py-1 pl-2.5 pr-1.5 text-[12px] leading-tight">
-                  <span
-                    className="absolute inset-y-0 left-0 w-1"
-                    style={{
-                      backgroundColor:
-                        (arg.event.extendedProps?.accentColor as string | undefined) ??
-                        darkenHex(arg.event.backgroundColor || "#059669"),
-                    }}
-                  />
-                  {arg.view.type === "dayGridMonth" && arg.timeText ? <span className="font-semibold">{arg.timeText} </span> : null}
-                  <span>{arg.event.title || "(Inget ämne)"}</span>
-                </div>
-              )}
-            />
+              );
+            })}
           </div>
         </main>
       </div>
