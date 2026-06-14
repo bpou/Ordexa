@@ -15,8 +15,13 @@ const OUTLOOK_SYNC_LOOKAHEAD_DAYS = Number.parseInt(
   10
 );
 const OUTLOOK_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
+const OUTLOOK_TRACK_SYNC_MIN_INTERVAL_MS = Number.parseInt(
+  process.env.OUTLOOK_TRACK_SYNC_MIN_INTERVAL_MS ?? "30000",
+  10
+);
 const OUTLOOK_SUBSCRIPTION_RENEW_BEFORE_MS = 12 * 60 * 60 * 1000;
 const OUTLOOK_SUBSCRIPTION_TTL_MS = 2 * 24 * 60 * 60 * 1000;
+const trackSyncLastRunByTrack = new Map<Track, number>();
 
 type OutlookConfig = {
   clientId: string;
@@ -131,6 +136,13 @@ type TrackCalendarEventForOutlook = {
     connectionId: string;
     calendarId: string;
   } | null;
+};
+
+type TrackOutlookEventPayloadSource = {
+  title: string;
+  notes: string | null;
+  start: Date;
+  end: Date;
 };
 
 export function isOutlookSchemaMissingError(error: unknown) {
@@ -579,7 +591,7 @@ function buildOutlookEventPayload(event: PersonalEventForOutlook) {
   };
 }
 
-function buildTrackOutlookEventPayload(event: TrackCalendarEventForOutlook) {
+function buildTrackOutlookEventPayload(event: TrackOutlookEventPayloadSource) {
   return {
     subject: event.title,
     isAllDay: false,
@@ -657,7 +669,7 @@ async function deleteOutlookEvent(
 async function createOutlookTrackEvent(
   accessToken: string,
   calendarId: string,
-  event: TrackCalendarEventForOutlook
+  event: TrackOutlookEventPayloadSource
 ) {
   const path = `/me/calendars/${encodeURIComponent(calendarId)}/events`;
 
@@ -675,7 +687,7 @@ async function updateOutlookTrackEvent(
   accessToken: string,
   calendarId: string,
   externalEventId: string,
-  event: TrackCalendarEventForOutlook
+  event: TrackOutlookEventPayloadSource
 ) {
   const path = `/me/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(externalEventId)}`;
   await graphVoidFetch(path, accessToken, {
@@ -1018,6 +1030,90 @@ async function upsertLocalPersonalEventFromGraph(
   return { synced: true, mode: "created" as const };
 }
 
+async function upsertLocalPublicTrackEventFromGraph(
+  connectionId: string,
+  track: Track,
+  event: GraphEvent
+) {
+  const externalEventId = event.id?.trim();
+  if (!externalEventId || event.isCancelled) {
+    return { synced: false, reason: "missing_or_cancelled" as const };
+  }
+
+  if (!isOutlookTrack(track)) {
+    return { synced: false, reason: "unsupported_track" as const };
+  }
+
+  const isAllDay = Boolean(event.isAllDay);
+  const start = parseGraphDateTime(event.start, isAllDay);
+  const end = parseGraphDateTime(event.end, isAllDay);
+  if (!start || !end) {
+    return { synced: false, reason: "invalid_datetime" as const };
+  }
+
+  const title = event.subject?.trim() || "Kalenderhändelse";
+  const notes = buildSyncedNotes(event);
+
+  const existing = await prisma.outlookCalendarSync.findFirst({
+    where: {
+      connectionId,
+      externalEventId,
+    },
+  });
+
+  if (existing) {
+    await prisma.personalCalendarEvent.update({
+      where: { id: existing.personalEventId },
+      data: {
+        title,
+        notes,
+        allDay: isAllDay,
+        start,
+        end,
+        track,
+        visibility: EventVisibility.PUBLIC,
+        ownerUserId: null,
+      },
+    });
+
+    await prisma.outlookCalendarSync.update({
+      where: { id: existing.id },
+      data: {
+        externalICalUId: event.iCalUId ?? existing.externalICalUId,
+        lastSeenAt: new Date(),
+      },
+    });
+
+    return { synced: true, mode: "updated" as const };
+  }
+
+  const personalEvent = await prisma.personalCalendarEvent.create({
+    data: {
+      track,
+      title,
+      label: null,
+      notes,
+      allDay: isAllDay,
+      start,
+      end,
+      visibility: EventVisibility.PUBLIC,
+      ownerUserId: null,
+    },
+  });
+
+  await prisma.outlookCalendarSync.create({
+    data: {
+      connectionId,
+      externalEventId,
+      externalICalUId: event.iCalUId ?? null,
+      personalEventId: personalEvent.id,
+      lastSeenAt: new Date(),
+    },
+  });
+
+  return { synced: true, mode: "created" as const };
+}
+
 function extractExternalEventIdFromResource(resource?: string) {
   if (!resource) return null;
   const trimmed = resource.trim();
@@ -1249,6 +1345,103 @@ export async function ensureTrackOutlookSubscription(track: Track, origin?: stri
   return { ensured: true, mode: "created" as const };
 }
 
+export async function syncOutlookTrackCalendar(
+  track: Track,
+  options?: { force?: boolean }
+) {
+  const calendarId = getTrackCalendarId(track);
+  if (!calendarId || !isOutlookConfigured()) {
+    return { connected: false, skipped: true, created: 0, updated: 0 };
+  }
+
+  if (!isOutlookTrack(track)) {
+    return { connected: false, skipped: true, created: 0, updated: 0 };
+  }
+
+  const lastRun = trackSyncLastRunByTrack.get(track) ?? 0;
+  if (
+    !options?.force &&
+    Number.isFinite(OUTLOOK_TRACK_SYNC_MIN_INTERVAL_MS) &&
+    lastRun > Date.now() - OUTLOOK_TRACK_SYNC_MIN_INTERVAL_MS
+  ) {
+    return { connected: true, skipped: true, created: 0, updated: 0 };
+  }
+
+  const connection = await getSharedTrackOutlookConnection();
+  if (!connection) {
+    return { connected: false, skipped: true, created: 0, updated: 0 };
+  }
+
+  trackSyncLastRunByTrack.set(track, Date.now());
+
+  const { accessToken } = await getValidAccessToken(connection.id);
+  const { events } = await fetchCalendarViewEvents(accessToken, calendarId);
+  let created = 0;
+  let updated = 0;
+
+  for (const event of events) {
+    const externalEventId = event.id?.trim();
+    if (!externalEventId || event.isCancelled) continue;
+
+    const orderSync = await prisma.outlookTrackCalendarSync.findFirst({
+      where: {
+        connectionId: connection.id,
+        calendarId,
+        externalEventId,
+      },
+      select: { id: true, calendarEventId: true },
+    });
+
+    if (orderSync) {
+      const start = parseGraphDateTime(event.start, Boolean(event.isAllDay));
+      const end = parseGraphDateTime(event.end, Boolean(event.isAllDay));
+      if (!start || !end) continue;
+
+      await prisma.$transaction(async (tx) => {
+        const updatedEvent = await tx.calendarEvent.update({
+          where: { id: orderSync.calendarEventId },
+          data: {
+            title: event.subject?.trim() || "Kalenderhändelse",
+            notes: buildSyncedNotes(event),
+            start,
+            end,
+          },
+          select: { orderId: true, track: true },
+        });
+
+        await tx.orderTrack.updateMany({
+          where: { orderId: updatedEvent.orderId, track: updatedEvent.track },
+          data: { plannedStartAt: start, plannedEndAt: end },
+        });
+
+        await tx.outlookTrackCalendarSync.update({
+          where: { id: orderSync.id },
+          data: { lastSeenAt: new Date() },
+        });
+      });
+
+      updated += 1;
+      continue;
+    }
+
+    const existingFree = await prisma.outlookCalendarSync.findFirst({
+      where: {
+        connectionId: connection.id,
+        externalEventId,
+      },
+      select: { id: true },
+    });
+
+    const result = await upsertLocalPublicTrackEventFromGraph(connection.id, track, event);
+    if (result.synced) {
+      if (existingFree) updated += 1;
+      else created += 1;
+    }
+  }
+
+  return { connected: true, created, updated };
+}
+
 export async function upsertTrackEventToOutlook(calendarEventId: string) {
   const event = await prisma.calendarEvent.findUnique({
     where: { id: calendarEventId },
@@ -1327,6 +1520,94 @@ export async function upsertTrackEventToOutlook(calendarEventId: string) {
       calendarId,
       externalEventId,
       calendarEventId: event.id,
+      lastSeenAt: new Date(),
+    },
+  });
+
+  return { synced: true, mode: "created" as const };
+}
+
+export async function upsertPublicFreeEventToTrackOutlook(
+  personalEventId: string,
+  origin?: string
+) {
+  const event = await prisma.personalCalendarEvent.findUnique({
+    where: { id: personalEventId },
+    include: { outlookSync: true },
+  });
+
+  if (!event || !event.start || !event.end) {
+    return { synced: false, reason: "missing_event" as const };
+  }
+
+  if (event.visibility !== EventVisibility.PUBLIC || !isOutlookTrack(event.track)) {
+    return { synced: false, reason: "not_public_track_event" as const };
+  }
+
+  const calendarId = getTrackCalendarId(event.track);
+  if (!calendarId) {
+    return { synced: false, reason: "track_not_configured" as const };
+  }
+
+  const connection = await getSharedTrackOutlookConnection();
+  if (!connection) {
+    return { synced: false, reason: "missing_shared_connection" as const };
+  }
+
+  try {
+    await ensureTrackOutlookSubscription(event.track, origin);
+  } catch (error) {
+    console.error(`Failed to ensure Outlook subscription for track ${event.track}:`, error);
+  }
+
+  const { accessToken } = await getValidAccessToken(connection.id);
+  const payload: TrackOutlookEventPayloadSource = {
+    title: event.title,
+    notes: event.notes,
+    start: event.start,
+    end: event.end,
+  };
+
+  if (event.outlookSync?.externalEventId) {
+    try {
+      await updateOutlookTrackEvent(
+        accessToken,
+        calendarId,
+        event.outlookSync.externalEventId,
+        payload
+      );
+      await prisma.outlookCalendarSync.update({
+        where: { id: event.outlookSync.id },
+        data: { connectionId: connection.id, lastSeenAt: new Date() },
+      });
+      return { synced: true, mode: "updated" as const };
+    } catch (error: any) {
+      const message = String(error?.message ?? "");
+      if (!message.includes("(404)")) {
+        throw error;
+      }
+    }
+  }
+
+  const created = await createOutlookTrackEvent(accessToken, calendarId, payload);
+  const externalEventId = created.id?.trim();
+  if (!externalEventId) {
+    throw new Error("Outlook track event did not return an event id.");
+  }
+
+  await prisma.outlookCalendarSync.upsert({
+    where: { personalEventId: event.id },
+    update: {
+      connectionId: connection.id,
+      externalEventId,
+      externalICalUId: created.iCalUId ?? null,
+      lastSeenAt: new Date(),
+    },
+    create: {
+      connectionId: connection.id,
+      externalEventId,
+      externalICalUId: created.iCalUId ?? null,
+      personalEventId: event.id,
       lastSeenAt: new Date(),
     },
   });
@@ -1460,7 +1741,8 @@ export async function handleOutlookTrackWebhookNotification(
 
   const externalEventId = extractExternalEventIdFromResource(notification.resource);
   if (!externalEventId) {
-    return { handled: false, reason: "missing_external_event_id" as const };
+    await syncOutlookTrackCalendar(subscription.track, { force: true });
+    return { handled: true, mode: "full_track_sync" as const, track: subscription.track };
   }
 
   const existing = await prisma.outlookTrackCalendarSync.findFirst({
@@ -1471,11 +1753,34 @@ export async function handleOutlookTrackWebhookNotification(
     },
   });
 
-  if (!existing) {
-    return { handled: false, reason: "not_linked" as const };
-  }
+  const existingFreeEvent = existing
+    ? null
+    : await prisma.outlookCalendarSync.findFirst({
+        where: {
+          connectionId: subscription.connectionId,
+          externalEventId,
+        },
+        include: { personalEvent: true },
+      });
 
   if (notification.changeType?.toLowerCase() === "deleted") {
+    if (existingFreeEvent) {
+      await prisma.$transaction([
+        prisma.outlookCalendarSync.delete({
+          where: { id: existingFreeEvent.id },
+        }),
+        prisma.personalCalendarEvent.delete({
+          where: { id: existingFreeEvent.personalEventId },
+        }),
+      ]);
+
+      return { handled: true, mode: "deleted_free_event" as const, track: subscription.track };
+    }
+
+    if (!existing) {
+      return { handled: false, reason: "not_linked" as const };
+    }
+
     const event = await prisma.calendarEvent.findUnique({
       where: { id: existing.calendarEventId },
       select: { id: true, orderId: true, track: true },
@@ -1504,6 +1809,20 @@ export async function handleOutlookTrackWebhookNotification(
     subscription.calendarId,
     externalEventId
   );
+
+  if (!existing) {
+    await upsertLocalPublicTrackEventFromGraph(
+      subscription.connectionId,
+      subscription.track,
+      graphEvent
+    );
+
+    return {
+      handled: true,
+      mode: existingFreeEvent ? "updated_free_event" as const : "created_free_event" as const,
+      track: subscription.track,
+    };
+  }
 
   const start = parseGraphDateTime(graphEvent.start, Boolean(graphEvent.isAllDay));
   const end = parseGraphDateTime(graphEvent.end, Boolean(graphEvent.isAllDay));
@@ -1832,6 +2151,7 @@ export async function removePersonalEventFromOutlook(personalEventId: string) {
       where: { personalEventId },
       include: {
         connection: true,
+        personalEvent: true,
       },
     });
   } catch (error) {
@@ -1854,10 +2174,19 @@ export async function removePersonalEventFromOutlook(personalEventId: string) {
   }
 
   const { accessToken } = await getValidAccessToken(syncRow.connection.id);
-  const calendarId = syncRow.connection.calendarId ?? "primary";
+  const trackCalendarId =
+    (await isManagedTrackOutlookSyncUser(syncRow.connection.userId)) &&
+    isOutlookTrack(syncRow.personalEvent.track)
+      ? getTrackCalendarId(syncRow.personalEvent.track)
+      : null;
+  const calendarId = trackCalendarId ?? syncRow.connection.calendarId ?? "primary";
 
   try {
-    await deleteOutlookEvent(accessToken, calendarId, syncRow.externalEventId);
+    if (trackCalendarId) {
+      await deleteOutlookTrackEvent(accessToken, calendarId, syncRow.externalEventId);
+    } else {
+      await deleteOutlookEvent(accessToken, calendarId, syncRow.externalEventId);
+    }
   } catch (error: any) {
     const message = String(error?.message ?? "");
     if (!message.includes("(404)")) {

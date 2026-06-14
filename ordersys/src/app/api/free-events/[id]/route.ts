@@ -7,6 +7,7 @@ import {
   isOutlookSchemaMissingError,
   removePersonalEventFromOutlook,
   upsertPersonalEventToOutlook,
+  upsertPublicFreeEventToTrackOutlook,
 } from "@/lib/outlook";
 
 /* ---------- helpers ---------- */
@@ -54,7 +55,7 @@ const PatchSchema = z.object({
   visibility: z.enum(["PUBLIC", "PERSONAL"]).optional(),
 
   // the client might include this; we ignore for updates
-  track: z.enum(["A", "B"]).optional(),
+  track: z.enum(["A", "B", "C", "D", "SHARED"]).optional(),
 });
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -80,6 +81,7 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
         title: true,
         allDay: true,
         label: true,
+        track: true,
       },
     });
 
@@ -125,10 +127,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     });
 
     try {
+      if (existing.visibility !== updated.visibility) {
+        await removePersonalEventFromOutlook(updated.id);
+      }
+
       if (updated.visibility === "PERSONAL" && updated.ownerUserId) {
         await upsertPersonalEventToOutlook(updated.id);
       } else {
-        await removePersonalEventFromOutlook(updated.id);
+        await upsertPublicFreeEventToTrackOutlook(updated.id, new URL(req.url).origin);
       }
     } catch (error) {
       if (!isOutlookSchemaMissingError(error)) {

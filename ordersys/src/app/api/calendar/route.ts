@@ -6,6 +6,7 @@ import { normalizeTrack } from "@/lib/tracks";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
 import {
   ensureTrackOutlookSubscription,
+  syncOutlookTrackCalendar,
   upsertTrackEventToOutlook,
 } from "@/lib/outlook";
 
@@ -84,6 +85,12 @@ export async function GET(req: NextRequest) {
     await ensureTrackOutlookSubscription(trackFilter, req.nextUrl.origin);
   } catch (error) {
     console.error(`Failed to ensure Outlook subscription for track ${trackFilter}:`, error);
+  }
+
+  try {
+    await syncOutlookTrackCalendar(trackFilter);
+  } catch (error) {
+    console.error(`Failed to sync Outlook events for track ${trackFilter}:`, error);
   }
 
   const missingCalendarEvents = await prisma.orderTrack.findMany({

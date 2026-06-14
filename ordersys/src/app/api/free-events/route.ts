@@ -7,6 +7,8 @@ import { EventVisibility } from "@prisma/client";
 import { APP_TRACKS, type AppTrack, normalizeTrack } from "@/lib/tracks";
 import {
   isOutlookSchemaMissingError,
+  syncOutlookTrackCalendar,
+  upsertPublicFreeEventToTrackOutlook,
   upsertPersonalEventToOutlook,
 } from "@/lib/outlook";
 
@@ -104,6 +106,14 @@ export async function GET(req: Request) {
     const normalizedParam = normalizeTrack(trackParam ?? undefined);
     const track: Track | undefined = normalizedParam ?? undefined;
 
+    if (track) {
+      try {
+        await syncOutlookTrackCalendar(track);
+      } catch (syncError) {
+        console.error(`Outlook free-event sync error for track ${track}:`, syncError);
+      }
+    }
+
     const rows = await prisma.personalCalendarEvent.findMany({
       where: {
         ...(track ? { track } : {}),
@@ -196,10 +206,14 @@ export async function POST(req: Request) {
       });
 
       try {
-        await upsertPersonalEventToOutlook(created.id);
+        if (visibility === EventVisibility.PERSONAL && ownerUserId) {
+          await upsertPersonalEventToOutlook(created.id);
+        } else {
+          await upsertPublicFreeEventToTrackOutlook(created.id, new URL(req.url).origin);
+        }
       } catch (error) {
         if (!isOutlookSchemaMissingError(error)) {
-          console.error("Outlook push for created personal event failed:", error);
+          console.error("Outlook push for created free event failed:", error);
         }
       }
 
@@ -297,10 +311,14 @@ export async function POST(req: Request) {
 
     for (const created of createdRows) {
       try {
-        await upsertPersonalEventToOutlook(created.id);
+        if (created.visibility === EventVisibility.PERSONAL && created.ownerUserId) {
+          await upsertPersonalEventToOutlook(created.id);
+        } else {
+          await upsertPublicFreeEventToTrackOutlook(created.id, new URL(req.url).origin);
+        }
       } catch (error) {
         if (!isOutlookSchemaMissingError(error)) {
-          console.error("Outlook push for recurring personal event failed:", error);
+          console.error("Outlook push for recurring free event failed:", error);
         }
       }
     }
