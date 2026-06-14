@@ -63,14 +63,13 @@ type DragHandle = "top" | "bottom" | null;
 
 type CalendarResponse = { events?: EventInput[] };
 
-const LABELS: { value: Label; label: string; color: string }[] = [
+const LABELS: { value: Exclude<Label, "UTFORT_ARBETE">; label: string; color: string }[] = [
   { value: "BOKAD_TID", label: "Calendar", color: "#059669" },
   { value: "KAN_FLYTTAS", label: "Verkstad", color: "#107c10" },
   { value: "LUNCH", label: "Birthdays", color: "#fce100" },
   { value: "SEMESTER", label: "Ateljé", color: "#ca5010" },
   { value: "TRAFIKVERKET", label: "Bilmontage", color: "#8764b8" },
   { value: "UNDER_VECKAN", label: "Montage", color: "#00b7c3" },
-  { value: "UTFORT_ARBETE", label: "Utfört arbete", color: "#69797e" },
 ];
 
 const STATUS_TO_LABEL: Partial<Record<TrackStatus, Label>> = {
@@ -971,11 +970,13 @@ export default function OutlookCalendarClient() {
             {error ? <div className="ml-auto text-sm text-red-600">{error}</div> : null}
           </div>
 
-          <div className={`min-h-0 flex-1 ${
-            activeCalendars.length >= 2
-              ? "grid gap-0 xl:grid-cols-2 2xl:grid-cols-3"
-              : ""
-          }`}>
+          <div
+            className="min-h-0 flex-1"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${Math.max(1, activeCalendars.length)}, minmax(0, 1fr))`,
+            }}
+          >
             {(activeCalendars.length === 0 ? ["" as Label] : activeCalendars).map((label) => {
               const labelMeta = labelFor(label);
               const displayEvents = activeCalendars.length <= 1 ? filteredEvents : (eventsByLabel[label] ?? []);
