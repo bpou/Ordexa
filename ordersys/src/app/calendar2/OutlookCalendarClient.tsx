@@ -601,100 +601,88 @@ export default function OutlookCalendarClient() {
   const PREVIEW_START_HOUR = 0;
   const PREVIEW_HOURS = 24;
 
-  const pxToMinutes = useCallback((px: number, baseHour: number) => {
-    return Math.max(0, baseHour - PREVIEW_START_HOUR) * 60 + px;
-  }, []);
-
   const minutesToLocalValue = useCallback((date: Date, totalMinutes: number) => {
     const d = new Date(date);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
+    const h = Math.max(0, Math.floor(totalMinutes / 60));
+    const m = Math.max(0, Math.floor(totalMinutes % 60));
     d.setHours(h, m, 0, 0);
     return toLocalInputValue(d);
   }, []);
 
+  const dragStateRef = useRef<{
+    handle: DragHandle;
+    startY: number;
+    startTotal: number;
+    endTotal: number;
+  } | null>(null);
+
   const startDrag = useCallback((handle: "top" | "bottom" | "middle", event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const rect = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
-    const startY = event.clientY - rect.top;
+    const container = (event.currentTarget.closest("[data-event-preview-container]") as HTMLElement) ?? null;
+    if (!container) return;
+
+    dragStateRef.current = {
+      handle,
+      startY: event.clientY,
+      startTotal: new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes(),
+      endTotal: new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes(),
+    };
     setDragHandle(handle);
-    setDragStartY(startY);
-    if (handle === "middle") {
-      setDragStartValue(draft.start);
-    } else {
-      setDragStartValue(handle === "top" ? draft.start : draft.end);
-    }
   }, [draft.start, draft.end]);
 
   useEffect(() => {
     if (!dragHandle) return;
 
-    let scrollContainer: HTMLElement | null = null;
-    let scrollYAtStart = 0;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = dragHandle === "middle" ? "grabbing" : "ns-resize";
 
-    const onMove = (event: MouseEvent) => {
-      const dragEl = document.querySelector("[data-event-preview-block]") as HTMLElement | null;
-      if (!dragEl) return;
-      scrollContainer = dragEl.closest("[data-event-preview-container]") as HTMLElement | null;
-      if (!scrollContainer) return;
+    const onMouseMove = (event: MouseEvent) => {
+      const state = dragStateRef.current;
+      if (!state) return;
 
-      if (scrollYAtStart === 0) {
-        scrollYAtStart = scrollContainer.scrollTop;
-      }
+      const container = document.querySelector("[data-event-preview-container]") as HTMLElement | null;
+      if (!container) return;
 
-      const rect = scrollContainer.getBoundingClientRect();
-      const currentY = event.clientY - rect.top + (scrollContainer.scrollTop - scrollYAtStart);
-      const deltaPx = currentY - dragStartY;
-      const deltaMinutes = Math.round(deltaPx * MINUTES_PER_PX / 15) * 15;
+      const deltaY = event.clientY - state.startY;
+      const deltaMinutes = Math.round(deltaY * MINUTES_PER_PX / 15) * 15;
+      const baseDate = new Date(draft.start);
 
-      if (dragHandle === "middle") {
-        const baseDate = new Date(dragStartValue);
-        const startTotal = new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes();
-        const endTotal = new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes();
-        const duration = endTotal - startTotal;
-        const newStartMinutes = Math.max(0, Math.min(24 * 60 - duration, startTotal + deltaMinutes));
-        const newEndMinutes = newStartMinutes + duration;
-        if (newStartMinutes < 0 || newEndMinutes > 24 * 60) return;
+      if (state.handle === "middle") {
+        const duration = state.endTotal - state.startTotal;
+        const clampedStart = Math.max(0, Math.min(24 * 60 - duration, state.startTotal + deltaMinutes));
         setDraft((prev) => ({
           ...prev,
-          start: minutesToLocalValue(baseDate, newStartMinutes),
-          end: minutesToLocalValue(baseDate, newEndMinutes),
+          start: minutesToLocalValue(baseDate, clampedStart),
+          end: minutesToLocalValue(baseDate, clampedStart + duration),
         }));
-      } else if (dragHandle === "top") {
-        const baseDate = new Date(dragStartValue);
-        const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
-        const newStartMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
-        const endTotalMinutes = new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes();
-        if (newStartMinutes >= endTotalMinutes - 15) return;
-        setDraft((prev) => ({
-          ...prev,
-          start: minutesToLocalValue(baseDate, newStartMinutes),
-        }));
-      } else if (dragHandle === "bottom") {
-        const baseDate = new Date(dragStartValue);
-        const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
-        const newEndMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
-        const startTotalMinutes = new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes();
-        if (newEndMinutes <= startTotalMinutes + 15) return;
-        setDraft((prev) => ({
-          ...prev,
-          end: minutesToLocalValue(baseDate, newEndMinutes),
-        }));
+      } else if (state.handle === "top") {
+        const newStart = Math.max(0, state.startTotal - deltaMinutes);
+        if (newStart >= state.endTotal - 15) return;
+        setDraft((prev) => ({ ...prev, start: minutesToLocalValue(baseDate, newStart) }));
+      } else if (state.handle === "bottom") {
+        const newEnd = Math.max(0, state.endTotal + deltaMinutes);
+        if (newEnd <= state.startTotal + 15) return;
+        setDraft((prev) => ({ ...prev, end: minutesToLocalValue(baseDate, newEnd) }));
       }
     };
 
-    const onUp = () => {
+    const onMouseUp = () => {
+      dragStateRef.current = null;
       setDragHandle(null);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
     };
 
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
     return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
     };
-  }, [dragHandle, dragStartY, dragStartValue, draft.start, draft.end, minutesToLocalValue]);
+  }, [dragHandle, minutesToLocalValue, draft.start]);
 
   const goToPreviewDay = useCallback((days: number) => {
     setPreviewDate((prev) => {
