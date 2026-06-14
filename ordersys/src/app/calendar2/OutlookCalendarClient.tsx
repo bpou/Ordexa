@@ -1017,8 +1017,8 @@ export default function OutlookCalendarClient() {
               const displayEvents = activeCalendars.length <= 1 ? filteredEvents : (eventsByLabel[label] ?? []);
               return (
                 <div
-                  key={label}
-                  className={`min-h-0 border-r border-border last:border-r-0 ${activeCalendars.length >= 2 ? "flex flex-col" : ""}`}
+                  key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
+                  className="flex min-h-0 flex-col border-r border-border last:border-r-0"
                 >
                   {activeCalendars.length >= 2 ? (
                     <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
