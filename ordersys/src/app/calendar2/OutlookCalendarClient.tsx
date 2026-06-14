@@ -1037,7 +1037,7 @@ export default function OutlookCalendarClient() {
                   <div className="min-h-0 flex-1">
                     <FullCalendar
                       ref={setCalendarRef(label)}
-                      key={label}
+                      key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
                       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                       locale={svLocale}
                       initialView={view}
