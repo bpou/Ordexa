@@ -13,6 +13,7 @@ import type {
   EventInput,
 } from "@fullcalendar/core";
 import svLocale from "@fullcalendar/core/locales/sv";
+import { CALENDAR_SETTABLE, STATUS_COLOR_PARTS, STATUS_DISPLAY, type TrackStatus } from "@/lib/orderStatus";
 import {
   AppWindow,
   CalendarDays,
@@ -25,13 +26,10 @@ import {
   Filter,
   MapPin,
   MoreHorizontal,
-  Paperclip,
-  Pencil,
   Plus,
   Save,
   Trash2,
   UsersRound,
-  Video,
   X,
 } from "lucide-react";
 
@@ -53,6 +51,7 @@ type Draft = {
   end: string;
   allDay: boolean;
   label: Label;
+  status?: TrackStatus;
   visibility: Visibility;
   location: string;
   body: string;
@@ -64,21 +63,28 @@ const LABELS: { value: Label; label: string; color: string }[] = [
   { value: "BOKAD_TID", label: "Calendar", color: "#059669" },
   { value: "KAN_FLYTTAS", label: "Verkstad", color: "#107c10" },
   { value: "LUNCH", label: "Birthdays", color: "#fce100" },
-  { value: "SEMESTER", label: "AteljÃ©", color: "#ca5010" },
+  { value: "SEMESTER", label: "Ateljé", color: "#ca5010" },
   { value: "TRAFIKVERKET", label: "Bilmontage", color: "#8764b8" },
   { value: "UNDER_VECKAN", label: "Montage", color: "#00b7c3" },
-  { value: "UTFORT_ARBETE", label: "UtfÃ¶rt arbete", color: "#69797e" },
+  { value: "UTFORT_ARBETE", label: "Utfört arbete", color: "#69797e" },
 ];
+
+const STATUS_TO_LABEL: Partial<Record<TrackStatus, Label>> = {
+  PAGAENDE: "BOKAD_TID",
+  PALACK: "KAN_FLYTTAS",
+  LEVERANS: "TRAFIKVERKET",
+  AVSLUTAD: "UTFORT_ARBETE",
+};
 
 const VIEW_BUTTONS: { view: CalendarView; label: string }[] = [
   { view: "timeGridDay", label: "Dag" },
   { view: "timeGridWorkWeek", label: "Arbetsvecka" },
   { view: "timeGridWeek", label: "Vecka" },
-  { view: "dayGridMonth", label: "MÃ¥nad" },
+  { view: "dayGridMonth", label: "Månad" },
 ];
 
 const WEEKDAYS_SHORT = ["S", "M", "T", "O", "T", "F", "L"];
-const WEEKDAYS_LONG = ["SÃ¶ndag", "MÃ¥ndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "LÃ¶rdag"];
+const WEEKDAYS_LONG = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
 const MONTHS = [
   "januari",
   "februari",
@@ -162,7 +168,7 @@ function formatRangeTitle(date: Date, view: CalendarView) {
     first.getMonth() === end.getMonth()
       ? MONTHS[first.getMonth()]
       : `${MONTHS[first.getMonth()]}-${MONTHS[end.getMonth()]}`;
-  return `${first.getDate()} ${monthPart}â€“${end.getDate()} ${end.getFullYear()}`;
+  return `${first.getDate()} ${monthPart}-${end.getDate()} ${end.getFullYear()}`;
 }
 
 async function safeJson<T>(response: Response | null, fallback: T): Promise<T> {
@@ -177,16 +183,19 @@ async function safeJson<T>(response: Response | null, fallback: T): Promise<T> {
 function normalizeEvents(events: EventInput[]) {
   return events.map((event: any) => {
     const label = labelFor(event.extendedProps?.label);
+    const status = event.extendedProps?.status as TrackStatus | undefined;
+    const statusColor = status ? STATUS_COLOR_PARTS[status] : null;
     return {
       ...event,
       id: event.id,
-      backgroundColor: "#d7ebfa",
-      borderColor: label.color,
-      textColor: "#23272f",
+      backgroundColor: statusColor?.bgHex ?? label.color,
+      borderColor: statusColor?.borderHex ?? label.color,
+      textColor: statusColor?.textHex ?? "#ffffff",
       extendedProps: {
         ...(event.extendedProps ?? {}),
         realId: event.extendedProps?.realId ?? event.id,
         label: event.extendedProps?.label ?? label.value,
+        status,
         visibility: event.extendedProps?.visibility ?? "PERSONAL",
       },
     };
@@ -205,6 +214,7 @@ function makeDraft(input?: Partial<Draft>): Draft {
     end: toLocalInputValue(end),
     allDay: input?.allDay ?? false,
     label: input?.label ?? "BOKAD_TID",
+    status: input?.status,
     visibility: input?.visibility ?? "PERSONAL",
     location: input?.location ?? "",
     body: input?.body ?? "",
@@ -222,6 +232,12 @@ export default function OutlookCalendarClient() {
   const [draft, setDraft] = useState<Draft>(() => makeDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventMenu, setEventMenu] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    track?: "A" | "B" | "C" | "D";
+  } | null>(null);
 
   const api = useCallback((): CalendarApi | null => calendarRef.current?.getApi() ?? null, []);
 
@@ -235,9 +251,9 @@ export default function OutlookCalendarClient() {
       });
       const json = await safeJson<CalendarResponse>(response, { events: [] });
       setEvents(normalizeEvents(Array.isArray(json.events) ? json.events : []));
-      if (!response.ok) setError("Kunde inte lÃ¤sa kalendern.");
+      if (!response.ok) setError("Kunde inte läsa kalendern.");
     } catch (err: any) {
-      setError(err?.message ?? "Kunde inte lÃ¤sa kalendern.");
+      setError(err?.message ?? "Kunde inte läsa kalendern.");
       setEvents([]);
     } finally {
       setLoading(false);
@@ -247,6 +263,20 @@ export default function OutlookCalendarClient() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!eventMenu) return;
+    const close = () => setEventMenu(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [eventMenu]);
 
   const title = useMemo(() => formatRangeTitle(anchorDate, view), [anchorDate, view]);
   const miniDays = useMemo(() => monthGrid(anchorDate), [anchorDate]);
@@ -328,6 +358,7 @@ export default function OutlookCalendarClient() {
         end: toLocalInputValue(arg.event.end ?? addMinutes(arg.event.start ?? new Date(), 30)),
         allDay: arg.event.allDay,
         label: label.value,
+        status: arg.event.extendedProps?.status as TrackStatus | undefined,
         visibility: (arg.event.extendedProps?.visibility as Visibility) ?? "PERSONAL",
         location: (arg.event.extendedProps?.location as string | null) ?? "",
       }),
@@ -335,17 +366,97 @@ export default function OutlookCalendarClient() {
     setDialogOpen(true);
   }, []);
 
+  const setCalendarLabel = useCallback(
+    async (eventId: string, label: Label) => {
+      const color = labelFor(label);
+      setEvents((prev) =>
+        prev.map((event) =>
+          String(event.id) === eventId
+            ? {
+                ...event,
+                backgroundColor: color.color,
+                borderColor: color.color,
+                textColor: "#ffffff",
+                extendedProps: { ...(event.extendedProps ?? {}), label, status: undefined },
+              }
+            : event,
+        ),
+      );
+
+      try {
+        const response = await fetch(`/api/free-events/${encodeURIComponent(eventId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ label }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        await load();
+      } catch (err) {
+        console.error("Failed to set calendar label", err);
+        await load();
+      } finally {
+        setEventMenu(null);
+      }
+    },
+    [load],
+  );
+
+  const setEventStatus = useCallback(
+    async (eventId: string, status: TrackStatus, track?: "A" | "B" | "C" | "D") => {
+      const statusColor = STATUS_COLOR_PARTS[status];
+      setEvents((prev) =>
+        prev.map((event) =>
+          String(event.id) === eventId
+            ? {
+                ...event,
+                backgroundColor: statusColor.bgHex,
+                borderColor: statusColor.borderHex,
+                textColor: statusColor.textHex,
+                extendedProps: { ...(event.extendedProps ?? {}), status, label: null },
+              }
+            : event,
+        ),
+      );
+
+      try {
+        if (track) {
+          const response = await fetch(`/api/calendar/${encodeURIComponent(eventId)}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ status, track }),
+          });
+          if (!response.ok) throw new Error(await response.text());
+        } else {
+          const label = STATUS_TO_LABEL[status] ?? "BOKAD_TID";
+          const response = await fetch(`/api/free-events/${encodeURIComponent(eventId)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ label }),
+          });
+          if (!response.ok) throw new Error(await response.text());
+        }
+        await load();
+      } catch (err) {
+        console.error("Failed to set status", err);
+        await load();
+      } finally {
+        setEventMenu(null);
+      }
+    },
+    [load],
+  );
+
   const saveDraft = useCallback(async () => {
     if (saving) return;
     setSaving(true);
     setError(null);
 
     const payload = {
-      title: draft.title.trim() || "(Inget Ã¤mne)",
+      title: draft.title.trim() || "(Inget ämne)",
       start: toIso(draft.start),
       end: toIso(draft.end),
       allDay: draft.allDay,
-      label: draft.label,
+      label: draft.status ? STATUS_TO_LABEL[draft.status] ?? draft.label : draft.label,
       visibility: draft.visibility,
       track: "A",
       repeat: "none",
@@ -363,14 +474,14 @@ export default function OutlookCalendarClient() {
 
       if (!response.ok) {
         const text = await response.text().catch(() => "");
-        setError(text || "Kunde inte spara hÃ¤ndelsen.");
+        setError(text || "Kunde inte spara händelsen.");
         return;
       }
 
       setDialogOpen(false);
       await load();
     } catch (err: any) {
-      setError(err?.message ?? "Kunde inte spara hÃ¤ndelsen.");
+      setError(err?.message ?? "Kunde inte spara händelsen.");
     } finally {
       setSaving(false);
     }
@@ -387,13 +498,13 @@ export default function OutlookCalendarClient() {
       });
       if (!response.ok) {
         const text = await response.text().catch(() => "");
-        setError(text || "Kunde inte ta bort hÃ¤ndelsen.");
+        setError(text || "Kunde inte ta bort händelsen.");
         return;
       }
       setDialogOpen(false);
       await load();
     } catch (err: any) {
-      setError(err?.message ?? "Kunde inte ta bort hÃ¤ndelsen.");
+      setError(err?.message ?? "Kunde inte ta bort händelsen.");
     } finally {
       setSaving(false);
     }
@@ -414,7 +525,7 @@ export default function OutlookCalendarClient() {
 
       if (!response?.ok) {
         arg.revert();
-        setError("Kunde inte flytta hÃ¤ndelsen.");
+        setError("Kunde inte flytta händelsen.");
         return;
       }
       await load();
@@ -438,7 +549,7 @@ export default function OutlookCalendarClient() {
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
               >
                 <Plus className="h-4 w-4" />
-                Ny hÃ¤ndelse
+                Ny händelse
                 <ChevronDown className="h-3 w-3" />
               </button>
             </div>
@@ -449,10 +560,10 @@ export default function OutlookCalendarClient() {
                 {MONTHS[anchorDate.getMonth()]} {anchorDate.getFullYear()}
               </button>
               <div className="flex gap-1 text-brand-700">
-                <button type="button" onClick={() => goDate(addDays(anchorDate, -30))} aria-label="FÃ¶regÃ¥ende mÃ¥nad">
+                <button type="button" onClick={() => goDate(addDays(anchorDate, -30))} aria-label="Föregående månad">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={() => goDate(addDays(anchorDate, 30))} aria-label="NÃ¤sta mÃ¥nad">
+                <button type="button" onClick={() => goDate(addDays(anchorDate, 30))} aria-label="Nästa månad">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
@@ -488,7 +599,7 @@ export default function OutlookCalendarClient() {
 
             <button className="mt-5 flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-800">
               <CalendarDays className="h-4 w-4" />
-              LÃ¤gg till kalender
+              Lägg till kalender
             </button>
 
             <div className="mt-6 border-t border-brand-100 pt-3">
@@ -538,7 +649,7 @@ export default function OutlookCalendarClient() {
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
             >
               <CalendarDays className="h-4 w-4" />
-              Ny hÃ¤ndelse
+              Ny händelse
               <ChevronDown className="h-3 w-3" />
             </button>
             <div className="h-6 w-px bg-border" />
@@ -608,6 +719,7 @@ export default function OutlookCalendarClient() {
               nowIndicator
               selectable
               editable
+              eventResizableFromStart
               selectMirror
               slotEventOverlap={false}
               firstDay={view === "timeGridWorkWeek" ? 1 : 0}
@@ -642,6 +754,18 @@ export default function OutlookCalendarClient() {
               eventClick={openEvent}
               eventDrop={eventDrop}
               eventResize={eventDrop as any}
+              eventDidMount={(arg) => {
+                arg.el.oncontextmenu = (event) => {
+                  event.preventDefault();
+                  const track = arg.event.extendedProps?.track as "A" | "B" | "C" | "D" | undefined;
+                  setEventMenu({
+                    id: String(arg.event.extendedProps?.realId ?? arg.event.id),
+                    x: event.clientX,
+                    y: event.clientY,
+                    track,
+                  });
+                };
+              }}
               eventContent={(arg) => (
                 <div className="truncate px-1.5 py-1 text-[12px] leading-tight">
                   {arg.view.type === "dayGridMonth" && arg.timeText ? <span className="font-semibold">{arg.timeText} </span> : null}
@@ -653,15 +777,55 @@ export default function OutlookCalendarClient() {
         </main>
       </div>
 
+      {eventMenu ? (
+        <div
+          className="fixed z-[60] min-w-[220px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
+          style={{ left: eventMenu.x, top: eventMenu.y }}
+          onMouseDown={(event) => event.stopPropagation()}
+          role="menu"
+        >
+          <div className="border-b px-3 py-2 text-xs text-muted">Sätt status</div>
+          {CALENDAR_SETTABLE.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50"
+              onClick={() => void setEventStatus(eventMenu.id, status, eventMenu.track)}
+              role="menuitem"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: STATUS_COLOR_PARTS[status].bgHex }}
+              />
+              <span className="font-medium">{STATUS_DISPLAY[status]}</span>
+            </button>
+          ))}
+
+          <div className="border-y px-3 py-2 text-xs text-muted">Kalenderetikett</div>
+          {LABELS.map((label) => (
+            <button
+              key={label.value}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50"
+              onClick={() => void setCalendarLabel(eventMenu.id, label.value)}
+              role="menuitem"
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: label.color }} />
+              <span className="font-medium">{label.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {dialogOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35">
           <div className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl">
             <div className="flex h-12 items-center border-b border-[#d4d8de] bg-[#d9f3e3] px-4">
-              <span className="text-sm">Ny hÃ¤ndelse â€“ Calendar</span>
-              <button className="ml-auto mr-4 text-[#23272f]" aria-label="Ã–ppna i nytt fÃ¶nster">
+              <span className="text-sm">Ny händelse - Calendar</span>
+              <button className="ml-auto mr-4 text-[#23272f]" aria-label="Öppna i nytt fönster">
                 <AppWindow className="h-4 w-4" />
               </button>
-              <button onClick={() => setDialogOpen(false)} aria-label="StÃ¤ng">
+              <button onClick={() => setDialogOpen(false)} aria-label="Stäng">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -678,7 +842,7 @@ export default function OutlookCalendarClient() {
               </button>
               <button className="inline-flex h-8 items-center gap-2 rounded-sm border border-[#929ba6] bg-[#d9f3e3] px-3 text-sm">
                 <CalendarDays className="h-4 w-4" />
-                HÃ¤ndelse
+                Händelse
               </button>
               <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]">
                 <ChevronRight className="h-4 w-4" />
@@ -709,7 +873,7 @@ export default function OutlookCalendarClient() {
                   <input
                     value={draft.title}
                     onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                    placeholder="LÃ¤gg till rubrik"
+                    placeholder="Lägg till rubrik"
                     className="h-12 border-b border-[#717b87] bg-transparent px-3 text-xl outline-none placeholder:text-[#929ba6]"
                   />
 
@@ -727,7 +891,7 @@ export default function OutlookCalendarClient() {
                       onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
                       className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                     />
-                    <span className="text-[#717b87]">â€“</span>
+                    <span className="text-[#717b87]">-</span>
                     <input
                       type="datetime-local"
                       value={draft.end}
@@ -740,16 +904,42 @@ export default function OutlookCalendarClient() {
                   <input
                     value={draft.location}
                     onChange={(event) => setDraft((prev) => ({ ...prev, location: event.target.value }))}
-                    placeholder="SÃ¶k efter en plats"
+                    placeholder="Sök efter en plats"
                     className="h-12 border-b border-[#717b87] bg-transparent px-3 text-sm outline-none placeholder:text-[#929ba6]"
                   />
 
-                  <Video className="mx-auto h-5 w-5 text-[#717b87]" />
+                  <MoreHorizontal className="mx-auto h-5 w-5 text-[#717b87]" />
                   <div className="flex h-12 items-center gap-3 px-3">
-                    <span className="inline-flex h-5 w-10 items-center rounded-full border border-[#929ba6] bg-white p-0.5">
-                      <span className="h-4 w-4 rounded-full bg-[#717b87]" />
-                    </span>
-                    <span className="text-sm">Skype-mÃ¶te</span>
+                    <select
+                      value={draft.status ?? ""}
+                      onChange={(event) => {
+                        const next = event.target.value as TrackStatus | "";
+                        if (!next) {
+                          setDraft((prev) => ({ ...prev, status: undefined }));
+                          return;
+                        }
+                        setDraft((prev) => ({ ...prev, status: next, label: STATUS_TO_LABEL[next] ?? prev.label }));
+                      }}
+                      className="h-9 rounded-lg border border-[#d4d8de] bg-white px-3 text-sm"
+                    >
+                      <option value="">Ingen orderstatus</option>
+                      {CALENDAR_SETTABLE.map((status) => (
+                        <option key={status} value={status}>
+                          {STATUS_DISPLAY[status]}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={draft.label}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value as Label, status: undefined }))}
+                      className="h-9 rounded-lg border border-[#d4d8de] bg-white px-3 text-sm"
+                    >
+                      {LABELS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </section>
@@ -781,42 +971,12 @@ export default function OutlookCalendarClient() {
                       height: `${Math.max(30, (new Date(draft.end).getTime() - new Date(draft.start).getTime()) / 60_000)}px`,
                     }}
                   >
-                    {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} â€“{" "}
+                    {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
                     {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                   </div>
                 </div>
               </aside>
 
-              <section className="col-span-2 min-h-0 rounded-md border border-[#d4d8de] bg-white">
-                <div className="grid h-full grid-cols-[52px_1fr]">
-                  <div className="border-r border-[#d9f3e3] p-4">
-                    <Paperclip className="h-5 w-5 text-[#717b87]" />
-                  </div>
-                  <div className="flex min-h-0 flex-col">
-                    <textarea
-                      value={draft.body}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, body: event.target.value }))}
-                      className="min-h-0 flex-1 resize-none p-4 outline-none"
-                    />
-                    <div className="flex h-12 items-center gap-4 border-t border-[#d9f3e3] px-4 text-[#717b87]">
-                      <Paperclip className="h-4 w-4" />
-                      <MapPin className="h-4 w-4" />
-                      <Pencil className="h-4 w-4" />
-                      <select
-                        value={draft.label}
-                        onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value as Label }))}
-                        className="ml-auto h-8 rounded-sm border border-[#d4d8de] bg-white px-2 text-sm"
-                      >
-                        {LABELS.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </section>
             </div>
           </div>
         </div>
@@ -866,8 +1026,6 @@ export default function OutlookCalendarClient() {
           overflow: hidden;
         }
         .outlook2 .fc-event {
-          background: #d7ebfa !important;
-          color: #23272f !important;
           border-radius: 4px;
           box-shadow: none;
           font-weight: 400;
