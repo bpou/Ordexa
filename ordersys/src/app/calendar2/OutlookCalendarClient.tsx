@@ -55,7 +55,11 @@ type Draft = {
   visibility: Visibility;
   location: string;
   body: string;
+  showAs: "UPPTAGEN" | "LEDIG";
+  recurrence: "none" | "daily" | "weekly";
 };
+
+type DragHandle = "top" | "bottom" | null;
 
 type CalendarResponse = { events?: EventInput[] };
 
@@ -242,6 +246,8 @@ function makeDraft(input?: Partial<Draft>): Draft {
     location: input?.location ?? "",
     body: input?.body ?? "",
     id: input?.id,
+    showAs: input?.showAs ?? "UPPTAGEN",
+    recurrence: input?.recurrence ?? "none",
   };
 }
 
@@ -255,6 +261,12 @@ export default function OutlookCalendarClient() {
   const [draft, setDraft] = useState<Draft>(() => makeDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [activeCalendars, setActiveCalendars] = useState<Label[]>(LABELS.map((l) => l.value));
+  const [previewDate, setPreviewDate] = useState(() => new Date());
+  const [dragHandle, setDragHandle] = useState<DragHandle>(null);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragStartValue, setDragStartValue] = useState("");
   const [eventMenu, setEventMenu] = useState<{
     eventId: string;
     persistId: string;
@@ -301,6 +313,12 @@ export default function OutlookCalendarClient() {
       document.removeEventListener("keydown", onKey);
     };
   }, [eventMenu]);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      setPreviewDate(new Date(draft.start));
+    }
+  }, [dialogOpen, draft.start]);
 
   const title = useMemo(() => formatRangeTitle(anchorDate, view), [anchorDate, view]);
   const miniDays = useMemo(() => monthGrid(anchorDate), [anchorDate]);
@@ -500,7 +518,8 @@ export default function OutlookCalendarClient() {
       label: draft.status ? STATUS_TO_LABEL[draft.status] ?? draft.label : draft.label,
       visibility: draft.visibility,
       track: "A",
-      repeat: "none",
+      repeat: draft.recurrence,
+      showAs: draft.showAs,
     };
 
     try {
@@ -550,6 +569,122 @@ export default function OutlookCalendarClient() {
       setSaving(false);
     }
   }, [draft.id, load, saving]);
+
+  const MINUTES_PER_PX = 1;
+  const PREVIEW_START_HOUR = 7;
+  const PREVIEW_HOURS = 17;
+
+  const pxToMinutes = useCallback((px: number, baseHour: number) => {
+    return Math.max(0, baseHour - PREVIEW_START_HOUR) * 60 + px;
+  }, []);
+
+  const minutesToLocalValue = useCallback((date: Date, totalMinutes: number) => {
+    const d = new Date(date);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    d.setHours(h, m, 0, 0);
+    return toLocalInputValue(d);
+  }, []);
+
+  const startDrag = useCallback((handle: "top" | "bottom", event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const startY = event.clientY - rect.top;
+    setDragHandle(handle);
+    setDragStartY(startY);
+    setDragStartValue(handle === "top" ? draft.start : draft.end);
+  }, [draft.start, draft.end]);
+
+  useEffect(() => {
+    if (!dragHandle) return;
+
+    const onMove = (event: MouseEvent) => {
+      const dragEl = document.querySelector("[data-event-preview-block]") as HTMLElement | null;
+      if (!dragEl) return;
+      const rect = dragEl.closest("[data-event-preview-container]")?.getBoundingClientRect();
+      if (!rect) return;
+
+      const currentY = event.clientY - rect.top;
+      const deltaPx = currentY - dragStartY;
+      const deltaMinutes = Math.round(deltaPx * MINUTES_PER_PX / 15) * 15;
+
+      const baseDate = new Date(dragStartValue);
+      const baseTotalMinutes = baseDate.getHours() * 60 + baseDate.getMinutes();
+
+      if (dragHandle === "top") {
+        const newStartMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
+        const endTotalMinutes = new Date(draft.end).getHours() * 60 + new Date(draft.end).getMinutes();
+        if (newStartMinutes >= endTotalMinutes - 15) return;
+        setDraft((prev) => ({
+          ...prev,
+          start: minutesToLocalValue(baseDate, newStartMinutes),
+        }));
+      } else {
+        const newEndMinutes = Math.max(0, baseTotalMinutes + deltaMinutes);
+        const startTotalMinutes = new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes();
+        if (newEndMinutes <= startTotalMinutes + 15) return;
+        setDraft((prev) => ({
+          ...prev,
+          end: minutesToLocalValue(baseDate, newEndMinutes),
+        }));
+      }
+    };
+
+    const onUp = () => {
+      setDragHandle(null);
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [dragHandle, dragStartY, dragStartValue, draft.start, draft.end, minutesToLocalValue]);
+
+  const goToPreviewDay = useCallback((days: number) => {
+    setPreviewDate((prev) => {
+      const next = addDays(prev, days);
+      setDraft((d) => ({
+        ...d,
+        start: toLocalInputValue(addDays(new Date(d.start), days - (prev.getTime() === next.getTime() ? 0 : 0))),
+        end: toLocalInputValue(addDays(new Date(d.end), days - (prev.getTime() === next.getTime() ? 0 : 0))),
+      }));
+      return next;
+    });
+  }, []);
+
+  const setPreviewDateAndDraftDate = useCallback((date: Date) => {
+    setPreviewDate(date);
+    setDraft((d) => {
+      const startDate = new Date(d.start);
+      const endDate = new Date(d.end);
+      startDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+      endDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+      return {
+        ...d,
+        start: toLocalInputValue(startDate),
+        end: toLocalInputValue(endDate),
+      };
+    });
+  }, []);
+
+  const toggleCalendarActive = useCallback((label: Label) => {
+    setActiveCalendars((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
+    );
+  }, []);
+
+  const filteredEvents = useMemo(
+    () =>
+      events.filter((e: any) => {
+        const label = e.extendedProps?.label as Label | null | undefined;
+        if (!label) return true;
+        return activeCalendars.includes(label);
+      }),
+    [events, activeCalendars],
+  );
 
   const eventDrop = useCallback(
     async (arg: EventDropArg) => {
@@ -638,7 +773,7 @@ export default function OutlookCalendarClient() {
               })}
             </div>
 
-            <button className="mt-5 flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-800">
+            <button className="mt-5 flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-800" onClick={() => {}}>
               <CalendarDays className="h-4 w-4" />
               Lägg till kalender
             </button>
@@ -649,23 +784,39 @@ export default function OutlookCalendarClient() {
                 Mina kalendrar
               </div>
               <div className="space-y-3">
-                {LABELS.slice(0, 6).map((item, index) => (
-                  <label key={item.value} className="flex items-center gap-3 text-sm">
-                    <span
-                      className="flex h-4 w-4 items-center justify-center rounded-full border"
-                      style={{
-                        borderColor: item.color,
-                        backgroundColor: index === 0 ? item.color : "transparent",
-                        color: "white",
-                      }}
+                {LABELS.slice(0, 6).map((item) => {
+                  const active = activeCalendars.includes(item.value);
+                  return (
+                    <label
+                      key={item.value}
+                      className="flex cursor-pointer items-center gap-3 text-sm hover:bg-brand-100/40 -mx-1 px-1 py-0.5 rounded"
+                      onClick={() => toggleCalendarActive(item.value)}
                     >
-                      {index === 0 ? <Check className="h-3 w-3" /> : null}
-                    </span>
-                    {item.label}
-                  </label>
-                ))}
+                      <span
+                        className="flex h-4 w-4 items-center justify-center rounded-full border"
+                        style={{
+                          borderColor: item.color,
+                          backgroundColor: active ? item.color : "transparent",
+                          color: "white",
+                        }}
+                      >
+                        {active ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                      {item.label}
+                    </label>
+                  );
+                })}
               </div>
-              <button className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800">Visa alla</button>
+              <button
+                className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
+                onClick={() =>
+                  setActiveCalendars(
+                    activeCalendars.length === LABELS.length ? [] : LABELS.map((l) => l.value),
+                  )
+                }
+              >
+                {activeCalendars.length === LABELS.length ? "Dölj alla" : "Visa alla"}
+              </button>
             </div>
 
             <div className="mt-6">
@@ -677,7 +828,14 @@ export default function OutlookCalendarClient() {
                 <span className="h-4 w-4 rounded-full border border-[#929ba6]" />
                 Din familj
               </label>
-              <button className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800">Visa valda</button>
+              <button
+                className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
+                onClick={() => {
+                  // Toggle group filter - currently no-op as groups are placeholder
+                }}
+              >
+                Visa valda
+              </button>
             </div>
           </div>
         </aside>
@@ -709,16 +867,53 @@ export default function OutlookCalendarClient() {
                 {item.label}
               </button>
             ))}
-            <button className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground">
+            <button
+              className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground hover:bg-brand-50"
+              onClick={() => window.open("/calendar2", "_blank", "width=1200,height=800")}
+            >
               <Copy className="h-3.5 w-3.5" />
               Delad vy
             </button>
             <div className="h-6 w-px bg-border" />
-            <button className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm hover:bg-brand-50">
-              <Filter className="h-4 w-4" />
-              Filtrera
-              <ChevronDown className="h-3 w-3" />
-            </button>
+            <div className="relative">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm hover:bg-brand-50"
+                onClick={() => setFilterOpen((o) => !o)}
+              >
+                <Filter className="h-4 w-4" />
+                Filtrera
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              {filterOpen ? (
+                <div
+                  className="absolute right-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {LABELS.map((item) => {
+                    const active = activeCalendars.includes(item.value);
+                    return (
+                      <button
+                        key={item.value}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50"
+                        onClick={() => toggleCalendarActive(item.value)}
+                      >
+                        <span
+                          className="flex h-4 w-4 items-center justify-center rounded-full border"
+                          style={{
+                            borderColor: item.color,
+                            backgroundColor: active ? item.color : "transparent",
+                            color: "white",
+                          }}
+                        >
+                          {active ? <Check className="h-3 w-3" /> : null}
+                        </span>
+                        <span className="font-medium">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <div className="ml-auto">
               {loading ? <span className="text-xs text-muted">Synkar...</span> : null}
             </div>
@@ -790,7 +985,7 @@ export default function OutlookCalendarClient() {
                 setAnchorDate((current) => (current.getTime() === nextDate.getTime() ? current : nextDate));
                 setView((current) => (current === arg.view.type ? current : (arg.view.type as CalendarView)));
               }}
-              events={events}
+              events={filteredEvents}
               select={openFromSelect}
               eventClick={openEvent}
               eventDrop={eventDrop}
@@ -871,8 +1066,18 @@ export default function OutlookCalendarClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35">
           <div className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl">
             <div className="flex h-12 items-center border-b border-[#d4d8de] bg-[#d9f3e3] px-4">
-              <span className="text-sm">Ny händelse - Calendar</span>
-              <button className="ml-auto mr-4 text-[#23272f]" aria-label="Öppna i nytt fönster">
+              <span className="text-sm">
+                {draft.recurrence === "none"
+                  ? "Händelse"
+                  : draft.recurrence === "daily"
+                    ? "Daglig serie"
+                    : "Veckovis serie"}
+              </span>
+              <button
+                className="ml-auto mr-4 text-[#23272f]"
+                aria-label="Öppna i nytt fönster"
+                onClick={() => window.open("/calendar2", "_blank", "width=1200,height=800")}
+              >
                 <AppWindow className="h-4 w-4" />
               </button>
               <button onClick={() => setDialogOpen(false)} aria-label="Stäng">
@@ -883,30 +1088,61 @@ export default function OutlookCalendarClient() {
             <div className="mx-4 mt-2 flex h-10 items-center gap-2 rounded-md border border-[#d4d8de] bg-white px-2 shadow-sm">
               <button
                 type="button"
-                onClick={() => void saveDraft()}
+                onClick={() => { void saveDraft(); }}
                 disabled={saving}
                 className="inline-flex h-8 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
                 Spara
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm border border-[#929ba6] bg-[#d9f3e3] px-3 text-sm">
+              <button
+                className={`inline-flex h-8 items-center gap-2 rounded-sm border px-3 text-sm ${
+                  draft.recurrence === "none"
+                    ? "border-brand-300 bg-brand-100 text-brand-900"
+                    : "border-[#929ba6] bg-[#d9f3e3]"
+                }`}
+                onClick={() => setDraft((prev) => ({ ...prev, recurrence: "none" }))}
+              >
                 <CalendarDays className="h-4 w-4" />
                 Händelse
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]">
+              <button
+                className={`inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3] ${
+                  draft.recurrence !== "none"
+                    ? "border-brand-300 bg-brand-100 text-brand-900 font-semibold"
+                    : ""
+                }`}
+                onClick={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    recurrence: prev.recurrence === "none" ? "daily" : prev.recurrence === "daily" ? "weekly" : "none",
+                    title:
+                      prev.recurrence === "daily" ? "Veckovis" : prev.recurrence === "weekly" ? "" : "Daglig",
+                  }))
+                }
+              >
                 <ChevronRight className="h-4 w-4" />
                 Serie
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]">
-                <MoreHorizontal className="h-4 w-4" />
-                Upptagen
-                <ChevronDown className="h-3 w-3" />
-              </button>
+              <div className="relative">
+                <button
+                  className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]"
+                  onClick={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      showAs: prev.showAs === "UPPTAGEN" ? "LEDIG" : "UPPTAGEN",
+                    }))
+                  }
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  {draft.showAs === "UPPTAGEN" ? "Upptagen" : "Ledig"}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
               {draft.id ? (
                 <button
                   type="button"
-                  onClick={() => void deleteDraft()}
+                  onClick={() => { void deleteDraft(); }}
                   disabled={saving}
                   className="ml-auto inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
                 >
@@ -959,7 +1195,7 @@ export default function OutlookCalendarClient() {
                   />
 
                   <MoreHorizontal className="mx-auto h-5 w-5 text-[#717b87]" />
-                  <div className="flex h-12 items-center gap-3 px-3">
+                  <div className="relative flex h-12 items-center gap-3 px-3">
                     <select
                       value={draft.status ?? ""}
                       onChange={(event) => {
@@ -991,22 +1227,39 @@ export default function OutlookCalendarClient() {
                       ))}
                     </select>
                   </div>
+
+                  <div className="mx-auto text-xs text-[#717b87]">Beskrivning</div>
+                  <textarea
+                    value={draft.body}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, body: event.target.value }))}
+                    placeholder="Lägg till en beskrivning"
+                    className="min-h-[80px] resize-y rounded border border-[#d4d8de] px-3 py-2 text-sm outline-none placeholder:text-[#929ba6]"
+                  />
                 </div>
               </section>
 
               <aside className="min-h-0 rounded-md border border-[#d4d8de] bg-white">
                 <div className="flex h-12 items-center gap-2 border-b border-[#d4d8de] px-3 font-semibold">
-                  <ChevronLeft className="h-4 w-4 text-[#717b87]" />
-                  <CalendarDays className="h-4 w-4 text-[#717b87]" />
-                  <ChevronRight className="h-4 w-4 text-[#717b87]" />
+                  <button type="button" onClick={() => goToPreviewDay(-1)} className="hover:bg-[#f3f2f1] rounded p-1">
+                    <ChevronLeft className="h-4 w-4 text-[#717b87]" />
+                  </button>
+                  <button type="button" onClick={() => setPreviewDateAndDraftDate(new Date())} className="hover:bg-[#f3f2f1] rounded p-1">
+                    <CalendarDays className="h-4 w-4 text-[#717b87]" />
+                  </button>
+                  <button type="button" onClick={() => goToPreviewDay(1)} className="hover:bg-[#f3f2f1] rounded p-1">
+                    <ChevronRight className="h-4 w-4 text-[#717b87]" />
+                  </button>
                   <span>
                     {WEEKDAYS_LONG[new Date(draft.start).getDay()].slice(0, 3)}, {MONTHS[new Date(draft.start).getMonth()].slice(0, 3)}{" "}
                     {new Date(draft.start).getDate()}, {new Date(draft.start).getFullYear()}
                   </span>
-                  <ChevronDown className="h-3 w-3" />
                 </div>
-                <div className="relative h-[calc(100%-48px)] overflow-hidden">
-                  {Array.from({ length: 17 }, (_, index) => index + 7).map((hour) => (
+                <div
+                  data-event-preview-container
+                  className="relative h-[calc(100%-48px)] overflow-hidden select-none"
+                  style={{ cursor: dragHandle === "top" ? "ns-resize" : dragHandle === "bottom" ? "ns-resize" : "default" }}
+                >
+                  {Array.from({ length: PREVIEW_HOURS }, (_, index) => index + PREVIEW_START_HOUR).map((hour) => (
                     <div key={hour} className="grid h-[60px] grid-cols-[48px_1fr] border-b border-[#d4d8de]">
                       <div className="border-r border-[#d4d8de] px-2 pt-1 text-right text-sm text-[#717b87]">
                         {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
@@ -1015,14 +1268,25 @@ export default function OutlookCalendarClient() {
                     </div>
                   ))}
                   <div
-                    className="absolute left-[58px] right-5 rounded-sm bg-[#4cc773] px-2 py-1 text-sm font-semibold text-black"
+                    data-event-preview-block
+                    className="absolute left-[58px] right-5 rounded-sm bg-[#4cc773] text-sm font-semibold text-black"
                     style={{
-                      top: `${Math.max(0, (new Date(draft.start).getHours() - 7) * 60 + new Date(draft.start).getMinutes())}px`,
+                      top: `${Math.max(0, (new Date(draft.start).getHours() - PREVIEW_START_HOUR) * 60 + new Date(draft.start).getMinutes())}px`,
                       height: `${Math.max(30, (new Date(draft.end).getTime() - new Date(draft.start).getTime()) / 60_000)}px`,
                     }}
                   >
-                    {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
-                    {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                    <div
+                      className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa]"
+                      onMouseDown={(e) => startDrag("top", e)}
+                    />
+                    <div className="px-2 py-1" style={{ paddingTop: "8px" }}>
+                      {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
+                      {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                    </div>
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa] rounded-b-sm"
+                      onMouseDown={(e) => startDrag("bottom", e)}
+                    />
                   </div>
                 </div>
               </aside>
@@ -1108,6 +1372,12 @@ export default function OutlookCalendarClient() {
         }
         .outlook2 .fc-timegrid-now-indicator-line {
           border-color: #929ba6;
+        }
+        [data-event-preview-container] [data-event-preview-block] {
+          transition: ${dragHandle ? "none" : "box-shadow 0.15s ease"};
+        }
+        [data-event-preview-container] [data-event-preview-block]:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
       `}</style>
     </div>
