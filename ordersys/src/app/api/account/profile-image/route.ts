@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   let imageUrl: string;
 
-  if (isVercelBlobConfigured()) {
+  if (process.env.VERCEL || isVercelBlobConfigured()) {
     const uploaded = await uploadStoredFile({
       key: `profiles/${filename}`,
       body: buffer,
@@ -86,13 +86,6 @@ export async function POST(req: Request) {
     });
     imageUrl = uploaded.url;
   } else {
-    if (process.env.VERCEL) {
-      return NextResponse.json(
-        { error: "Profilbildsuppladdning saknar BLOB_READ_WRITE_TOKEN i produktion." },
-        { status: 500 }
-      );
-    }
-
     await mkdir(uploadDir, { recursive: true });
     const relativeUrl = `${PROFILE_UPLOAD_URL_PREFIX}${filename}`;
     const destination = path.join(uploadDir, filename);
@@ -114,6 +107,12 @@ export async function POST(req: Request) {
       // Best effort cleanup only; a missing old avatar should not fail upload.
     }
   } else if (current.image?.includes(".blob.vercel-storage.com/")) {
+    try {
+      await deleteStoredFile(current.image);
+    } catch {
+      // Best effort cleanup only; a missing old avatar should not fail upload.
+    }
+  } else if (current.image?.includes("/api/stored-files/")) {
     try {
       await deleteStoredFile(current.image);
     } catch {

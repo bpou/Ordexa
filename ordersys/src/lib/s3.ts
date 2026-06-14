@@ -17,6 +17,14 @@ type S3Config = {
 let cachedS3Client: S3Client | null = null;
 let cachedS3Config: S3Config | null = null;
 
+export function isS3Configured() {
+  return Boolean(
+    process.env.S3_BUCKET_NAME &&
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY
+  );
+}
+
 function getS3Config(): S3Config {
   if (cachedS3Config) return cachedS3Config;
 
@@ -115,5 +123,27 @@ export async function s3PresignGetUrl(key: string, expiresInSec = 600) {
     Key: resolveS3Key(key),
   });
   return getSignedUrl(s3, cmd, { expiresIn: expiresInSec });
+}
+
+export async function s3GetObject(key: string) {
+  const { bucket } = getS3Config();
+  const s3 = getS3Client();
+  const object = await s3.send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: resolveS3Key(key),
+    })
+  );
+
+  if (!object.Body) {
+    throw new Error("S3 object response is missing a body.");
+  }
+
+  const bytes = await object.Body.transformToByteArray();
+  return {
+    body: Buffer.from(bytes),
+    contentType: object.ContentType ?? "application/octet-stream",
+    cacheControl: object.CacheControl ?? null,
+  };
 }
 
