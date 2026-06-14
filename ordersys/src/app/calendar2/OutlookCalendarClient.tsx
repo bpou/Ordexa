@@ -15,7 +15,6 @@ import type {
 import svLocale from "@fullcalendar/core/locales/sv";
 import {
   AppWindow,
-  Bell,
   CalendarDays,
   Check,
   ChevronDown,
@@ -24,22 +23,13 @@ import {
   Clock3,
   Copy,
   Filter,
-  Grid2X2,
-  HelpCircle,
-  Mail,
   MapPin,
-  Menu,
   MoreHorizontal,
   Paperclip,
   Pencil,
   Plus,
-  Printer,
   Save,
-  Search,
-  Settings,
-  Share2,
   Trash2,
-  UserRound,
   UsersRound,
   Video,
   X,
@@ -71,7 +61,7 @@ type Draft = {
 type CalendarResponse = { events?: EventInput[] };
 
 const LABELS: { value: Label; label: string; color: string }[] = [
-  { value: "BOKAD_TID", label: "Calendar", color: "#0078d4" },
+  { value: "BOKAD_TID", label: "Calendar", color: "#059669" },
   { value: "KAN_FLYTTAS", label: "Verkstad", color: "#107c10" },
   { value: "LUNCH", label: "Birthdays", color: "#fce100" },
   { value: "SEMESTER", label: "Ateljé", color: "#ca5010" },
@@ -433,56 +423,11 @@ export default function OutlookCalendarClient() {
   );
 
   return (
-    <div className="outlook2 fixed inset-0 z-[1000] h-screen overflow-hidden bg-[#f3f2f1] text-[#323130]">
-      <div className="flex h-8 items-center bg-[#0f6cbd] text-white">
-        <button className="flex h-8 w-8 items-center justify-center hover:bg-white/10" aria-label="Appar">
-          <Grid2X2 className="h-4 w-4" />
-        </button>
-        <div className="px-2 text-sm font-semibold">Outlook</div>
-        <div className="ml-32 flex h-8 w-[380px] items-center gap-2 bg-white px-3 text-[#605e5c]">
-          <Search className="h-4 w-4" />
-          <span className="text-sm">Sök</span>
-        </div>
-        <div className="ml-auto flex items-center">
-          <button className="flex h-8 w-8 items-center justify-center hover:bg-white/10" aria-label="Meddelande">
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button className="flex h-8 w-8 items-center justify-center hover:bg-white/10" aria-label="Aviseringar">
-            <Bell className="h-4 w-4" />
-          </button>
-          <button className="flex h-8 w-8 items-center justify-center hover:bg-white/10" aria-label="Inställningar">
-            <Settings className="h-4 w-4" />
-          </button>
-          <button className="flex h-8 w-8 items-center justify-center hover:bg-white/10" aria-label="Hjälp">
-            <HelpCircle className="h-4 w-4" />
-          </button>
-          <div className="mx-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
-            <UserRound className="h-4 w-4" />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex h-[calc(100vh-32px)]">
-        <aside className="flex w-8 flex-col items-center gap-2 border-r border-[#dedede] bg-[#faf9f8] py-2">
-          {[Mail, CalendarDays, UsersRound, Check, AppWindow].map((Icon, index) => (
-            <button
-              key={index}
-              className={`flex h-7 w-7 items-center justify-center rounded-sm ${
-                index === 1 ? "bg-[#e5f1fb] text-[#0078d4]" : "text-[#605e5c] hover:bg-[#edebe9]"
-              }`}
-              aria-label={`Outlook ikon ${index + 1}`}
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          ))}
-        </aside>
-
-        <aside className="w-[250px] shrink-0 border-r border-[#dedede] bg-[#faf9f8]">
-          <div className="flex h-9 items-center gap-3 border-b border-[#edebe9] px-4">
-            <Menu className="h-4 w-4 text-[#605e5c]" />
-            <span className="border-b-2 border-[#0078d4] px-1 py-2 text-sm font-semibold">Hem</span>
-            <span className="px-1 py-2 text-sm text-[#605e5c]">Visa</span>
-            <span className="px-1 py-2 text-sm text-[#605e5c]">Hjälp</span>
+    <div className="outlook2 h-[calc(100dvh-128px)] min-h-[680px] overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm">
+      <div className="flex h-full">
+        <aside className="w-[260px] shrink-0 border-r border-border bg-brand-50/60">
+          <div className="flex h-12 items-center border-b border-brand-100 px-4">
+            <span className="text-sm font-semibold text-brand-800">Kalender</span>
           </div>
 
           <div className="px-4 py-3">
@@ -490,7 +435,7 @@ export default function OutlookCalendarClient() {
               <button
                 type="button"
                 onClick={() => openNew()}
-                className="inline-flex h-8 items-center gap-2 rounded-sm bg-[#0078d4] px-3 text-sm font-semibold text-white shadow-sm hover:bg-[#106ebe]"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
               >
                 <Plus className="h-4 w-4" />
                 Ny händelse
@@ -503,7 +448,7 @@ export default function OutlookCalendarClient() {
                 <ChevronDown className="h-4 w-4" />
                 {MONTHS[anchorDate.getMonth()]} {anchorDate.getFullYear()}
               </button>
-              <div className="flex gap-1 text-[#0078d4]">
+              <div className="flex gap-1 text-brand-700">
                 <button type="button" onClick={() => goDate(addDays(anchorDate, -30))} aria-label="Föregående månad">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -515,7 +460,7 @@ export default function OutlookCalendarClient() {
 
             <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
               {WEEKDAYS_SHORT.map((day, index) => (
-                <div key={`${day}-${index}`} className="text-[#605e5c]">
+                <div key={`${day}-${index}`} className="text-[#717b87]">
                   {day}
                 </div>
               ))}
@@ -529,10 +474,10 @@ export default function OutlookCalendarClient() {
                     type="button"
                     onClick={() => goDate(day)}
                     className={[
-                      "mx-auto flex h-6 w-7 items-center justify-center rounded-sm text-xs",
-                      outside ? "text-[#8a8886]" : "text-[#323130]",
-                      selected ? "bg-[#cfe4fa] outline outline-1 outline-[#0078d4]" : "hover:bg-[#edebe9]",
-                      today ? "font-semibold text-[#0078d4]" : "",
+                      "mx-auto flex h-6 w-7 items-center justify-center rounded-md text-xs",
+                      outside ? "text-muted-foreground" : "text-foreground",
+                      selected ? "bg-brand-100 outline outline-1 outline-brand-600" : "hover:bg-brand-100/70",
+                      today ? "font-semibold text-brand-700" : "",
                     ].join(" ")}
                   >
                     {day.getDate()}
@@ -541,13 +486,13 @@ export default function OutlookCalendarClient() {
               })}
             </div>
 
-            <button className="mt-5 flex items-center gap-2 text-sm text-[#0078d4]">
+            <button className="mt-5 flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-800">
               <CalendarDays className="h-4 w-4" />
               Lägg till kalender
             </button>
 
-            <div className="mt-6 border-t border-[#edebe9] pt-3">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <div className="mt-6 border-t border-brand-100 pt-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-900">
                 <ChevronDown className="h-4 w-4" />
                 Mina kalendrar
               </div>
@@ -568,90 +513,81 @@ export default function OutlookCalendarClient() {
                   </label>
                 ))}
               </div>
-              <button className="ml-7 mt-4 text-sm text-[#0078d4]">Visa alla</button>
+              <button className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800">Visa alla</button>
             </div>
 
             <div className="mt-6">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-900">
                 <ChevronDown className="h-4 w-4" />
                 Grupper
               </div>
               <label className="flex items-center gap-3 text-sm">
-                <span className="h-4 w-4 rounded-full border border-[#8a8886]" />
+                <span className="h-4 w-4 rounded-full border border-[#929ba6]" />
                 Din familj
               </label>
-              <button className="ml-7 mt-4 text-sm text-[#0078d4]">Visa valda</button>
+              <button className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800">Visa valda</button>
             </div>
           </div>
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-          <div className="flex h-10 items-center gap-2 border-b border-[#dedede] bg-[#faf9f8] px-2 shadow-sm">
+          <div className="flex h-12 items-center gap-2 border-b border-border bg-card px-3 shadow-sm">
             <button
               type="button"
               onClick={() => openNew()}
-              className="inline-flex h-8 items-center gap-2 rounded-sm bg-[#0078d4] px-3 text-sm font-semibold text-white hover:bg-[#106ebe]"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
             >
               <CalendarDays className="h-4 w-4" />
               Ny händelse
               <ChevronDown className="h-3 w-3" />
             </button>
-            <div className="h-6 w-px bg-[#dedede]" />
+            <div className="h-6 w-px bg-border" />
             {VIEW_BUTTONS.map((item) => (
               <button
                 key={item.view}
                 type="button"
                 onClick={() => changeView(item.view)}
-                className={`inline-flex h-8 items-center gap-1 rounded-sm border px-2 text-sm ${
+                className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm ${
                   view === item.view
-                    ? "border-[#8a8886] bg-[#edebe9]"
-                    : "border-transparent bg-transparent hover:bg-[#edebe9]"
+                    ? "border-brand-300 bg-brand-100 text-brand-900"
+                    : "border-transparent bg-transparent text-foreground hover:bg-brand-50"
                 }`}
               >
-                <CalendarDays className="h-3.5 w-3.5 text-[#605e5c]" />
+                <CalendarDays className="h-3.5 w-3.5 text-brand-700" />
                 {item.label}
               </button>
             ))}
-            <button className="inline-flex h-8 items-center gap-1 rounded-sm px-2 text-sm text-[#a19f9d]">
+            <button className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground">
               <Copy className="h-3.5 w-3.5" />
               Delad vy
             </button>
-            <div className="h-6 w-px bg-[#dedede]" />
-            <button className="inline-flex h-8 items-center gap-1 rounded-sm px-2 text-sm hover:bg-[#edebe9]">
+            <div className="h-6 w-px bg-border" />
+            <button className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm hover:bg-brand-50">
               <Filter className="h-4 w-4" />
               Filtrera
               <ChevronDown className="h-3 w-3" />
             </button>
-            <button className="inline-flex h-8 items-center gap-1 rounded-sm px-2 text-sm hover:bg-[#edebe9]">
-              <Share2 className="h-4 w-4 text-[#0078d4]" />
-              Dela
-              <ChevronDown className="h-3 w-3" />
-            </button>
-            <button className="inline-flex h-8 items-center gap-1 rounded-sm px-2 text-sm hover:bg-[#edebe9]">
-              <Printer className="h-4 w-4" />
-              Skriv ut
-            </button>
             <div className="ml-auto">
-              {loading ? <span className="text-xs text-[#605e5c]">Synkar...</span> : null}
+              {loading ? <span className="text-xs text-muted">Synkar...</span> : null}
             </div>
           </div>
 
-          <div className="flex h-12 items-center gap-2 border-b border-[#edebe9] px-4">
+          <div className="flex h-12 items-center gap-2 border-b border-border px-4">
             <button
               type="button"
               onClick={goToday}
-              className="inline-flex h-8 items-center gap-2 rounded-sm border border-[#dedede] bg-white px-4 text-sm font-semibold hover:bg-[#faf9f8]"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-white px-4 text-sm font-semibold hover:bg-brand-50"
             >
               <CalendarDays className="h-4 w-4" />
               I dag
             </button>
-            <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-sm hover:bg-[#edebe9]">
+            <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-brand-50">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button type="button" onClick={goNext} className="flex h-8 w-8 items-center justify-center rounded-sm hover:bg-[#edebe9]">
+            <button type="button" onClick={goNext} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-brand-50">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <h1 className="ml-2 text-xl font-semibold">
+            <h1 className="ml-2 text-xl font-semibold text-brand-900">
               {title}
               <ChevronDown className="ml-1 inline h-4 w-4" />
             </h1>
@@ -685,13 +621,13 @@ export default function OutlookCalendarClient() {
                 if (view === "dayGridMonth") return WEEKDAYS_LONG[arg.date.getDay()];
                 return (
                   <div className="px-3 py-2 text-left">
-                    <div className="text-lg font-normal text-[#0078d4]">{dayNumber}</div>
-                    <div className="text-xs text-[#605e5c]">{WEEKDAYS_LONG[arg.date.getDay()]}</div>
+                    <div className="text-lg font-normal text-brand-700">{dayNumber}</div>
+                    <div className="text-xs text-[#717b87]">{WEEKDAYS_LONG[arg.date.getDay()]}</div>
                   </div>
                 );
               }}
               dayCellContent={(arg) => (
-                <div className="px-2 py-1 text-left text-sm text-[#605e5c]">
+                <div className="px-2 py-1 text-left text-sm text-[#717b87]">
                   {arg.date.getDate() === 1 ? `${MONTHS[arg.date.getMonth()].slice(0, 3)} ${arg.date.getDate()}` : arg.date.getDate()}
                 </div>
               )}
@@ -719,9 +655,9 @@ export default function OutlookCalendarClient() {
       {dialogOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35">
           <div className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl">
-            <div className="flex h-12 items-center border-b border-[#dedede] bg-[#edebe9] px-4">
+            <div className="flex h-12 items-center border-b border-[#d4d8de] bg-[#d9f3e3] px-4">
               <span className="text-sm">Ny händelse – Calendar</span>
-              <button className="ml-auto mr-4 text-[#323130]" aria-label="Öppna i nytt fönster">
+              <button className="ml-auto mr-4 text-[#23272f]" aria-label="Öppna i nytt fönster">
                 <AppWindow className="h-4 w-4" />
               </button>
               <button onClick={() => setDialogOpen(false)} aria-label="Stäng">
@@ -729,25 +665,25 @@ export default function OutlookCalendarClient() {
               </button>
             </div>
 
-            <div className="mx-4 mt-2 flex h-10 items-center gap-2 rounded-md border border-[#dedede] bg-white px-2 shadow-sm">
+            <div className="mx-4 mt-2 flex h-10 items-center gap-2 rounded-md border border-[#d4d8de] bg-white px-2 shadow-sm">
               <button
                 type="button"
                 onClick={() => void saveDraft()}
                 disabled={saving}
-                className="inline-flex h-8 items-center gap-2 rounded-sm bg-[#0078d4] px-4 text-sm font-semibold text-white hover:bg-[#106ebe] disabled:opacity-60"
+                className="inline-flex h-8 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
                 Spara
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm border border-[#8a8886] bg-[#edebe9] px-3 text-sm">
+              <button className="inline-flex h-8 items-center gap-2 rounded-sm border border-[#929ba6] bg-[#d9f3e3] px-3 text-sm">
                 <CalendarDays className="h-4 w-4" />
                 Händelse
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#edebe9]">
+              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]">
                 <ChevronRight className="h-4 w-4" />
                 Serie
               </button>
-              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#edebe9]">
+              <button className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]">
                 <MoreHorizontal className="h-4 w-4" />
                 Upptagen
                 <ChevronDown className="h-3 w-3" />
@@ -766,31 +702,31 @@ export default function OutlookCalendarClient() {
             </div>
 
             <div className="grid min-h-0 flex-1 grid-cols-[1fr_352px] gap-4 p-4">
-              <section className="min-h-0 rounded-md border border-[#dedede] bg-white p-3">
+              <section className="min-h-0 rounded-md border border-[#d4d8de] bg-white p-3">
                 <div className="grid grid-cols-[42px_1fr] items-center gap-y-2">
-                  <UsersRound className="mx-auto h-5 w-5 text-[#0078d4]" />
+                  <UsersRound className="mx-auto h-5 w-5 text-brand-700" />
                   <input
                     value={draft.title}
                     onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
                     placeholder="Lägg till rubrik"
-                    className="h-12 border-b border-[#605e5c] bg-transparent px-3 text-xl outline-none placeholder:text-[#8a8886]"
+                    className="h-12 border-b border-[#717b87] bg-transparent px-3 text-xl outline-none placeholder:text-[#929ba6]"
                   />
 
-                  <UsersRound className="mx-auto h-5 w-5 text-[#605e5c]" />
+                  <UsersRound className="mx-auto h-5 w-5 text-[#717b87]" />
                   <input
                     placeholder="Bjud in obligatoriska deltagare"
-                    className="h-12 border-b border-[#c8c6c4] bg-transparent px-3 text-sm outline-none placeholder:text-[#8a8886]"
+                    className="h-12 border-b border-[#d4d8de] bg-transparent px-3 text-sm outline-none placeholder:text-[#929ba6]"
                   />
 
-                  <Clock3 className="mx-auto h-5 w-5 text-[#605e5c]" />
-                  <div className="flex h-12 items-center gap-2 border-b border-[#605e5c] px-3">
+                  <Clock3 className="mx-auto h-5 w-5 text-[#717b87]" />
+                  <div className="flex h-12 items-center gap-2 border-b border-[#717b87] px-3">
                     <input
                       type="datetime-local"
                       value={draft.start}
                       onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
                       className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                     />
-                    <span className="text-[#605e5c]">–</span>
+                    <span className="text-[#717b87]">–</span>
                     <input
                       type="datetime-local"
                       value={draft.end}
@@ -799,29 +735,29 @@ export default function OutlookCalendarClient() {
                     />
                   </div>
 
-                  <MapPin className="mx-auto h-5 w-5 text-[#605e5c]" />
+                  <MapPin className="mx-auto h-5 w-5 text-[#717b87]" />
                   <input
                     value={draft.location}
                     onChange={(event) => setDraft((prev) => ({ ...prev, location: event.target.value }))}
                     placeholder="Sök efter en plats"
-                    className="h-12 border-b border-[#605e5c] bg-transparent px-3 text-sm outline-none placeholder:text-[#8a8886]"
+                    className="h-12 border-b border-[#717b87] bg-transparent px-3 text-sm outline-none placeholder:text-[#929ba6]"
                   />
 
-                  <Video className="mx-auto h-5 w-5 text-[#605e5c]" />
+                  <Video className="mx-auto h-5 w-5 text-[#717b87]" />
                   <div className="flex h-12 items-center gap-3 px-3">
-                    <span className="inline-flex h-5 w-10 items-center rounded-full border border-[#8a8886] bg-white p-0.5">
-                      <span className="h-4 w-4 rounded-full bg-[#605e5c]" />
+                    <span className="inline-flex h-5 w-10 items-center rounded-full border border-[#929ba6] bg-white p-0.5">
+                      <span className="h-4 w-4 rounded-full bg-[#717b87]" />
                     </span>
                     <span className="text-sm">Skype-möte</span>
                   </div>
                 </div>
               </section>
 
-              <aside className="min-h-0 rounded-md border border-[#dedede] bg-white">
-                <div className="flex h-12 items-center gap-2 border-b border-[#dedede] px-3 font-semibold">
-                  <ChevronLeft className="h-4 w-4 text-[#605e5c]" />
-                  <CalendarDays className="h-4 w-4 text-[#605e5c]" />
-                  <ChevronRight className="h-4 w-4 text-[#605e5c]" />
+              <aside className="min-h-0 rounded-md border border-[#d4d8de] bg-white">
+                <div className="flex h-12 items-center gap-2 border-b border-[#d4d8de] px-3 font-semibold">
+                  <ChevronLeft className="h-4 w-4 text-[#717b87]" />
+                  <CalendarDays className="h-4 w-4 text-[#717b87]" />
+                  <ChevronRight className="h-4 w-4 text-[#717b87]" />
                   <span>
                     {WEEKDAYS_LONG[new Date(draft.start).getDay()].slice(0, 3)}, {MONTHS[new Date(draft.start).getMonth()].slice(0, 3)}{" "}
                     {new Date(draft.start).getDate()}, {new Date(draft.start).getFullYear()}
@@ -830,8 +766,8 @@ export default function OutlookCalendarClient() {
                 </div>
                 <div className="relative h-[calc(100%-48px)] overflow-hidden">
                   {Array.from({ length: 17 }, (_, index) => index + 7).map((hour) => (
-                    <div key={hour} className="grid h-[60px] grid-cols-[48px_1fr] border-b border-[#dedede]">
-                      <div className="border-r border-[#dedede] px-2 pt-1 text-right text-sm text-[#605e5c]">
+                    <div key={hour} className="grid h-[60px] grid-cols-[48px_1fr] border-b border-[#d4d8de]">
+                      <div className="border-r border-[#d4d8de] px-2 pt-1 text-right text-sm text-[#717b87]">
                         {hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                       </div>
                       <div className="bg-white" />
@@ -850,10 +786,10 @@ export default function OutlookCalendarClient() {
                 </div>
               </aside>
 
-              <section className="col-span-2 min-h-0 rounded-md border border-[#dedede] bg-white">
+              <section className="col-span-2 min-h-0 rounded-md border border-[#d4d8de] bg-white">
                 <div className="grid h-full grid-cols-[52px_1fr]">
-                  <div className="border-r border-[#edebe9] p-4">
-                    <Paperclip className="h-5 w-5 text-[#605e5c]" />
+                  <div className="border-r border-[#d9f3e3] p-4">
+                    <Paperclip className="h-5 w-5 text-[#717b87]" />
                   </div>
                   <div className="flex min-h-0 flex-col">
                     <textarea
@@ -861,14 +797,14 @@ export default function OutlookCalendarClient() {
                       onChange={(event) => setDraft((prev) => ({ ...prev, body: event.target.value }))}
                       className="min-h-0 flex-1 resize-none p-4 outline-none"
                     />
-                    <div className="flex h-12 items-center gap-4 border-t border-[#edebe9] px-4 text-[#605e5c]">
+                    <div className="flex h-12 items-center gap-4 border-t border-[#d9f3e3] px-4 text-[#717b87]">
                       <Paperclip className="h-4 w-4" />
                       <MapPin className="h-4 w-4" />
                       <Pencil className="h-4 w-4" />
                       <select
                         value={draft.label}
                         onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value as Label }))}
-                        className="ml-auto h-8 rounded-sm border border-[#dedede] bg-white px-2 text-sm"
+                        className="ml-auto h-8 rounded-sm border border-[#d4d8de] bg-white px-2 text-sm"
                       >
                         {LABELS.map((item) => (
                           <option key={item.value} value={item.value}>
@@ -887,16 +823,16 @@ export default function OutlookCalendarClient() {
 
       <style jsx global>{`
         .outlook2 .fc {
-          --fc-border-color: #dedede;
+          --fc-border-color: #d4d8de;
           --fc-today-bg-color: transparent;
-          --fc-now-indicator-color: #605e5c;
+          --fc-now-indicator-color: #717b87;
           height: 100%;
           font-family: "Segoe UI", Arial, sans-serif;
-          color: #323130;
+          color: #23272f;
         }
         .outlook2 .fc-theme-standard td,
         .outlook2 .fc-theme-standard th {
-          border-color: #dedede;
+          border-color: #d4d8de;
         }
         .outlook2 .fc-scrollgrid {
           border: 0;
@@ -910,7 +846,7 @@ export default function OutlookCalendarClient() {
         .outlook2 .fc-timegrid-axis,
         .outlook2 .fc-timegrid-slot-label {
           width: 52px;
-          color: #605e5c;
+          color: #717b87;
           font-size: 12px;
         }
         .outlook2 .fc-timegrid-slot {
@@ -918,7 +854,7 @@ export default function OutlookCalendarClient() {
           border-top: 1px solid #e1dfdd;
         }
         .outlook2 .fc-timegrid-slot-minor {
-          border-top: 1px dotted #edebe9;
+          border-top: 1px dotted #d9f3e3;
         }
         .outlook2 .fc-timegrid-event {
           border-radius: 0;
@@ -940,7 +876,7 @@ export default function OutlookCalendarClient() {
         }
         .outlook2 .fc-daygrid-day.fc-day-today {
           background: transparent;
-          outline: 1px solid #0078d4;
+          outline: 1px solid #059669;
           outline-offset: -1px;
         }
         .outlook2 .fc-daygrid-event {
@@ -951,7 +887,7 @@ export default function OutlookCalendarClient() {
           background: rgba(0, 120, 212, 0.16);
         }
         .outlook2 .fc-timegrid-now-indicator-line {
-          border-color: #8a8886;
+          border-color: #929ba6;
         }
       `}</style>
     </div>
