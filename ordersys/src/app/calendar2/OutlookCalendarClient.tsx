@@ -147,6 +147,12 @@ function toTimeInputValue(value?: string | Date | null) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function formatTime24(value?: string | Date | null) {
+  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "00:00";
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function fromTimeInputValue(value: string) {
   const [hours, minutes] = value.split(":").map((part) => parseInt(part, 10) || 0);
   return { hours, minutes };
@@ -228,8 +234,8 @@ function recurrenceSummary(draft: Draft) {
   if (draft.recurrence === "none") return "";
   const start = new Date(draft.start);
   const end = new Date(draft.end);
-  const startLabel = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const endLabel = end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const startLabel = formatTime24(start);
+  const endLabel = formatTime24(end);
   const until = draft.recurrenceUntil ? new Date(`${draft.recurrenceUntil}T00:00:00`) : null;
 
   if (draft.recurrence === "daily") {
@@ -253,13 +259,7 @@ function popupTimeSummary(draft: Pick<Draft, "start" | "end">) {
     month: "numeric",
     day: "numeric",
   });
-  const timePart = `${start.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })} - ${end.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
+  const timePart = `${formatTime24(start)} - ${formatTime24(end)}`;
   return `${dayPart} ${timePart}`;
 }
 
@@ -1298,7 +1298,8 @@ export default function OutlookCalendarClient({
                       slotMaxTime="24:00:00"
                       slotDuration="00:30:00"
                       slotLabelInterval="01:00"
-                      slotLabelFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
+                      slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+                      eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
                       dayHeaderContent={(arg) => {
                         const dayNumber = arg.date.getDate();
                         if (view === "dayGridMonth") return WEEKDAYS_LONG[arg.date.getDay()];
@@ -1347,7 +1348,9 @@ export default function OutlookCalendarClient({
                                 darkenHex(arg.event.backgroundColor || "#059669"),
                             }}
                           />
-                          {arg.view.type === "dayGridMonth" && arg.timeText ? <span className="font-semibold">{arg.timeText} </span> : null}
+                          {arg.view.type === "dayGridMonth" && arg.event.start ? (
+                            <span className="font-semibold">{formatTime24(arg.event.start)} </span>
+                          ) : null}
                           <span>{arg.event.title || "(Inget ämne)"}</span>
                         </div>
                       )}
@@ -1817,7 +1820,7 @@ export default function OutlookCalendarClient({
                   {Array.from({ length: PREVIEW_HOURS }, (_, index) => index + PREVIEW_START_HOUR).map((hour) => (
                     <div key={hour} className="grid h-[60px] grid-cols-[48px_1fr] border-b border-[#d4d8de]">
                       <div className="border-r border-[#d4d8de] px-2 pt-1 text-right text-sm text-[#717b87]">
-                        {hour === 0 ? "12 AM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                        {`${pad(hour)}:00`}
                       </div>
                       <div className="bg-white" />
                     </div>
@@ -1840,8 +1843,7 @@ export default function OutlookCalendarClient({
                       aria-label="Resize start"
                     />
                     <div className="relative px-2 py-1" style={{ paddingTop: "8px" }}>
-                      {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
-                      {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                      {formatTime24(draft.start)} - {formatTime24(draft.end)}
                     </div>
                     <div
                       className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize rounded-b-sm"
