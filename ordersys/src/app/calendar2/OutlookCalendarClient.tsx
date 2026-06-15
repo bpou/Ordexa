@@ -67,7 +67,9 @@ type DragHandle = "top" | "bottom" | "middle" | null;
 
 type CalendarResponse = { events?: EventInput[] };
 
-const LABELS: { value: Exclude<Label, "UTFORT_ARBETE">; label: string; color: string }[] = [
+type CalendarLabel = Exclude<Label, "UTFORT_ARBETE">;
+
+const LABELS: { value: CalendarLabel; label: string; color: string }[] = [
   { value: "BOKAD_TID", label: "Calendar", color: "#059669" },
   { value: "KAN_FLYTTAS", label: "Verkstad", color: "#107c10" },
   { value: "LUNCH", label: "Birthdays", color: "#fce100" },
@@ -345,7 +347,22 @@ function makeDraft(input?: Partial<Draft>): Draft {
   };
 }
 
-export default function OutlookCalendarClient() {
+type OutlookCalendarClientProps = {
+  initialCalendarLabels?: CalendarLabel[];
+  lockCalendarSelection?: boolean;
+  calendarTrack?: "A" | "B" | "C" | "D";
+};
+
+export default function OutlookCalendarClient({
+  initialCalendarLabels,
+  lockCalendarSelection = false,
+  calendarTrack = "A",
+}: OutlookCalendarClientProps = {}) {
+  const defaultCalendarLabels = useMemo(
+    () => (initialCalendarLabels?.length ? initialCalendarLabels : LABELS.map((label) => label.value)),
+    [initialCalendarLabels],
+  );
+  const defaultCalendarLabel = defaultCalendarLabels[0] ?? LABELS[0].value;
   const [events, setEvents] = useState<EventInput[]>([]);
   const [view, setView] = useState<CalendarView>("timeGridWorkWeek");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
@@ -355,7 +372,7 @@ export default function OutlookCalendarClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [activeCalendars, setActiveCalendars] = useState<Label[]>(LABELS.map((l) => l.value));
+  const [activeCalendars, setActiveCalendars] = useState<Label[]>(defaultCalendarLabels);
   const [previewDate, setPreviewDate] = useState(() => new Date());
   const [dragHandle, setDragHandle] = useState<DragHandle>(null);
   const [showAsMenuOpen, setShowAsMenuOpen] = useState(false);
@@ -381,6 +398,10 @@ export default function OutlookCalendarClient() {
   };
 
   const primaryLabel = activeCalendars[0];
+  const visibleLabels = useMemo(
+    () => (lockCalendarSelection ? LABELS.filter((label) => defaultCalendarLabels.includes(label.value)) : LABELS),
+    [defaultCalendarLabels, lockCalendarSelection],
+  );
   const api = useCallback((): CalendarApi | null => {
     const ref = primaryLabel ? calendarRefs.current[primaryLabel] : Object.values(calendarRefs.current)[0];
     return ref?.getApi() ?? null;
@@ -521,11 +542,12 @@ export default function OutlookCalendarClient() {
         start: toLocalInputValue(base),
         end: toLocalInputValue(end ?? addMinutes(base, 30)),
         allDay,
+        label: defaultCalendarLabel,
       }),
     );
     setRecurrenceEditorOpen(false);
     setDialogOpen(true);
-  }, []);
+  }, [defaultCalendarLabel]);
 
   const openFromSelect = useCallback(
     (arg: DateSelectArg) => {
@@ -673,7 +695,7 @@ export default function OutlookCalendarClient() {
       allDay: draft.allDay,
       label: draft.status ? STATUS_TO_LABEL[draft.status] ?? draft.label : draft.label,
       visibility: draft.visibility,
-      track: "A",
+      track: calendarTrack,
       repeat: draft.recurrence,
       showAs: draft.showAs,
       notes: draft.body.trim() || null,
@@ -717,7 +739,7 @@ export default function OutlookCalendarClient() {
     } finally {
       setSaving(false);
     }
-  }, [draft, load, saving]);
+  }, [calendarTrack, draft, load, saving]);
 
   const deleteDraft = useCallback(async () => {
     if (!draft.id || saving) return;
@@ -886,10 +908,11 @@ export default function OutlookCalendarClient() {
   }, []);
 
   const toggleCalendarActive = useCallback((label: Label) => {
+    if (lockCalendarSelection) return;
     setActiveCalendars((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
-  }, []);
+  }, [lockCalendarSelection]);
 
   const filteredEvents = useMemo(
     () =>
@@ -1027,7 +1050,7 @@ export default function OutlookCalendarClient() {
                 Mina kalendrar
               </div>
               <div className="space-y-3">
-                {LABELS.slice(0, 6).map((item) => {
+                {visibleLabels.map((item) => {
                   const active = activeCalendars.includes(item.value);
                   return (
                     <label
@@ -1050,16 +1073,18 @@ export default function OutlookCalendarClient() {
                   );
                 })}
               </div>
-              <button
-                className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
-                onClick={() =>
-                  setActiveCalendars(
-                    activeCalendars.length === LABELS.length ? [] : LABELS.map((l) => l.value),
-                  )
-                }
-              >
-                {activeCalendars.length === LABELS.length ? "Dölj alla" : "Visa alla"}
-              </button>
+              {!lockCalendarSelection ? (
+                <button
+                  className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
+                  onClick={() =>
+                    setActiveCalendars(
+                      activeCalendars.length === LABELS.length ? [] : LABELS.map((l) => l.value),
+                    )
+                  }
+                >
+                  {activeCalendars.length === LABELS.length ? "Dölj alla" : "Visa alla"}
+                </button>
+              ) : null}
             </div>
 
             <div className="mt-6">
@@ -1118,6 +1143,7 @@ export default function OutlookCalendarClient() {
               Delad vy
             </button>
             <div className="h-6 w-px bg-border" />
+            {!lockCalendarSelection ? (
             <div className="relative">
               <button
                 className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm hover:bg-brand-50"
@@ -1132,7 +1158,7 @@ export default function OutlookCalendarClient() {
                   className="absolute right-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  {LABELS.map((item) => {
+                  {visibleLabels.map((item) => {
                     const active = activeCalendars.includes(item.value);
                     return (
                       <button
@@ -1157,6 +1183,7 @@ export default function OutlookCalendarClient() {
                 </div>
               ) : null}
             </div>
+            ) : null}
             <div className="ml-auto">
               {loading ? <span className="text-xs text-muted">Synkar...</span> : null}
             </div>
@@ -1193,7 +1220,10 @@ export default function OutlookCalendarClient() {
           >
             {(activeCalendars.length === 0 ? ["" as Label] : activeCalendars).map((label) => {
               const labelMeta = labelFor(label);
-              const displayEvents = activeCalendars.length <= 1 ? filteredEvents : (eventsByLabel[label] ?? []);
+              const displayEvents =
+                activeCalendars.length === 0
+                  ? filteredEvents
+                  : (eventsByLabel[label] ?? []);
               return (
                 <div
                   key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
@@ -1203,6 +1233,7 @@ export default function OutlookCalendarClient() {
                     <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
                       <span className="h-2.5 w-2.5 rounded-full border border-transparent" style={{ backgroundColor: labelMeta.color }} />
                       <h3 className="text-sm font-semibold capitalize">{labelMeta.label}</h3>
+                      {!lockCalendarSelection ? (
                       <button
                         type="button"
                         onClick={() => toggleCalendarActive(label)}
@@ -1211,6 +1242,7 @@ export default function OutlookCalendarClient() {
                       >
                         <X className="h-4 w-4" />
                       </button>
+                      ) : null}
                     </div>
                   ) : null}
                   <div className="min-h-0 flex-1">
@@ -1324,7 +1356,7 @@ export default function OutlookCalendarClient() {
           ))}
 
           <div className="border-y px-3 py-2 text-xs text-muted">Kalenderetikett</div>
-          {LABELS.map((label) => (
+          {visibleLabels.map((label) => (
             <button
               key={label.value}
               type="button"
@@ -1690,7 +1722,7 @@ export default function OutlookCalendarClient() {
                       onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value as Label, status: undefined }))}
                       className="h-9 rounded-lg border border-[#d4d8de] bg-white px-3 text-sm"
                     >
-                      {LABELS.map((item) => (
+                      {visibleLabels.map((item) => (
                         <option key={item.value} value={item.value}>
                           {item.label}
                         </option>

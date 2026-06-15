@@ -1,25 +1,17 @@
-// src/app/calendar/[track]/page.tsx
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
-import OutlookCalendarClient from "@/app/calendar2/OutlookCalendarClient";
-import { normalizeTrack } from "@/lib/tracks";
+import CalendarTracksView from "@/app/calendar/CalendarTracksView";
 import { authOptions } from "@/lib/auth";
 import { canManageTrack } from "@/lib/permissions";
+import { normalizeTrack } from "@/lib/tracks";
 import type { Role, Track } from "@prisma/client";
 
-const TRACK_CALENDAR_LABEL = {
-  A: "SEMESTER",
-  B: "KAN_FLYTTAS",
-  C: "UNDER_VECKAN",
-  D: "TRAFIKVERKET",
-} as const;
-
-export default async function CalendarPage({
+export default async function OldCalendarPage({
   params,
 }: {
   params: Promise<{ track: string }>;
 }) {
-  const { track } = await params;               // vänta in params
+  const { track } = await params;
   const normalized = normalizeTrack(track);
 
   if (!normalized) notFound();
@@ -29,11 +21,5 @@ export default async function CalendarPage({
   const role = (session.user as { role?: Role } | null | undefined)?.role;
   if (!canManageTrack(role, normalized as Track)) redirect("/403");
 
-  return (
-    <OutlookCalendarClient
-      calendarTrack={normalized}
-      initialCalendarLabels={[TRACK_CALENDAR_LABEL[normalized]]}
-      lockCalendarSelection
-    />
-  );
+  return <CalendarTracksView initialTrack={normalized} />;
 }
