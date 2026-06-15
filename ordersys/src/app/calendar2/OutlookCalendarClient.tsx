@@ -27,6 +27,7 @@ import {
   Filter,
   Globe,
   MapPin,
+  Menu,
   MoreHorizontal,
   Plus,
   Save,
@@ -380,6 +381,7 @@ export default function OutlookCalendarClient({
   const [dragHandle, setDragHandle] = useState<DragHandle>(null);
   const [showAsMenuOpen, setShowAsMenuOpen] = useState(false);
   const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [timeZoneMode, setTimeZoneMode] = useState<"LOCAL" | "UTC">("LOCAL");
   const [eventMenu, setEventMenu] = useState<{
     eventId: string;
@@ -979,9 +981,29 @@ export default function OutlookCalendarClient({
   }, [draft.label, draft.status]);
 
   return (
-    <div className="outlook2 h-[calc(100dvh-128px)] min-h-[680px] overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm">
+    <div className="outlook2 h-[calc(100dvh-80px)] min-h-0 overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm md:h-[calc(100dvh-128px)] md:min-h-[680px]">
       <div className="flex h-full">
-        <aside className="w-[260px] shrink-0 border-r border-border bg-brand-50/60">
+        <AnimatePresence>
+          {mobileSidebarOpen ? (
+            <motion.button
+              key="mobile-sidebar-backdrop"
+              type="button"
+              aria-label="Stäng kalenderlista"
+              className="fixed inset-0 z-30 bg-black/35 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={SMOOTH}
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
+        <aside
+          className={[
+            "fixed inset-y-0 left-0 z-40 w-[260px] shrink-0 border-r border-border bg-brand-50/95 shadow-2xl transition-transform duration-300 ease-out md:relative md:z-auto md:translate-x-0 md:bg-brand-50/60 md:shadow-none",
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full",
+          ].join(" ")}
+        >
           <div className="flex h-12 items-center border-b border-brand-100 px-4">
             <span className="text-sm font-semibold text-brand-800">Kalender</span>
           </div>
@@ -1112,17 +1134,25 @@ export default function OutlookCalendarClient({
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-          <div className="flex h-12 items-center gap-2 border-b border-border bg-card px-3 shadow-sm">
+          <div className="flex h-12 items-center gap-2 overflow-x-auto border-b border-border bg-card px-3 shadow-sm">
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-brand-900 hover:bg-brand-50 md:hidden"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Öppna kalenderlista"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             <button
               type="button"
               onClick={() => openNew()}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
             >
               <CalendarDays className="h-4 w-4" />
               Ny händelse
               <ChevronDown className="h-3 w-3" />
             </button>
-            <div className="h-6 w-px bg-border" />
+            <div className="h-6 w-px shrink-0 bg-border" />
             {VIEW_BUTTONS.map((item) => (
               <motion.button
                 key={item.view}
@@ -1131,7 +1161,7 @@ export default function OutlookCalendarClient({
                 whileTap={{ scale: 0.96 }}
                 transition={SPRING}
                 onClick={() => changeView(item.view)}
-                className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm ${
+                className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-sm ${
                   view === item.view
                     ? "border-brand-300 bg-brand-100 text-brand-900"
                     : "border-transparent bg-transparent text-foreground hover:bg-brand-50"
@@ -1142,13 +1172,13 @@ export default function OutlookCalendarClient({
               </motion.button>
             ))}
             <button
-              className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground hover:bg-brand-50"
+              className="hidden h-9 shrink-0 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground hover:bg-brand-50 sm:inline-flex"
               onClick={() => window.open("/calendar2", "_blank", "width=1200,height=800")}
             >
               <Copy className="h-3.5 w-3.5" />
               Delad vy
             </button>
-            <div className="h-6 w-px bg-border" />
+            <div className="h-6 w-px shrink-0 bg-border" />
             {!lockCalendarSelection ? (
             <div className="relative">
               <button
@@ -1420,7 +1450,7 @@ export default function OutlookCalendarClient({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={SMOOTH}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35"
+          className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-black/35 sm:items-center sm:justify-center"
         >
           <motion.div
             key="event-dialog"
@@ -1428,7 +1458,7 @@ export default function OutlookCalendarClient({
             animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: 18, scale: 0.975, filter: "blur(6px)" }}
             transition={SPRING}
-            className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl"
+            className="flex h-dvh w-screen flex-col overflow-hidden rounded-none bg-[#f3f2f1] shadow-2xl sm:h-[min(790px,calc(100vh-40px))] sm:w-[min(1120px,calc(100vw-32px))] sm:rounded-sm"
           >
             <div className="flex h-12 items-center border-b border-[#d4d8de] bg-[#d9f3e3] px-4">
               <span className="text-sm">
@@ -1450,18 +1480,18 @@ export default function OutlookCalendarClient({
               </button>
             </div>
 
-            <div className="mx-4 mt-2 flex h-10 items-center gap-2 rounded-md border border-[#d4d8de] bg-white px-2 shadow-sm">
+            <div className="mx-3 mt-2 flex h-10 shrink-0 items-center gap-2 overflow-x-auto rounded-md border border-[#d4d8de] bg-white px-2 shadow-sm sm:mx-4">
               <button
                 type="button"
                 onClick={() => { void saveDraft(); }}
                 disabled={saving}
-                className="inline-flex h-8 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                className="inline-flex h-8 shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
                 Spara
               </button>
               <button
-                className={`inline-flex h-8 items-center gap-2 rounded-sm border px-3 text-sm ${
+                className={`inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border px-3 text-sm ${
                   draft.recurrence === "none"
                     ? "border-brand-300 bg-brand-100 text-brand-900"
                     : "border-[#929ba6] bg-[#d9f3e3]"
@@ -1472,7 +1502,7 @@ export default function OutlookCalendarClient({
                 Händelse
               </button>
               <button
-                className={`inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3] ${
+                className={`inline-flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3] ${
                   draft.recurrence !== "none"
                     ? "border-brand-300 bg-brand-100 text-brand-900 font-semibold"
                     : ""
@@ -1492,7 +1522,7 @@ export default function OutlookCalendarClient({
               </button>
               <div className="relative">
                 <button
-                  className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]"
+                  className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]"
                   onClick={() => setShowAsMenuOpen((open) => !open)}
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -1528,7 +1558,7 @@ export default function OutlookCalendarClient({
                   type="button"
                   onClick={() => { void deleteDraft(); }}
                   disabled={saving}
-                  className="ml-auto inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
+                  className="ml-auto inline-flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
                 >
                   <Trash2 className="h-4 w-4" />
                   Ta bort
@@ -1536,7 +1566,7 @@ export default function OutlookCalendarClient({
               ) : null}
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-cols-[1fr_352px] gap-4 p-4">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 sm:grid-cols-[1fr_352px] sm:gap-4 sm:p-4">
               <section className="min-h-0 rounded-md border border-[#d4d8de] bg-white p-3">
                 <div className="grid grid-cols-[42px_1fr] items-center gap-y-2">
                   <UsersRound className="mx-auto h-5 w-5 text-brand-700" />
@@ -1606,8 +1636,8 @@ export default function OutlookCalendarClient({
                       </button>
                     </div>
                     {recurrenceEditorOpen ? (
-                      <div className="absolute left-3 right-0 top-[74px] z-40 rounded-md border border-[#d4d8de] border-t-brand-600 bg-white px-4 py-4 shadow-xl">
-                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
+                      <div className="absolute left-0 right-0 top-[74px] z-40 max-h-[min(420px,calc(100dvh-220px))] overflow-y-auto rounded-md border border-[#d4d8de] border-t-brand-600 bg-white px-4 py-4 shadow-xl sm:left-3">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
                           <div>
                             <div className="mb-1 text-sm text-[#717b87]">Startdatum</div>
                             <input
@@ -1791,12 +1821,12 @@ export default function OutlookCalendarClient({
                     value={draft.body}
                     onChange={(event) => setDraft((prev) => ({ ...prev, body: event.target.value }))}
                     placeholder="Lägg till en beskrivning"
-                    className="min-h-[80px] resize-y rounded border border-[#d4d8de] px-3 py-2 text-sm outline-none placeholder:text-[#929ba6]"
+                    className="min-h-[360px] resize-y rounded border border-[#d4d8de] px-3 py-2 text-sm outline-none placeholder:text-[#929ba6] sm:min-h-[80px]"
                   />
                 </div>
               </section>
 
-              <aside className="min-h-0 rounded-md border border-[#d4d8de] bg-white">
+              <aside className="hidden min-h-0 rounded-md border border-[#d4d8de] bg-white sm:block">
                 <div className="flex h-12 items-center gap-2 border-b border-[#d4d8de] px-3 font-semibold">
                   <button type="button" onClick={() => goToPreviewDay(-1)} className="hover:bg-[#f3f2f1] rounded p-1">
                     <ChevronLeft className="h-4 w-4 text-[#717b87]" />
