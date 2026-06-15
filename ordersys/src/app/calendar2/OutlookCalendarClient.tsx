@@ -373,11 +373,13 @@ export default function OutlookCalendarClient({
   const [draft, setDraft] = useState<Draft>(() => makeDraft());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeCalendars, setActiveCalendars] = useState<Label[]>(defaultCalendarLabels);
   const [previewDate, setPreviewDate] = useState(() => new Date());
   const [dragHandle, setDragHandle] = useState<DragHandle>(null);
   const [showAsMenuOpen, setShowAsMenuOpen] = useState(false);
   const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobileCalendar, setIsMobileCalendar] = useState(false);
   const [timeZoneMode, setTimeZoneMode] = useState<"LOCAL" | "UTC">("LOCAL");
   const [eventMenu, setEventMenu] = useState<{
     eventId: string;
@@ -398,14 +400,15 @@ export default function OutlookCalendarClient({
     }
   };
 
+  const primaryLabel = activeCalendars[0];
   const visibleLabels = useMemo(
     () => (lockCalendarSelection ? LABELS.filter((label) => defaultCalendarLabels.includes(label.value)) : LABELS),
     [defaultCalendarLabels, lockCalendarSelection],
   );
   const api = useCallback((): CalendarApi | null => {
-    const ref = calendarRefs.current.main ?? Object.values(calendarRefs.current)[0];
+    const ref = primaryLabel ? calendarRefs.current[primaryLabel] : Object.values(calendarRefs.current)[0];
     return ref?.getApi() ?? null;
-  }, []);
+  }, [primaryLabel]);
 
   const callAllApis = (fn: (api: CalendarApi) => void) => {
     Object.values(calendarRefs.current).forEach((ref) => {
@@ -457,6 +460,19 @@ export default function OutlookCalendarClient({
       setRecurrenceEditorOpen(false);
     }
   }, [dialogOpen]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobileCalendar(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileCalendar) return;
+    setActiveCalendars((prev) => (prev.length > 1 ? [prev[0]] : prev));
+  }, [isMobileCalendar]);
 
   useEffect(() => {
     if (!recurrenceEditorOpen) return;
@@ -907,6 +923,17 @@ export default function OutlookCalendarClient({
     }));
   }, []);
 
+  const toggleCalendarActive = useCallback((label: Label) => {
+    if (lockCalendarSelection) return;
+    if (isMobileCalendar) {
+      setActiveCalendars([label]);
+      return;
+    }
+    setActiveCalendars((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
+    );
+  }, [isMobileCalendar, lockCalendarSelection]);
+
   const filteredEvents = useMemo(
     () =>
       events.filter((e: any) => {
@@ -915,6 +942,18 @@ export default function OutlookCalendarClient({
       }),
     [events],
   );
+
+  const eventsByLabel = useMemo(() => {
+    const map: Record<string, typeof events> = {};
+    for (const label of activeCalendars) {
+      if (label === "UTFORT_ARBETE") continue;
+      map[label] = events.filter((e: any) => {
+        const l = e.extendedProps?.label as Label | null | undefined;
+        return l === label || (!l && activeCalendars.length === 1);
+      });
+    }
+    return map;
+  }, [events, activeCalendars]);
 
   const eventDrop = useCallback(
     async (arg: EventDropArg) => {
@@ -1051,19 +1090,41 @@ export default function OutlookCalendarClient({
                 Mina kalendrar
               </div>
               <div className="space-y-3">
-                {visibleLabels.map((item) => (
-                  <div
-                    key={item.value}
-                    className="-mx-1 flex items-center gap-3 rounded px-1 py-0.5 text-sm"
-                  >
-                    <span
-                      className="h-3.5 w-3.5 rounded-full border border-white shadow-sm"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    {item.label}
-                  </div>
-                ))}
+                {visibleLabels.map((item) => {
+                  const active = activeCalendars.includes(item.value);
+                  return (
+                    <label
+                      key={item.value}
+                      className="flex cursor-pointer items-center gap-3 text-sm hover:bg-brand-100/40 -mx-1 px-1 py-0.5 rounded"
+                      onClick={() => toggleCalendarActive(item.value)}
+                    >
+                      <span
+                        className="flex h-4 w-4 items-center justify-center rounded-full border"
+                        style={{
+                          borderColor: item.color,
+                          backgroundColor: active ? item.color : "transparent",
+                          color: "white",
+                        }}
+                      >
+                        {active ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                      {item.label}
+                    </label>
+                  );
+                })}
               </div>
+              {!lockCalendarSelection ? (
+                <button
+                  className="ml-7 mt-4 hidden text-sm font-medium text-brand-700 hover:text-brand-800 md:block"
+                  onClick={() =>
+                    setActiveCalendars(
+                      activeCalendars.length === LABELS.length ? [] : LABELS.map((l) => l.value),
+                    )
+                  }
+                >
+                  {activeCalendars.length === LABELS.length ? "Dölj alla" : "Visa alla"}
+                </button>
+              ) : null}
             </div>
 
           </div>
@@ -1149,20 +1210,47 @@ export default function OutlookCalendarClient({
             layout
             transition={SPRING}
             className="min-h-0 flex-1"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${Math.max(1, activeCalendars.length)}, minmax(0, 1fr))`,
+            }}
           >
             <AnimatePresence initial={false} mode="popLayout">
-              <motion.div
-                key="main-calendar"
-                layout
-                initial={{ opacity: 0, x: 18, scale: 0.985 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -18, scale: 0.985 }}
-                transition={SPRING}
-                className="flex min-h-0 flex-col border-r border-border last:border-r-0"
-              >
-                <AnimatePresence mode="wait" initial={false}>
+            {(activeCalendars.length === 0 ? ["" as Label] : activeCalendars).map((label) => {
+              const labelMeta = labelFor(label);
+              const displayEvents =
+                activeCalendars.length === 0
+                  ? filteredEvents
+                  : (eventsByLabel[label] ?? []);
+              return (
+                <motion.div
+                  key={label}
+                  layout
+                  initial={{ opacity: 0, x: 18, scale: 0.985 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -18, scale: 0.985 }}
+                  transition={SPRING}
+                  className="flex min-h-0 flex-col border-r border-border last:border-r-0"
+                >
+                  {activeCalendars.length >= 2 ? (
+                    <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
+                      <span className="h-2.5 w-2.5 rounded-full border border-transparent" style={{ backgroundColor: labelMeta.color }} />
+                      <h3 className="text-sm font-semibold capitalize">{labelMeta.label}</h3>
+                      {!lockCalendarSelection ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleCalendarActive(label)}
+                        className="ml-auto rounded p-1 text-[#717b87] hover:bg-[#f3f2f1]"
+                        aria-label={`Ta bort ${labelMeta.label}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <AnimatePresence mode="wait" initial={false}>
                   <motion.div
-                    key={`main-${view}`}
+                    key={`${label}-${view}`}
                     initial={{ opacity: 0, y: 12, filter: "blur(3px)" }}
                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                     exit={{ opacity: 0, y: -10, filter: "blur(3px)" }}
@@ -1170,8 +1258,8 @@ export default function OutlookCalendarClient({
                     className="min-h-0 flex-1"
                   >
                     <FullCalendar
-                      ref={setCalendarRef("main")}
-                      key="main-calendar"
+                      ref={setCalendarRef(label)}
+                      key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
                       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                       locale={svLocale}
                       initialView={view}
@@ -1214,7 +1302,7 @@ export default function OutlookCalendarClient({
                         setAnchorDate((current) => (current.getTime() === nextDate.getTime() ? current : nextDate));
                         setView((current) => (current === arg.view.type ? current : (arg.view.type as CalendarView)));
                       }}
-                      events={filteredEvents}
+                      events={displayEvents}
                       select={openFromSelect}
                       eventClick={openEvent}
                       eventDrop={eventDrop}
@@ -1245,13 +1333,15 @@ export default function OutlookCalendarClient({
                           {arg.view.type === "dayGridMonth" && arg.event.start ? (
                             <span className="font-semibold">{formatTime24(arg.event.start)} </span>
                           ) : null}
-                          <span>{arg.event.title || "(Inget ?mne)"}</span>
+                          <span>{arg.event.title || "(Inget ämne)"}</span>
                         </div>
                       )}
                     />
                   </motion.div>
-                </AnimatePresence>
-              </motion.div>
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
             </AnimatePresence>
           </motion.div>
         </main>
