@@ -370,6 +370,7 @@ export default function OutlookCalendarClient() {
   } | null>(null);
 
   const calendarRefs = useRef<Record<string, FullCalendar | null>>({});
+  const timePopupRef = useRef<HTMLDivElement | null>(null);
 
   const setCalendarRef = (label: string) => (el: FullCalendar | null) => {
     if (el) {
@@ -435,6 +436,19 @@ export default function OutlookCalendarClient() {
       setRecurrenceEditorOpen(false);
     }
   }, [dialogOpen]);
+
+  useEffect(() => {
+    if (!recurrenceEditorOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && timePopupRef.current?.contains(target)) return;
+      setRecurrenceEditorOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [recurrenceEditorOpen]);
 
   useEffect(() => {
     if (dialogOpen) {
@@ -1452,7 +1466,7 @@ export default function OutlookCalendarClient() {
                   />
 
                   <Clock3 className="mx-auto h-5 w-5 text-[#717b87]" />
-                  <div className="relative py-1">
+                  <div ref={timePopupRef} className="relative py-1">
                     <div
                       role="button"
                       tabIndex={0}
