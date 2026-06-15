@@ -74,7 +74,6 @@ type CalendarLabel = Exclude<Label, "UTFORT_ARBETE">;
 const LABELS: { value: CalendarLabel; label: string; color: string }[] = [
   { value: "BOKAD_TID", label: "Calendar", color: "#059669" },
   { value: "KAN_FLYTTAS", label: "Verkstad", color: "#107c10" },
-  { value: "LUNCH", label: "Birthdays", color: "#fce100" },
   { value: "SEMESTER", label: "Ateljé", color: "#ca5010" },
   { value: "TRAFIKVERKET", label: "Bilmontage", color: "#8764b8" },
   { value: "UNDER_VECKAN", label: "Montage", color: "#00b7c3" },
@@ -989,7 +988,7 @@ export default function OutlookCalendarClient({
               key="mobile-sidebar-backdrop"
               type="button"
               aria-label="Stäng kalenderlista"
-              className="fixed inset-0 z-30 bg-black/35 md:hidden"
+              className="fixed inset-0 z-[1090] bg-black/35 md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1000,7 +999,7 @@ export default function OutlookCalendarClient({
         </AnimatePresence>
         <aside
           className={[
-            "fixed inset-y-0 left-0 z-40 w-[260px] shrink-0 border-r border-border bg-brand-50/95 shadow-2xl transition-transform duration-300 ease-out md:relative md:z-auto md:translate-x-0 md:bg-brand-50/60 md:shadow-none",
+            "fixed inset-y-0 left-0 z-[1100] w-[260px] shrink-0 border-r border-border bg-brand-50/95 shadow-2xl transition-transform duration-300 ease-out md:relative md:z-auto md:translate-x-0 md:bg-brand-50/60 md:shadow-none",
             mobileSidebarOpen ? "translate-x-0" : "-translate-x-full",
           ].join(" ")}
         >
@@ -1112,24 +1111,6 @@ export default function OutlookCalendarClient({
               ) : null}
             </div>
 
-            <div className="mt-6">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-900">
-                <ChevronDown className="h-4 w-4" />
-                Grupper
-              </div>
-              <label className="flex items-center gap-3 text-sm">
-                <span className="h-4 w-4 rounded-full border border-[#929ba6]" />
-                Din familj
-              </label>
-              <button
-                className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
-                onClick={() => {
-                  // Toggle group filter - currently no-op as groups are placeholder
-                }}
-              >
-                Visa valda
-              </button>
-            </div>
           </div>
         </aside>
 
@@ -1146,11 +1127,13 @@ export default function OutlookCalendarClient({
             <button
               type="button"
               onClick={() => openNew()}
-              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-600 text-sm font-semibold text-white hover:bg-brand-700 md:w-auto md:px-3"
+              aria-label="Ny händelse"
             >
-              <CalendarDays className="h-4 w-4" />
-              Ny händelse
-              <ChevronDown className="h-3 w-3" />
+              <Plus className="h-4 w-4 md:hidden" />
+              <CalendarDays className="hidden h-4 w-4 md:block" />
+              <span className="hidden md:inline">Ny händelse</span>
+              <ChevronDown className="hidden h-3 w-3 md:block" />
             </button>
             <div className="h-6 w-px shrink-0 bg-border" />
             {VIEW_BUTTONS.map((item) => (
@@ -1161,13 +1144,15 @@ export default function OutlookCalendarClient({
                 whileTap={{ scale: 0.96 }}
                 transition={SPRING}
                 onClick={() => changeView(item.view)}
-                className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-sm ${
+                className={`h-9 shrink-0 items-center gap-1 rounded-lg border px-2 text-xs md:px-3 md:text-sm ${
+                  item.view === "dayGridMonth" ? "hidden md:inline-flex" : "inline-flex"
+                } ${
                   view === item.view
                     ? "border-brand-300 bg-brand-100 text-brand-900"
                     : "border-transparent bg-transparent text-foreground hover:bg-brand-50"
                 }`}
               >
-                <CalendarDays className="h-3.5 w-3.5 text-brand-700" />
+                <CalendarDays className="hidden h-3.5 w-3.5 text-brand-700 md:block" />
                 {item.label}
               </motion.button>
             ))}

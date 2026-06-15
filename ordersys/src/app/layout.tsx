@@ -128,8 +128,8 @@ export default async function RootLayout({
                 </div>
 
                 {needsMfa ? (
-                  <div className="sm:hidden border-t border-amber-200 bg-amber-50/95 px-3 py-2.5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/80 dark:text-amber-200">
-                    <div className="flex items-start gap-2">
+                  <div className="border-t border-amber-200 bg-amber-50/95 px-3 py-2.5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/80 dark:text-amber-200 sm:px-6">
+                    <div className="mx-auto flex max-w-7xl items-start gap-2">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                       <div className="flex-1 text-xs">
                         <p className="font-medium">Aktivera authenticator</p>
