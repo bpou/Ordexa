@@ -1378,6 +1378,7 @@ export default function OutlookCalendarClient() {
                 onClick={() => {
                   if (draft.recurrence === "none") {
                     setRecurrenceMode("weekly");
+                    setRecurrenceEditorOpen(false);
                   } else {
                     setRecurrenceMode("none");
                     setRecurrenceEditorOpen(false);
@@ -1451,7 +1452,7 @@ export default function OutlookCalendarClient() {
                   />
 
                   <Clock3 className="mx-auto h-5 w-5 text-[#717b87]" />
-                  <div className="py-1">
+                  <div className="relative py-1">
                     {draft.recurrence !== "none" ? (
                       <div className="px-3 pb-2 text-sm text-[#5f6b76]">{recurrenceSummary(draft)}</div>
                     ) : null}
@@ -1460,13 +1461,13 @@ export default function OutlookCalendarClient() {
                       tabIndex={draft.recurrence !== "none" ? 0 : -1}
                       onClick={() => {
                         if (draft.recurrence !== "none") {
-                          setRecurrenceEditorOpen((open) => !open);
+                          setRecurrenceEditorOpen(true);
                         }
                       }}
                       onKeyDown={(event) => {
                         if (draft.recurrence !== "none" && (event.key === "Enter" || event.key === " ")) {
                           event.preventDefault();
-                          setRecurrenceEditorOpen((open) => !open);
+                          setRecurrenceEditorOpen(true);
                         }
                       }}
                       className={`flex h-12 w-full items-center gap-2 border-b px-3 text-left ${
@@ -1511,9 +1512,10 @@ export default function OutlookCalendarClient() {
                         onClick={() => {
                           if (draft.recurrence === "none") {
                             setRecurrenceMode("weekly");
-                            setRecurrenceEditorOpen(true);
+                            setRecurrenceEditorOpen(false);
                           } else {
-                            setRecurrenceEditorOpen((open) => !open);
+                            setRecurrenceMode("none");
+                            setRecurrenceEditorOpen(false);
                           }
                         }}
                         className={`inline-flex h-8 items-center gap-2 rounded-md px-3 ${
@@ -1525,7 +1527,7 @@ export default function OutlookCalendarClient() {
                       </button>
                     </div>
                     {draft.recurrence !== "none" && recurrenceEditorOpen ? (
-                      <div className="rounded-md border border-[#d4d8de] bg-white px-3 py-4 shadow-sm">
+                      <div className="absolute left-3 right-0 top-[74px] z-40 rounded-md border border-[#d4d8de] border-t-brand-600 bg-white px-4 py-4 shadow-xl">
                         <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
                           <div>
                             <div className="mb-1 text-sm text-[#717b87]">Startdatum</div>
@@ -1580,20 +1582,40 @@ export default function OutlookCalendarClient() {
                           </button>
                         </div>
 
+                        <div className="mt-5 flex items-center gap-6 text-sm">
+                          <label className="flex items-center gap-2 text-[#5f6b76]">
+                            <input
+                              type="checkbox"
+                              checked={draft.allDay}
+                              onChange={(event) => setDraft((prev) => ({ ...prev, allDay: event.target.checked }))}
+                              className="h-4 w-4 rounded border-[#c7ccd1]"
+                            />
+                            Hela dagen
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setRecurrenceEditorOpen(false)}
+                            className="inline-flex h-8 items-center gap-2 rounded-md bg-[#f3f2f1] px-3 text-brand-900"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Återkommande
+                          </button>
+                        </div>
+
                         <div className="mt-4 flex items-center gap-3">
                           <span className="text-sm text-[#717b87]">Upprepa var</span>
                           <select
                             value={draft.recurrence}
                             onChange={(event) => setRecurrenceMode(event.target.value as Draft["recurrence"])}
-                            className="h-9 rounded-md border border-[#d4d8de] bg-white px-3 text-sm"
+                            className="h-9 rounded-md border border-[#d4d8de] bg-[#f3f2f1] px-3 text-sm"
                           >
-                            <option value="daily">Dag</option>
-                            <option value="weekly">Vecka</option>
+                            <option value="daily">dag</option>
+                            <option value="weekly">vecka</option>
                           </select>
                         </div>
 
                         {draft.recurrence === "weekly" ? (
-                          <div className="mt-4 flex flex-wrap gap-2">
+                          <div className="mt-4 flex flex-wrap items-center gap-3">
                             {WEEKDAY_PICKER.map((day) => {
                               const active = draft.weeklyDays.includes(day.value);
                               return (
@@ -1601,7 +1623,7 @@ export default function OutlookCalendarClient() {
                                   key={day.value}
                                   type="button"
                                   onClick={() => toggleWeekday(day.value)}
-                                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${
+                                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
                                     active ? "bg-brand-600 text-white" : "bg-[#f3f2f1] text-[#4b5560]"
                                   }`}
                                 >
@@ -1609,29 +1631,26 @@ export default function OutlookCalendarClient() {
                                 </button>
                               );
                             })}
+                            <span className="text-sm text-[#717b87]">Till</span>
+                            <input
+                              type="date"
+                              value={draft.recurrenceUntil}
+                              onChange={(event) => setDraft((prev) => ({ ...prev, recurrenceUntil: event.target.value }))}
+                              className="h-9 rounded-md border border-transparent bg-[#f3f2f1] px-3 text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRecurrenceMode("none");
+                                setRecurrenceEditorOpen(false);
+                              }}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-brand-700 hover:bg-brand-50"
+                              aria-label="Ta bort återkommande"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
                         ) : null}
-
-                        <div className="mt-4 flex items-center gap-3">
-                          <span className="text-sm text-[#717b87]">Till</span>
-                          <input
-                            type="date"
-                            value={draft.recurrenceUntil}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, recurrenceUntil: event.target.value }))}
-                            className="h-9 rounded-md border border-[#d4d8de] bg-white px-3 text-sm"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRecurrenceMode("none");
-                              setRecurrenceEditorOpen(false);
-                            }}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#5f6b76] hover:bg-[#f3f2f1]"
-                            aria-label="Ta bort återkommande"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
                       </div>
                     ) : null}
                   </div>
