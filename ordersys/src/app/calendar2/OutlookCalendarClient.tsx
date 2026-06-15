@@ -13,6 +13,7 @@ import type {
   EventInput,
 } from "@fullcalendar/core";
 import svLocale from "@fullcalendar/core/locales/sv";
+import { AnimatePresence, motion } from "framer-motion";
 import { CALENDAR_SETTABLE, STATUS_COLOR_PARTS, STATUS_DISPLAY, type TrackStatus } from "@/lib/orderStatus";
 import {
   AppWindow,
@@ -103,6 +104,8 @@ const WEEKDAY_PICKER: Array<{ value: string; label: string }> = [
   { value: "6", label: "L" },
   { value: "0", label: "S" },
 ];
+const SPRING = { type: "spring", stiffness: 420, damping: 34, mass: 0.8 } as const;
+const SMOOTH = { duration: 0.24, ease: [0.22, 1, 0.36, 1] } as const;
 const MONTHS = [
   "januari",
   "februari",
@@ -1121,9 +1124,12 @@ export default function OutlookCalendarClient({
             </button>
             <div className="h-6 w-px bg-border" />
             {VIEW_BUTTONS.map((item) => (
-              <button
+              <motion.button
                 key={item.view}
                 type="button"
+                layout
+                whileTap={{ scale: 0.96 }}
+                transition={SPRING}
                 onClick={() => changeView(item.view)}
                 className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm ${
                   view === item.view
@@ -1133,7 +1139,7 @@ export default function OutlookCalendarClient({
               >
                 <CalendarDays className="h-3.5 w-3.5 text-brand-700" />
                 {item.label}
-              </button>
+              </motion.button>
             ))}
             <button
               className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-muted-foreground hover:bg-brand-50"
@@ -1153,8 +1159,14 @@ export default function OutlookCalendarClient({
                 Filtrera
                 <ChevronDown className="h-3 w-3" />
               </button>
+              <AnimatePresence>
               {filterOpen ? (
-                <div
+                <motion.div
+                  key="calendar-filter"
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  transition={SMOOTH}
                   className="absolute right-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
                   onClick={(event) => event.stopPropagation()}
                 >
@@ -1180,8 +1192,9 @@ export default function OutlookCalendarClient({
                       </button>
                     );
                   })}
-                </div>
+                </motion.div>
               ) : null}
+              </AnimatePresence>
             </div>
             ) : null}
             <div className="ml-auto">
@@ -1211,13 +1224,16 @@ export default function OutlookCalendarClient({
             {error ? <div className="ml-auto text-sm text-red-600">{error}</div> : null}
           </div>
 
-          <div
+          <motion.div
+            layout
+            transition={SPRING}
             className="min-h-0 flex-1"
             style={{
               display: "grid",
               gridTemplateColumns: `repeat(${Math.max(1, activeCalendars.length)}, minmax(0, 1fr))`,
             }}
           >
+            <AnimatePresence initial={false} mode="popLayout">
             {(activeCalendars.length === 0 ? ["" as Label] : activeCalendars).map((label) => {
               const labelMeta = labelFor(label);
               const displayEvents =
@@ -1225,8 +1241,13 @@ export default function OutlookCalendarClient({
                   ? filteredEvents
                   : (eventsByLabel[label] ?? []);
               return (
-                <div
-                  key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
+                <motion.div
+                  key={label}
+                  layout
+                  initial={{ opacity: 0, x: 18, scale: 0.985 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -18, scale: 0.985 }}
+                  transition={SPRING}
                   className="flex min-h-0 flex-col border-r border-border last:border-r-0"
                 >
                   {activeCalendars.length >= 2 ? (
@@ -1245,7 +1266,15 @@ export default function OutlookCalendarClient({
                       ) : null}
                     </div>
                   ) : null}
-                  <div className="min-h-0 flex-1">
+                  <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={`${label}-${view}`}
+                    initial={{ opacity: 0, y: 12, filter: "blur(3px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, y: -10, filter: "blur(3px)" }}
+                    transition={SMOOTH}
+                    className="min-h-0 flex-1"
+                  >
                     <FullCalendar
                       ref={setCalendarRef(label)}
                       key={`${label}-${activeCalendars.length}-${activeCalendars.join(",")}`}
@@ -1323,16 +1352,24 @@ export default function OutlookCalendarClient({
                         </div>
                       )}
                     />
-                  </div>
-                </div>
+                  </motion.div>
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
-          </div>
+            </AnimatePresence>
+          </motion.div>
         </main>
       </div>
 
+      <AnimatePresence>
       {eventMenu ? (
-        <div
+        <motion.div
+          key="event-menu"
+          initial={{ opacity: 0, y: -6, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.97 }}
+          transition={SMOOTH}
           className="fixed z-[60] min-w-[220px] overflow-hidden rounded-lg border border-border bg-white shadow-xl"
           style={{ left: eventMenu.x, top: eventMenu.y }}
           onClick={(event) => event.stopPropagation()}
@@ -1368,12 +1405,28 @@ export default function OutlookCalendarClient({
               <span className="font-medium">{label.label}</span>
             </button>
           ))}
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {dialogOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35">
-          <div className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl">
+        <motion.div
+          key="event-dialog-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={SMOOTH}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35"
+        >
+          <motion.div
+            key="event-dialog"
+            initial={{ opacity: 0, y: 26, scale: 0.965, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: 18, scale: 0.975, filter: "blur(6px)" }}
+            transition={SPRING}
+            className="flex h-[min(790px,calc(100vh-40px))] w-[min(1120px,calc(100vw-32px))] flex-col overflow-hidden rounded-sm bg-[#f3f2f1] shadow-2xl"
+          >
             <div className="flex h-12 items-center border-b border-[#d4d8de] bg-[#d9f3e3] px-4">
               <span className="text-sm">
                 {draft.recurrence === "none"
@@ -1800,9 +1853,10 @@ export default function OutlookCalendarClient({
               </aside>
 
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
 
       <style jsx global>{`
         .outlook2 .fc {
