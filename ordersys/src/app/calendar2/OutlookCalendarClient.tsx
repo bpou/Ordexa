@@ -1453,9 +1453,6 @@ export default function OutlookCalendarClient() {
 
                   <Clock3 className="mx-auto h-5 w-5 text-[#717b87]" />
                   <div className="relative py-1">
-                    {draft.recurrence !== "none" ? (
-                      <div className="px-3 pb-2 text-sm text-[#5f6b76]">{recurrenceSummary(draft)}</div>
-                    ) : null}
                     <div
                       role="button"
                       tabIndex={0}
@@ -1472,7 +1469,9 @@ export default function OutlookCalendarClient() {
                           : "border-[#717b87]"
                       }`}
                     >
-                      <div className="min-w-0 flex-1 text-sm text-[#23272f]">{popupTimeSummary(draft)}</div>
+                      <div className="min-w-0 flex-1 truncate text-sm text-[#23272f]">
+                        {draft.recurrence !== "none" ? recurrenceSummary(draft) : popupTimeSummary(draft)}
+                      </div>
                       <ChevronDown className="h-4 w-4 text-[#717b87]" />
                     </div>
                     <div className="flex items-center gap-6 px-3 py-3 text-sm">
