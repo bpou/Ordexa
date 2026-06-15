@@ -1457,45 +1457,23 @@ export default function OutlookCalendarClient() {
                       <div className="px-3 pb-2 text-sm text-[#5f6b76]">{recurrenceSummary(draft)}</div>
                     ) : null}
                     <div
-                      role={draft.recurrence !== "none" ? "button" : undefined}
-                      tabIndex={draft.recurrence !== "none" ? 0 : -1}
-                      onClick={() => {
-                        if (draft.recurrence !== "none") {
-                          setRecurrenceEditorOpen(true);
-                        }
-                      }}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setRecurrenceEditorOpen(true)}
                       onKeyDown={(event) => {
-                        if (draft.recurrence !== "none" && (event.key === "Enter" || event.key === " ")) {
+                        if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
                           setRecurrenceEditorOpen(true);
                         }
                       }}
                       className={`flex h-12 w-full items-center gap-2 border-b px-3 text-left ${
-                        draft.recurrence !== "none" && recurrenceEditorOpen
+                        recurrenceEditorOpen
                           ? "border-brand-600"
                           : "border-[#717b87]"
                       }`}
                     >
-                      {draft.recurrence === "none" ? (
-                        <>
-                          <input
-                            type="datetime-local"
-                            value={draft.start}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
-                            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                          />
-                          <span className="text-[#717b87]">-</span>
-                          <input
-                            type="datetime-local"
-                            value={draft.end}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, end: event.target.value }))}
-                            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                          />
-                        </>
-                      ) : (
-                        <div className="min-w-0 flex-1 text-sm text-[#23272f]">{popupTimeSummary(draft)}</div>
-                      )}
-                      {draft.recurrence !== "none" ? <ChevronDown className="h-4 w-4 text-[#717b87]" /> : null}
+                      <div className="min-w-0 flex-1 text-sm text-[#23272f]">{popupTimeSummary(draft)}</div>
+                      <ChevronDown className="h-4 w-4 text-[#717b87]" />
                     </div>
                     <div className="flex items-center gap-6 px-3 py-3 text-sm">
                       <label className="flex items-center gap-2 text-[#5f6b76]">
@@ -1526,7 +1504,7 @@ export default function OutlookCalendarClient() {
                         Återkommande
                       </button>
                     </div>
-                    {draft.recurrence !== "none" && recurrenceEditorOpen ? (
+                    {recurrenceEditorOpen ? (
                       <div className="absolute left-3 right-0 top-[74px] z-40 rounded-md border border-[#d4d8de] border-t-brand-600 bg-white px-4 py-4 shadow-xl">
                         <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
                           <div>
@@ -1594,25 +1572,35 @@ export default function OutlookCalendarClient() {
                           </label>
                           <button
                             type="button"
-                            onClick={() => setRecurrenceEditorOpen(false)}
-                            className="inline-flex h-8 items-center gap-2 rounded-md bg-[#f3f2f1] px-3 text-brand-900"
+                            onClick={() => {
+                              if (draft.recurrence === "none") {
+                                setRecurrenceMode("weekly");
+                              } else {
+                                setRecurrenceMode("none");
+                              }
+                            }}
+                            className={`inline-flex h-8 items-center gap-2 rounded-md px-3 ${
+                              draft.recurrence === "none" ? "bg-transparent text-[#5f6b76] hover:bg-[#f3f2f1]" : "bg-[#f3f2f1] text-brand-900"
+                            }`}
                           >
                             <RefreshCw className="h-4 w-4" />
                             Återkommande
                           </button>
                         </div>
 
-                        <div className="mt-4 flex items-center gap-3">
-                          <span className="text-sm text-[#717b87]">Upprepa var</span>
-                          <select
-                            value={draft.recurrence}
-                            onChange={(event) => setRecurrenceMode(event.target.value as Draft["recurrence"])}
-                            className="h-9 rounded-md border border-[#d4d8de] bg-[#f3f2f1] px-3 text-sm"
-                          >
-                            <option value="daily">dag</option>
-                            <option value="weekly">vecka</option>
-                          </select>
-                        </div>
+                        {draft.recurrence !== "none" ? (
+                          <div className="mt-4 flex items-center gap-3">
+                            <span className="text-sm text-[#717b87]">Upprepa var</span>
+                            <select
+                              value={draft.recurrence}
+                              onChange={(event) => setRecurrenceMode(event.target.value as Draft["recurrence"])}
+                              className="h-9 rounded-md border border-[#d4d8de] bg-[#f3f2f1] px-3 text-sm"
+                            >
+                              <option value="daily">dag</option>
+                              <option value="weekly">vecka</option>
+                            </select>
+                          </div>
+                        ) : null}
 
                         {draft.recurrence === "weekly" ? (
                           <div className="mt-4 flex flex-wrap items-center gap-3">
