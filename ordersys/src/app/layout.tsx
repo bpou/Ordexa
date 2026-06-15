@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth";
 import HeaderUserMenu from "@/components/HeaderUserMenu";
 import RegisterMenu from "@/components/RegisterMenu";
 import Footer from "@/components/Footer";
-import { AlertTriangle } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { AppSessionProvider } from "@/components/AppSessionProvider";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -128,18 +128,28 @@ export default async function RootLayout({
                 </div>
 
                 {needsMfa ? (
-                  <div className="border-t border-amber-200 bg-amber-50/95 px-3 py-2.5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/80 dark:text-amber-200 sm:px-6">
-                    <div className="mx-auto flex max-w-7xl items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                      <div className="flex-1 text-xs">
-                        <p className="font-medium">Aktivera authenticator</p>
-                        <p className="text-amber-800/80 dark:text-amber-200/80">Skydda ditt konto med engångskoder.</p>
+                  <div className="border-t border-brand-200/80 bg-gradient-to-r from-brand-50 via-white to-brand-50 px-3 py-3 text-brand-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] dark:border-brand-300/30 dark:from-brand-950/70 dark:via-card dark:to-brand-950/70 sm:px-6">
+                    <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-brand-200 bg-white text-brand-700 shadow-sm dark:border-brand-300/30 dark:bg-card">
+                          <ShieldCheck className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold leading-5 text-foreground">
+                            Aktivera authenticator
+                          </p>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Skydda ditt konto med engångskoder innan du fortsätter.
+                          </p>
+                        </div>
                       </div>
+
                       <Link
                         href="/account"
-                        className="ml-2 inline-flex items-center rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 active:bg-amber-800 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-400"
+                        className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-600 px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 active:bg-brand-800 dark:bg-brand-500 dark:text-brand-950 dark:hover:bg-brand-400 sm:self-auto"
                       >
                         Starta
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                       </Link>
                     </div>
                   </div>
