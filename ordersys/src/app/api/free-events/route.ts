@@ -34,6 +34,7 @@ const TRACK_VALUES = [...APP_TRACKS] as [AppTrack, ...AppTrack[]];
 const BodySchema = z.object({
   track: z.enum(TRACK_VALUES),
   title: z.string().min(1),
+  notes: z.string().nullable().optional(),
   label: z
     .enum([
       "BOKAD_TID",
@@ -195,6 +196,7 @@ export async function POST(req: Request) {
       const created = await prisma.personalCalendarEvent.create({
         data: {
           title: body.title,
+          notes: body.notes ?? null,
           start,
           end,
           allDay: !!body.allDay,
@@ -202,6 +204,11 @@ export async function POST(req: Request) {
           track: body.track,
           visibility,
           ownerUserId,
+          weeklyDays: null,
+          startRecur: null,
+          endRecur: null,
+          startTime: null,
+          endTime: null,
         },
       });
 
@@ -247,8 +254,9 @@ export async function POST(req: Request) {
           );
 
     const toCreate: {
-      title: string;
-      start: Date;
+        title: string;
+        notes: string | null;
+        start: Date;
       end: Date;
       allDay: boolean;
       label: Label | null;
@@ -275,6 +283,7 @@ export async function POST(req: Request) {
 
       toCreate.push({
         title: body.title,
+        notes: body.notes ?? null,
         start,
         end,
         allDay: !!body.allDay,
@@ -297,6 +306,7 @@ export async function POST(req: Request) {
         prisma.personalCalendarEvent.create({
           data: {
             title: e.title,
+            notes: e.notes,
             start: e.start,
             end: e.end,
             allDay: e.allDay,
@@ -304,6 +314,11 @@ export async function POST(req: Request) {
             track: e.track,
             visibility: e.visibility,
             ownerUserId: e.ownerUserId,
+            weeklyDays: repeat === "weekly" ? Array.from(allowedWeekdays).join(",") : "0,1,2,3,4,5,6",
+            startRecur: baseStart,
+            endRecur: rangeEnd,
+            startTime: body.startTime,
+            endTime: body.endTime,
           },
         })
       )

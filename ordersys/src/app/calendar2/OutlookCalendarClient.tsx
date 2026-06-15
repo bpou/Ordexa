@@ -24,10 +24,12 @@ import {
   Clock3,
   Copy,
   Filter,
+  Globe,
   MapPin,
   MoreHorizontal,
   Plus,
   Save,
+  RefreshCw,
   Trash2,
   UsersRound,
   X,
@@ -57,6 +59,8 @@ type Draft = {
   body: string;
   showAs: "UPPTAGEN" | "LEDIG";
   recurrence: "none" | "daily" | "weekly";
+  weeklyDays: string[];
+  recurrenceUntil: string;
 };
 
 type DragHandle = "top" | "bottom" | "middle" | null;
@@ -88,6 +92,15 @@ const VIEW_BUTTONS: { view: CalendarView; label: string }[] = [
 
 const WEEKDAYS_SHORT = ["S", "M", "T", "O", "T", "F", "L"];
 const WEEKDAYS_LONG = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
+const WEEKDAY_PICKER: Array<{ value: string; label: string }> = [
+  { value: "1", label: "M" },
+  { value: "2", label: "T" },
+  { value: "3", label: "O" },
+  { value: "4", label: "T" },
+  { value: "5", label: "F" },
+  { value: "6", label: "L" },
+  { value: "0", label: "S" },
+];
 const MONTHS = [
   "januari",
   "februari",
@@ -115,6 +128,35 @@ function toLocalInputValue(value?: string | Date | null) {
 
 function toIso(value: string) {
   return new Date(value).toISOString();
+}
+
+function toDateInputValue(value?: string | Date | null) {
+  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function toTimeInputValue(value?: string | Date | null) {
+  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "00:00";
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromTimeInputValue(value: string) {
+  const [hours, minutes] = value.split(":").map((part) => parseInt(part, 10) || 0);
+  return { hours, minutes };
+}
+
+function combineDateAndTimeInput(dateValue: string, timeValue: string) {
+  const date = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
+  const { hours, minutes } = fromTimeInputValue(timeValue || "00:00");
+  date.setHours(hours, minutes, 0, 0);
+  return toLocalInputValue(date);
+}
+
+function toTimeApiValue(value: string) {
+  const { hours, minutes } = fromTimeInputValue(value);
+  return `${pad(hours)}:${pad(minutes)}:00`;
 }
 
 function addMinutes(date: Date, minutes: number) {
@@ -177,6 +219,45 @@ function darkenHex(hex: string, amount = 0.18) {
   return `#${parts.join("")}`;
 }
 
+function recurrenceSummary(draft: Draft) {
+  if (draft.recurrence === "none") return "";
+  const start = new Date(draft.start);
+  const end = new Date(draft.end);
+  const startLabel = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const endLabel = end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const until = draft.recurrenceUntil ? new Date(`${draft.recurrenceUntil}T00:00:00`) : null;
+
+  if (draft.recurrence === "daily") {
+    return `Inträffar dagligen från ${startLabel} till ${endLabel}${until ? ` gäller till ${until.toLocaleDateString("sv-SE")}` : ""}`;
+  }
+
+  const dayNames = WEEKDAY_PICKER.filter((day) => draft.weeklyDays.includes(day.value)).map((day) => {
+    const index = Number(day.value);
+    return WEEKDAYS_LONG[index].toLowerCase();
+  });
+  const dayText = dayNames.length ? dayNames.join(", ") : WEEKDAYS_LONG[start.getDay()].toLowerCase();
+  return `Inträffar varje ${dayText} från ${startLabel} till ${endLabel}${until ? ` gäller ${start.toLocaleDateString("sv-SE")} till ${until.toLocaleDateString("sv-SE")}` : ""}`;
+}
+
+function popupTimeSummary(draft: Pick<Draft, "start" | "end">) {
+  const start = new Date(draft.start);
+  const end = new Date(draft.end);
+  const dayPart = start.toLocaleDateString("sv-SE", {
+    weekday: "short",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const timePart = `${start.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  })} - ${end.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
+  return `${dayPart} ${timePart}`;
+}
+
 function formatRangeTitle(date: Date, view: CalendarView) {
   if (view === "dayGridMonth") {
     return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
@@ -223,6 +304,15 @@ function normalizeEvents(events: EventInput[]) {
         label: event.extendedProps?.label ?? label.value,
         status,
         visibility: event.extendedProps?.visibility ?? "PERSONAL",
+        notes: event.extendedProps?.notes ?? "",
+        recurrence: event.extendedProps?.recurrence ?? "none",
+        weeklyDays:
+          Array.isArray(event.extendedProps?.weeklyDays)
+            ? event.extendedProps.weeklyDays
+            : typeof event.extendedProps?.weeklyDays === "string" && event.extendedProps.weeklyDays.length
+              ? event.extendedProps.weeklyDays.split(",")
+              : [],
+        recurrenceUntil: event.extendedProps?.endRecur ? toDateInputValue(event.extendedProps.endRecur) : "",
       },
     };
   });
@@ -247,6 +337,11 @@ function makeDraft(input?: Partial<Draft>): Draft {
     id: input?.id,
     showAs: input?.showAs ?? "UPPTAGEN",
     recurrence: input?.recurrence ?? "none",
+    weeklyDays:
+      input?.weeklyDays && input.weeklyDays.length
+        ? input.weeklyDays
+        : [String(start.getDay())],
+    recurrenceUntil: input?.recurrenceUntil ?? "",
   };
 }
 
@@ -263,8 +358,9 @@ export default function OutlookCalendarClient() {
   const [activeCalendars, setActiveCalendars] = useState<Label[]>(LABELS.map((l) => l.value));
   const [previewDate, setPreviewDate] = useState(() => new Date());
   const [dragHandle, setDragHandle] = useState<DragHandle>(null);
-  const [dragStartY, setDragStartY] = useState(0);
-  const [dragStartValue, setDragStartValue] = useState("");
+  const [showAsMenuOpen, setShowAsMenuOpen] = useState(false);
+  const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false);
+  const [timeZoneMode, setTimeZoneMode] = useState<"LOCAL" | "UTC">("LOCAL");
   const [eventMenu, setEventMenu] = useState<{
     eventId: string;
     persistId: string;
@@ -332,6 +428,13 @@ export default function OutlookCalendarClient() {
       document.removeEventListener("keydown", onKey);
     };
   }, [eventMenu]);
+
+  useEffect(() => {
+    if (!dialogOpen) {
+      setShowAsMenuOpen(false);
+      setRecurrenceEditorOpen(false);
+    }
+  }, [dialogOpen]);
 
   useEffect(() => {
     if (dialogOpen) {
@@ -406,6 +509,7 @@ export default function OutlookCalendarClient() {
         allDay,
       }),
     );
+    setRecurrenceEditorOpen(false);
     setDialogOpen(true);
   }, []);
 
@@ -430,8 +534,19 @@ export default function OutlookCalendarClient() {
         status: arg.event.extendedProps?.status as TrackStatus | undefined,
         visibility: (arg.event.extendedProps?.visibility as Visibility) ?? "PERSONAL",
         location: (arg.event.extendedProps?.location as string | null) ?? "",
+        body: (arg.event.extendedProps?.notes as string | null) ?? "",
+        recurrence: (arg.event.extendedProps?.recurrence as Draft["recurrence"] | undefined) ?? "none",
+        weeklyDays: Array.isArray(arg.event.extendedProps?.weeklyDays)
+          ? (arg.event.extendedProps.weeklyDays as string[])
+          : typeof arg.event.extendedProps?.weeklyDays === "string" && arg.event.extendedProps.weeklyDays.length
+            ? String(arg.event.extendedProps.weeklyDays).split(",")
+            : [String((arg.event.start ?? new Date()).getDay())],
+        recurrenceUntil: arg.event.extendedProps?.endRecur
+          ? toDateInputValue(arg.event.extendedProps.endRecur as string)
+          : "",
       }),
     );
+    setRecurrenceEditorOpen(false);
     setDialogOpen(true);
   }, []);
 
@@ -537,7 +652,7 @@ export default function OutlookCalendarClient() {
     setSaving(true);
     setError(null);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title: draft.title.trim() || "(Inget ämne)",
       start: toIso(draft.start),
       end: toIso(draft.end),
@@ -547,7 +662,23 @@ export default function OutlookCalendarClient() {
       track: "A",
       repeat: draft.recurrence,
       showAs: draft.showAs,
+      notes: draft.body.trim() || null,
     };
+
+    if (draft.recurrence !== "none") {
+      payload.startRecur = toIso(combineDateAndTimeInput(toDateInputValue(draft.start), "00:00"));
+      payload.endRecur = draft.recurrenceUntil
+        ? toIso(combineDateAndTimeInput(draft.recurrenceUntil, "00:00"))
+        : null;
+      payload.startTime = toTimeApiValue(toTimeInputValue(draft.start));
+      payload.endTime = toTimeApiValue(toTimeInputValue(draft.end));
+      payload.weeklyDays =
+        draft.recurrence === "daily"
+          ? ["0", "1", "2", "3", "4", "5", "6"]
+          : draft.weeklyDays.length
+            ? draft.weeklyDays
+            : [String(new Date(draft.start).getDay())];
+    }
 
     try {
       const response = await fetch(
@@ -657,11 +788,11 @@ export default function OutlookCalendarClient() {
           end: minutesToLocalValue(baseDate, clampedStart + duration),
         }));
       } else if (state.handle === "top") {
-        const newStart = Math.max(0, state.startTotal - deltaMinutes);
+        const newStart = Math.max(0, state.startTotal + deltaMinutes);
         if (newStart >= state.endTotal - 15) return;
         setDraft((prev) => ({ ...prev, start: minutesToLocalValue(baseDate, newStart) }));
       } else if (state.handle === "bottom") {
-        const newEnd = Math.max(0, state.endTotal + deltaMinutes);
+        const newEnd = Math.min(24 * 60, Math.max(0, state.endTotal + deltaMinutes));
         if (newEnd <= state.startTotal + 15) return;
         setDraft((prev) => ({ ...prev, end: minutesToLocalValue(baseDate, newEnd) }));
       }
@@ -689,8 +820,8 @@ export default function OutlookCalendarClient() {
       const next = addDays(prev, days);
       setDraft((d) => ({
         ...d,
-        start: toLocalInputValue(addDays(new Date(d.start), days - (prev.getTime() === next.getTime() ? 0 : 0))),
-        end: toLocalInputValue(addDays(new Date(d.end), days - (prev.getTime() === next.getTime() ? 0 : 0))),
+        start: toLocalInputValue(addDays(new Date(d.start), days)),
+        end: toLocalInputValue(addDays(new Date(d.end), days)),
       }));
       return next;
     });
@@ -709,6 +840,35 @@ export default function OutlookCalendarClient() {
         end: toLocalInputValue(endDate),
       };
     });
+  }, []);
+
+  const toggleWeekday = useCallback((day: string) => {
+    setDraft((prev) => {
+      const set = new Set(prev.weeklyDays);
+      if (set.has(day)) {
+        set.delete(day);
+      } else {
+        set.add(day);
+      }
+      const next = Array.from(set);
+      return {
+        ...prev,
+        weeklyDays: next.length ? next : [day],
+      };
+    });
+  }, []);
+
+  const setRecurrenceMode = useCallback((mode: Draft["recurrence"]) => {
+    setDraft((prev) => ({
+      ...prev,
+      recurrence: mode,
+      weeklyDays:
+        mode === "daily"
+          ? ["0", "1", "2", "3", "4", "5", "6"]
+          : prev.weeklyDays.length
+            ? prev.weeklyDays
+            : [String(new Date(prev.start).getDay())],
+    }));
   }, []);
 
   const toggleCalendarActive = useCallback((label: Label) => {
@@ -760,6 +920,23 @@ export default function OutlookCalendarClient() {
     },
     [load],
   );
+
+  const previewPalette = useMemo(() => {
+    if (draft.status) {
+      const statusColor = STATUS_COLOR_PARTS[draft.status];
+      return {
+        bg: statusColor.bgHex,
+        text: statusColor.textHex,
+        accent: darkenHex(statusColor.bgHex),
+      };
+    }
+    const label = labelFor(draft.label);
+    return {
+      bg: label.color,
+      text: "#ffffff",
+      accent: darkenHex(label.color),
+    };
+  }, [draft.label, draft.status]);
 
   return (
     <div className="outlook2 h-[calc(100dvh-128px)] min-h-[680px] overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm">
@@ -1198,32 +1375,50 @@ export default function OutlookCalendarClient() {
                     ? "border-brand-300 bg-brand-100 text-brand-900 font-semibold"
                     : ""
                 }`}
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    recurrence: prev.recurrence === "none" ? "daily" : prev.recurrence === "daily" ? "weekly" : "none",
-                    title:
-                      prev.recurrence === "daily" ? "Veckovis" : prev.recurrence === "weekly" ? "" : "Daglig",
-                  }))
-                }
+                onClick={() => {
+                  if (draft.recurrence === "none") {
+                    setRecurrenceMode("weekly");
+                  } else {
+                    setRecurrenceMode("none");
+                    setRecurrenceEditorOpen(false);
+                  }
+                }}
               >
-                <ChevronRight className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
                 Serie
               </button>
               <div className="relative">
                 <button
                   className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-sm hover:bg-[#d9f3e3]"
-                  onClick={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      showAs: prev.showAs === "UPPTAGEN" ? "LEDIG" : "UPPTAGEN",
-                    }))
-                  }
+                  onClick={() => setShowAsMenuOpen((open) => !open)}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                   {draft.showAs === "UPPTAGEN" ? "Upptagen" : "Ledig"}
                   <ChevronDown className="h-3 w-3" />
                 </button>
+                {showAsMenuOpen ? (
+                  <div className="absolute left-0 top-full z-20 mt-1 min-w-[150px] rounded-md border border-[#d4d8de] bg-white py-1 shadow-lg">
+                    {[
+                      { value: "UPPTAGEN", label: "Upptagen" },
+                      { value: "LEDIG", label: "Ledig" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[#f3f2f1] ${
+                          draft.showAs === option.value ? "font-semibold text-brand-900" : ""
+                        }`}
+                        onClick={() => {
+                          setDraft((prev) => ({ ...prev, showAs: option.value as Draft["showAs"] }));
+                          setShowAsMenuOpen(false);
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {draft.showAs === option.value ? <Check className="h-4 w-4" /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               {draft.id ? (
                 <button
@@ -1256,20 +1451,189 @@ export default function OutlookCalendarClient() {
                   />
 
                   <Clock3 className="mx-auto h-5 w-5 text-[#717b87]" />
-                  <div className="flex h-12 items-center gap-2 border-b border-[#717b87] px-3">
-                    <input
-                      type="datetime-local"
-                      value={draft.start}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
-                      className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                    />
-                    <span className="text-[#717b87]">-</span>
-                    <input
-                      type="datetime-local"
-                      value={draft.end}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, end: event.target.value }))}
-                      className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                    />
+                  <div className="py-1">
+                    {draft.recurrence !== "none" ? (
+                      <div className="px-3 pb-2 text-sm text-[#5f6b76]">{recurrenceSummary(draft)}</div>
+                    ) : null}
+                    <div
+                      role={draft.recurrence !== "none" ? "button" : undefined}
+                      tabIndex={draft.recurrence !== "none" ? 0 : -1}
+                      onClick={() => {
+                        if (draft.recurrence !== "none") {
+                          setRecurrenceEditorOpen((open) => !open);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (draft.recurrence !== "none" && (event.key === "Enter" || event.key === " ")) {
+                          event.preventDefault();
+                          setRecurrenceEditorOpen((open) => !open);
+                        }
+                      }}
+                      className={`flex h-12 w-full items-center gap-2 border-b px-3 text-left ${
+                        draft.recurrence !== "none" && recurrenceEditorOpen
+                          ? "border-brand-600"
+                          : "border-[#717b87]"
+                      }`}
+                    >
+                      {draft.recurrence === "none" ? (
+                        <>
+                          <input
+                            type="datetime-local"
+                            value={draft.start}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, start: event.target.value }))}
+                            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                          />
+                          <span className="text-[#717b87]">-</span>
+                          <input
+                            type="datetime-local"
+                            value={draft.end}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, end: event.target.value }))}
+                            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                          />
+                        </>
+                      ) : (
+                        <div className="min-w-0 flex-1 text-sm text-[#23272f]">{popupTimeSummary(draft)}</div>
+                      )}
+                      {draft.recurrence !== "none" ? <ChevronDown className="h-4 w-4 text-[#717b87]" /> : null}
+                    </div>
+                    <div className="flex items-center gap-6 px-3 py-3 text-sm">
+                      <label className="flex items-center gap-2 text-[#5f6b76]">
+                        <input
+                          type="checkbox"
+                          checked={draft.allDay}
+                          onChange={(event) => setDraft((prev) => ({ ...prev, allDay: event.target.checked }))}
+                          className="h-4 w-4 rounded border-[#c7ccd1]"
+                        />
+                        Hela dagen
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (draft.recurrence === "none") {
+                            setRecurrenceMode("weekly");
+                            setRecurrenceEditorOpen(true);
+                          } else {
+                            setRecurrenceEditorOpen((open) => !open);
+                          }
+                        }}
+                        className={`inline-flex h-8 items-center gap-2 rounded-md px-3 ${
+                          draft.recurrence === "none" ? "text-[#5f6b76] hover:bg-[#f3f2f1]" : "bg-[#f3f2f1] text-brand-900"
+                        }`}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Återkommande
+                      </button>
+                    </div>
+                    {draft.recurrence !== "none" && recurrenceEditorOpen ? (
+                      <div className="rounded-md border border-[#d4d8de] bg-white px-3 py-4 shadow-sm">
+                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
+                          <div>
+                            <div className="mb-1 text-sm text-[#717b87]">Startdatum</div>
+                            <input
+                              type="date"
+                              value={toDateInputValue(draft.start)}
+                              onChange={(event) =>
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  start: combineDateAndTimeInput(event.target.value, toTimeInputValue(prev.start)),
+                                  end: combineDateAndTimeInput(event.target.value, toTimeInputValue(prev.end)),
+                                }))
+                              }
+                              className="w-full border-b border-[#d4d8de] bg-transparent pb-2 text-sm outline-none"
+                            />
+                          </div>
+                          <div>
+                            <div className="mb-1 text-sm text-[#717b87]">Starttid</div>
+                            <input
+                              type="time"
+                              value={toTimeInputValue(draft.start)}
+                              onChange={(event) =>
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  start: combineDateAndTimeInput(toDateInputValue(prev.start), event.target.value),
+                                }))
+                              }
+                              className="w-full border-b border-[#d4d8de] bg-transparent pb-2 text-sm outline-none"
+                            />
+                          </div>
+                          <div>
+                            <div className="mb-1 text-sm text-[#717b87]">Sluttid</div>
+                            <input
+                              type="time"
+                              value={toTimeInputValue(draft.end)}
+                              onChange={(event) =>
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  end: combineDateAndTimeInput(toDateInputValue(prev.end), event.target.value),
+                                }))
+                              }
+                              className="w-full border-b border-[#d4d8de] bg-transparent pb-2 text-sm outline-none"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setTimeZoneMode((prev) => (prev === "LOCAL" ? "UTC" : "LOCAL"))}
+                            className="mt-6 inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-700 hover:bg-brand-50"
+                            title={timeZoneMode === "LOCAL" ? "Byt till UTC-visning" : "Byt till lokal tidszon"}
+                          >
+                            <Globe className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="mt-4 flex items-center gap-3">
+                          <span className="text-sm text-[#717b87]">Upprepa var</span>
+                          <select
+                            value={draft.recurrence}
+                            onChange={(event) => setRecurrenceMode(event.target.value as Draft["recurrence"])}
+                            className="h-9 rounded-md border border-[#d4d8de] bg-white px-3 text-sm"
+                          >
+                            <option value="daily">Dag</option>
+                            <option value="weekly">Vecka</option>
+                          </select>
+                        </div>
+
+                        {draft.recurrence === "weekly" ? (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {WEEKDAY_PICKER.map((day) => {
+                              const active = draft.weeklyDays.includes(day.value);
+                              return (
+                                <button
+                                  key={day.value}
+                                  type="button"
+                                  onClick={() => toggleWeekday(day.value)}
+                                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${
+                                    active ? "bg-brand-600 text-white" : "bg-[#f3f2f1] text-[#4b5560]"
+                                  }`}
+                                >
+                                  {day.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-4 flex items-center gap-3">
+                          <span className="text-sm text-[#717b87]">Till</span>
+                          <input
+                            type="date"
+                            value={draft.recurrenceUntil}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, recurrenceUntil: event.target.value }))}
+                            className="h-9 rounded-md border border-[#d4d8de] bg-white px-3 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRecurrenceMode("none");
+                              setRecurrenceEditorOpen(false);
+                            }}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#5f6b76] hover:bg-[#f3f2f1]"
+                            aria-label="Ta bort återkommande"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
                   <MapPin className="mx-auto h-5 w-5 text-[#717b87]" />
@@ -1336,8 +1700,8 @@ export default function OutlookCalendarClient() {
                     <ChevronRight className="h-4 w-4 text-[#717b87]" />
                   </button>
                   <span>
-                    {WEEKDAYS_LONG[new Date(draft.start).getDay()].slice(0, 3)}, {MONTHS[new Date(draft.start).getMonth()].slice(0, 3)}{" "}
-                    {new Date(draft.start).getDate()}, {new Date(draft.start).getFullYear()}
+                    {WEEKDAYS_LONG[previewDate.getDay()].slice(0, 3)}, {MONTHS[previewDate.getMonth()].slice(0, 3)}{" "}
+                    {previewDate.getDate()}, {previewDate.getFullYear()}
                   </span>
                 </div>
                 <div
@@ -1355,28 +1719,27 @@ export default function OutlookCalendarClient() {
                   ))}
                   <div
                     data-event-preview-block
-                    className="absolute left-[58px] right-5 rounded-sm bg-[#4cc773] text-sm font-semibold text-black"
+                    className="absolute left-[58px] right-5 cursor-grab rounded-sm text-sm font-semibold"
                     style={{
                       top: `${new Date(draft.start).getHours() * 60 + new Date(draft.start).getMinutes()}px`,
                       height: `${Math.max(30, (new Date(draft.end).getTime() - new Date(draft.start).getTime()) / 60_000)}px`,
+                      backgroundColor: previewPalette.bg,
+                      color: previewPalette.text,
+                      boxShadow: `inset 4px 0 0 ${previewPalette.accent}`,
                     }}
+                    onMouseDown={(e) => startDrag("middle", e)}
                   >
                     <div
-                      className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa]"
+                      className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize"
                       onMouseDown={(e) => startDrag("top", e)}
                       aria-label="Resize start"
-                    />
-                    <div
-                      className="absolute inset-x-0 top-2 bottom-2 cursor-grab hover:bg-[#4cc77322] flex items-center justify-center"
-                      onMouseDown={(e) => startDrag("middle", e)}
-                      aria-label="Move event"
                     />
                     <div className="relative px-2 py-1" style={{ paddingTop: "8px" }}>
                       {new Date(draft.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} -{" "}
                       {new Date(draft.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                     </div>
                     <div
-                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-[#4cc773aa] rounded-b-sm"
+                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize rounded-b-sm"
                       onMouseDown={(e) => startDrag("bottom", e)}
                       aria-label="Resize end"
                     />

@@ -40,6 +40,13 @@ export async function GET(req: Request) {
 
     const events = rows.map((r) => {
       const visibility = r.visibility as "PUBLIC" | "PERSONAL";
+      const weeklyDays = r.weeklyDays?.split(",").filter(Boolean) ?? [];
+      const recurrence =
+        r.startTime && r.endTime
+          ? weeklyDays.length && weeklyDays.length < 7
+            ? "weekly"
+            : "daily"
+          : "none";
       const colorMap: Record<string, string> = {
         BOKAD_TID: "#3b82f6", // blue
         KAN_FLYTTAS: "#eab308", // yellow
@@ -66,6 +73,13 @@ export async function GET(req: Request) {
           realId: r.id,
           synthetic: false,
           location: null,
+          notes: r.notes ?? "",
+          recurrence,
+          weeklyDays,
+          startRecur: r.startRecur?.toISOString() ?? null,
+          endRecur: r.endRecur?.toISOString() ?? null,
+          startTime: r.startTime ?? null,
+          endTime: r.endTime ?? null,
           ownerUserId: r.ownerUserId,
         },
       };

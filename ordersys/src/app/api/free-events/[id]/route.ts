@@ -39,7 +39,14 @@ const PatchSchema = z.object({
 
   // optional extra edits (not required for drag/resize)
   title: z.string().min(1).optional(),
+  notes: z.string().nullable().optional(),
   allDay: z.boolean().optional(),
+  repeat: z.enum(["none", "daily", "weekly"]).optional(),
+  startRecur: iso.nullable().optional(),
+  endRecur: iso.nullable().optional(),
+  startTime: z.string().nullable().optional(),
+  endTime: z.string().nullable().optional(),
+  weeklyDays: z.array(z.enum(["0", "1", "2", "3", "4", "5", "6"])).optional(),
   label: z
     .enum([
       "BOKAD_TID",
@@ -79,8 +86,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
         start: true,
         end: true,
         title: true,
+        notes: true,
         allDay: true,
         label: true,
+        weeklyDays: true,
+        startRecur: true,
+        endRecur: true,
+        startTime: true,
+        endTime: true,
         track: true,
       },
     });
@@ -98,8 +111,27 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     if (body.start !== undefined) data.start = safeDate(body.start);
     if (body.end !== undefined) data.end = safeDate(body.end);
     if (body.title !== undefined) data.title = body.title;
+    if (body.notes !== undefined) data.notes = body.notes;
     if (body.allDay !== undefined) data.allDay = body.allDay;
     if (body.label !== undefined) data.label = body.label;
+    if (body.repeat !== undefined) {
+      if (body.repeat === "none") {
+        data.weeklyDays = null;
+        data.startRecur = null;
+        data.endRecur = null;
+        data.startTime = null;
+        data.endTime = null;
+      } else {
+        data.weeklyDays =
+          body.repeat === "daily"
+            ? "0,1,2,3,4,5,6"
+            : (body.weeklyDays?.length ? body.weeklyDays : ["1"]).join(",");
+        data.startRecur = safeDate(body.startRecur ?? undefined) ?? existing.startRecur ?? existing.start ?? null;
+        data.endRecur = safeDate(body.endRecur ?? undefined) ?? null;
+        data.startTime = body.startTime ?? existing.startTime ?? null;
+        data.endTime = body.endTime ?? existing.endTime ?? null;
+      }
+    }
     if (body.visibility !== undefined) {
       if (body.visibility === "PERSONAL" && !userId) {
         return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -146,8 +178,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
             start: existing.start,
             end: existing.end,
             title: existing.title,
+            notes: existing.notes,
             allDay: existing.allDay,
             label: existing.label,
+            weeklyDays: existing.weeklyDays,
+            startRecur: existing.startRecur,
+            endRecur: existing.endRecur,
+            startTime: existing.startTime,
+            endTime: existing.endTime,
             visibility: existing.visibility,
             ownerUserId: existing.ownerUserId,
           },
@@ -225,6 +263,13 @@ export async function GET(_req: Request, ctx: RouteCtx) {
         allDay: row.allDay ?? false,
         extendedProps: {
           label: row.label ?? null,
+          notes: row.notes ?? "",
+          recurrence: row.startTime && row.endTime ? ((row.weeklyDays?.split(",").filter(Boolean).length ?? 0) < 7 ? "weekly" : "daily") : "none",
+          weeklyDays: row.weeklyDays?.split(",").filter(Boolean) ?? [],
+          startRecur: row.startRecur?.toISOString?.() ?? null,
+          endRecur: row.endRecur?.toISOString?.() ?? null,
+          startTime: row.startTime ?? null,
+          endTime: row.endTime ?? null,
           visibility: row.visibility ?? "PUBLIC",
           kind: "free",
           realId: row.id,
