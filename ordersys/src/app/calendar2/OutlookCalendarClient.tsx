@@ -381,6 +381,7 @@ export default function OutlookCalendarClient({
   const [showAsMenuOpen, setShowAsMenuOpen] = useState(false);
   const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobileCalendar, setIsMobileCalendar] = useState(false);
   const [timeZoneMode, setTimeZoneMode] = useState<"LOCAL" | "UTC">("LOCAL");
   const [eventMenu, setEventMenu] = useState<{
     eventId: string;
@@ -461,6 +462,19 @@ export default function OutlookCalendarClient({
       setRecurrenceEditorOpen(false);
     }
   }, [dialogOpen]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobileCalendar(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileCalendar) return;
+    setActiveCalendars((prev) => (prev.length > 1 ? [prev[0]] : prev));
+  }, [isMobileCalendar]);
 
   useEffect(() => {
     if (!recurrenceEditorOpen) return;
@@ -913,10 +927,15 @@ export default function OutlookCalendarClient({
 
   const toggleCalendarActive = useCallback((label: Label) => {
     if (lockCalendarSelection) return;
+    if (isMobileCalendar) {
+      setActiveCalendars([label]);
+      setFilterOpen(false);
+      return;
+    }
     setActiveCalendars((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
-  }, [lockCalendarSelection]);
+  }, [isMobileCalendar, lockCalendarSelection]);
 
   const filteredEvents = useMemo(
     () =>
@@ -1099,7 +1118,7 @@ export default function OutlookCalendarClient({
               </div>
               {!lockCalendarSelection ? (
                 <button
-                  className="ml-7 mt-4 text-sm font-medium text-brand-700 hover:text-brand-800"
+                  className="ml-7 mt-4 hidden text-sm font-medium text-brand-700 hover:text-brand-800 md:block"
                   onClick={() =>
                     setActiveCalendars(
                       activeCalendars.length === LABELS.length ? [] : LABELS.map((l) => l.value),
