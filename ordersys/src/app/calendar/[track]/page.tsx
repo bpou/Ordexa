@@ -33,7 +33,6 @@ export default async function CalendarPage({
     <OutlookCalendarClient
       calendarTrack={normalized}
       initialCalendarLabels={[TRACK_CALENDAR_LABEL[normalized]]}
-      lockCalendarSelection
     />
   );
 }
