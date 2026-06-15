@@ -20,6 +20,16 @@ import { OrdinaLogoSpinner } from "@/components/OrdinaLoader";
 import { formatMinutesLabel } from "@/lib/time";
 import { recordRecentOrder } from "@/lib/recentOrders";
 import { Shimmer } from "@/components/Shimmer";
+import {
+  Activity,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  History,
+  Link2,
+  MapPin,
+  UploadCloud,
+} from "lucide-react";
 type TrackType = AppTrack | "SHARED";
 type Track = AppTrack;
 type Role = "ADMIN" | "SALJARE" | "A_TEAM" | "B_TEAM" | "C_TEAM" | "D_TEAM";
@@ -58,10 +68,29 @@ type TimeEntry = {
   createdAt: string;
 };
 
+type CalendarEventItem = {
+  id: string;
+  track: Track;
+  start: string;
+  end: string;
+  title: string;
+  notes?: string | null;
+};
+
 type OrderData = {
   orderNumber: string | number;
   title: string;
   customerName?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  dueDate?: string | null;
+  deliveryAddress?: string | null;
+  deliveryMethod?: string | null;
+  createdByName?: string | null;
+  createdByEmail?: string | null;
+  createdByImage?: string | null;
+  fortnox?: { documentNumber: string; createdAt: string } | null;
+  events?: CalendarEventItem[];
   notes?: string | null;
   tracks: {
     track: Track;
@@ -140,6 +169,200 @@ function PersonPill({
   );
 }
 
+type AuditItem = {
+  id: string;
+  at: string;
+  title: string;
+  description: string;
+  icon: "created" | "calendar" | "file" | "time" | "status" | "billing" | "fortnox" | "delivery";
+  accent: string;
+};
+
+function parseDate(value: string | number | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatAuditDate(value: string) {
+  const date = parseDate(value);
+  return date ? date.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" }) : "-";
+}
+
+function auditIcon(icon: AuditItem["icon"]) {
+  const className = "h-4 w-4";
+  if (icon === "calendar") return <CalendarClock className={className} aria-hidden />;
+  if (icon === "file") return <UploadCloud className={className} aria-hidden />;
+  if (icon === "time") return <Clock3 className={className} aria-hidden />;
+  if (icon === "billing") return <CheckCircle2 className={className} aria-hidden />;
+  if (icon === "fortnox") return <Link2 className={className} aria-hidden />;
+  if (icon === "delivery") return <MapPin className={className} aria-hidden />;
+  if (icon === "status") return <Activity className={className} aria-hidden />;
+  return <History className={className} aria-hidden />;
+}
+
+function buildAuditTrail(order: OrderData): AuditItem[] {
+  const items: AuditItem[] = [];
+  const orderNumber = String(order.orderNumber);
+  const creator = order.createdByName ?? order.createdByEmail ?? "Okänd användare";
+
+  if (order.createdAt) {
+    items.push({
+      id: "created",
+      at: order.createdAt,
+      title: "Order skapad",
+      description: `${creator} skapade order ${orderNumber}.`,
+      icon: "created",
+      accent: "border-brand-200 bg-brand-50 text-brand-700",
+    });
+  }
+
+  if (order.fortnox) {
+    items.push({
+      id: "fortnox",
+      at: order.fortnox.createdAt,
+      title: "Kopplad till Fortnox",
+      description: `Dokumentnummer ${order.fortnox.documentNumber} är länkat till ordern.`,
+      icon: "fortnox",
+      accent: "border-sky-200 bg-sky-50 text-sky-700",
+    });
+  }
+
+  if (order.deliveryAddress || order.dueDate) {
+    items.push({
+      id: "delivery",
+      at: order.dueDate ?? order.createdAt ?? new Date().toISOString(),
+      title: "Leveransinformation",
+      description: [
+        order.dueDate ? `Leverans ${new Date(order.dueDate).toLocaleDateString("sv-SE")}` : null,
+        order.deliveryAddress,
+        order.deliveryMethod,
+      ].filter(Boolean).join(" · "),
+      icon: "delivery",
+      accent: "border-violet-200 bg-violet-50 text-violet-700",
+    });
+  }
+
+  for (const track of order.tracks ?? []) {
+    const plannedAt = track.plannedStartAt ?? track.plannedEndAt;
+    if (plannedAt) {
+      items.push({
+        id: `track-${track.track}`,
+        at: plannedAt,
+        title: `${TRACK_LABELS[track.track]} planerad`,
+        description: `${STATUS_DISPLAY[track.status] ?? "Status"} · ${formatMinutesLabel(track.timeSpentMinutes ?? 0)} loggat.`,
+        icon: "status",
+        accent: "border-amber-200 bg-amber-50 text-amber-700",
+      });
+    }
+  }
+
+  for (const event of order.events ?? []) {
+    items.push({
+      id: `event-${event.id}`,
+      at: event.start,
+      title: `${TRACK_LABELS[event.track]} i kalendern`,
+      description: `${formatAuditDate(event.start)} till ${formatAuditDate(event.end)}${event.notes ? ` · ${event.notes}` : ""}`,
+      icon: "calendar",
+      accent: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    });
+  }
+
+  for (const entry of order.timeEntries ?? []) {
+    items.push({
+      id: `time-${entry.id}`,
+      at: entry.createdAt,
+      title: `${formatMinutesLabel(entry.minutes)} registrerat`,
+      description: `${entry.createdByName} registrerade tid på ${TRACK_LABELS[entry.track]} för ${entry.userName}.`,
+      icon: "time",
+      accent: "border-neutral-200 bg-neutral-50 text-neutral-700",
+    });
+  }
+
+  for (const file of order.files ?? []) {
+    const at = typeof file.createdAt === "number" ? new Date(file.createdAt).toISOString() : file.createdAt;
+    items.push({
+      id: `file-${file.id}`,
+      at,
+      title: "Fil uppladdad",
+      description: `${file.filename}${file.uploadedByName || file.uploadedBy ? ` · ${file.uploadedByName ?? file.uploadedBy}` : ""}`,
+      icon: "file",
+      accent: "border-blue-200 bg-blue-50 text-blue-700",
+    });
+  }
+
+  if (order.billingConfirmedAt) {
+    items.push({
+      id: "billing",
+      at: order.billingConfirmedAt,
+      title: "Fakturering bekräftad",
+      description: "Ordern är markerad som fakturerad.",
+      icon: "billing",
+      accent: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    });
+  }
+
+  return items
+    .filter((item) => Boolean(parseDate(item.at)))
+    .sort((a, b) => (parseDate(b.at)?.getTime() ?? 0) - (parseDate(a.at)?.getTime() ?? 0))
+    .slice(0, 14);
+}
+
+function OrderAuditTimeline({ order }: { order: OrderData }) {
+  const items = buildAuditTrail(order);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-38px_rgba(15,23,42,0.55)]">
+      <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="border-b border-neutral-200 bg-gradient-to-br from-neutral-950 via-neutral-900 to-brand-950 p-5 text-white lg:border-b-0 lg:border-r">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10">
+            <History className="h-5 w-5" aria-hidden />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold">Orderhistorik</h2>
+          <p className="mt-2 text-sm leading-6 text-white/70">
+            En samlad tidslinje från order, kalender, filer och tidrapportering.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Händelser</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Filer</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{order.files.length}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          {items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
+              Inga händelser att visa ännu.
+            </div>
+          ) : (
+            <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[18px] before:top-4 before:w-px before:bg-neutral-200">
+              {items.map((item) => (
+                <div key={item.id} className="relative grid grid-cols-[38px_minmax(0,1fr)] gap-3">
+                  <span className={`relative z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border ${item.accent}`}>
+                    {auditIcon(item.icon)}
+                  </span>
+                  <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-sm font-semibold text-neutral-900">{item.title}</h3>
+                      <span className="text-xs font-medium text-neutral-500">{formatAuditDate(item.at)}</span>
+                    </div>
+                    <p className="mt-1 text-sm leading-5 text-neutral-600">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TrackCard({
   track,
   currentStatus,
@@ -187,20 +410,6 @@ function TrackCard({
   const timeLabel = formatMinutesLabel(timeSpent);
   const selectedAssigneeId = selectedUserId || currentUserId || users[0]?.id || "";
   const visibleTimeEntries = timeEntries.filter((entry) => entry.track === track);
-  const totalsByUser = visibleTimeEntries.reduce<Record<string, { name: string; image: string | null; minutes: number }>>(
-    (acc, entry) => {
-      const key = entry.userId ?? entry.userName;
-      const current = acc[key] ?? { name: entry.userName, image: entry.userImage, minutes: 0 };
-      current.minutes += entry.minutes;
-      acc[key] = current;
-      return acc;
-    },
-    {}
-  );
-  const totalRows = Object.entries(totalsByUser)
-    .map(([key, value]) => ({ key, ...value }))
-    .filter((row) => row.minutes !== 0)
-    .sort((a, b) => b.minutes - a.minutes);
   const hasPlannedTime = (() => {
     const start = plannedStartAt ? new Date(plannedStartAt) : null;
     const end = plannedEndAt ? new Date(plannedEndAt) : null;
@@ -890,6 +1099,7 @@ export default function OrderPage() {
           })}
         </div>
      
+      <OrderAuditTimeline order={data} />
 
       <form
         onSubmit={upload}

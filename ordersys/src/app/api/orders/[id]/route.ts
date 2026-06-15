@@ -19,6 +19,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
     include: {
       tracks: true,
+      events: { orderBy: { start: "asc" } },
+      fortnox: true,
+      createdBy: { select: { name: true, email: true, image: true } },
       files: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -129,6 +132,28 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       orderNumber: order.orderNumber,
       title: order.title,
       customerName: order.customerName ?? null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      dueDate: order.dueDate?.toISOString() ?? null,
+      deliveryAddress: order.deliveryAddress ?? null,
+      deliveryMethod: order.deliveryMethod ?? null,
+      createdByName: order.createdByName ?? order.createdBy?.name ?? order.createdBy?.email ?? null,
+      createdByEmail: order.createdBy?.email ?? null,
+      createdByImage: order.createdBy?.image ?? null,
+      fortnox: order.fortnox
+        ? {
+            documentNumber: order.fortnox.documentNumber,
+            createdAt: order.fortnox.createdAt.toISOString(),
+          }
+        : null,
+      events: order.events.map((event) => ({
+        id: event.id,
+        track: event.track,
+        start: event.start.toISOString(),
+        end: event.end.toISOString(),
+        title: event.title,
+        notes: event.notes ?? null,
+      })),
       notes: order.notes ?? null,
       tracks,
       timeEntries: serializedTimeEntries,

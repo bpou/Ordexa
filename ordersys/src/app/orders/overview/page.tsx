@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -14,6 +15,8 @@ import {
   CalendarClock,
   ChevronRight,
   CircleDollarSign,
+  ClipboardCheck,
+  Compass,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -21,8 +24,10 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  Target,
   Trash2,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SALJARE" | "A_TEAM" | "B_TEAM" | "C_TEAM" | "D_TEAM";
@@ -579,7 +584,135 @@ const LoadingList = memo(function LoadingList() {
   );
 });
 
-const EmptyState = memo(function EmptyState({ title, description }: { title: string; description: string }) {
+function roleFocus(role: Role | undefined) {
+  if (role === "SALJARE") {
+    return {
+      title: "Säljarfokus",
+      description: "Skapa skarpa orderunderlag, följ mina ordrar och lämna färdiga jobb rena till fakturering.",
+      primaryHref: "/orders/new",
+      primaryLabel: "Skapa order",
+      secondaryHref: "/orders/archived",
+      secondaryLabel: "Arkiv",
+      cards: [
+        ["Nya order", "Starta med kund, rader, leverans och spår."],
+        ["Mina ordrar", "Växla till egna ordrar när listan blir tung."],
+        ["Fakturering", "Färdiga spår syns tydligare innan arkivering."],
+      ],
+    };
+  }
+
+  if (role === "ADMIN") {
+    return {
+      title: "Adminöverblick",
+      description: "Håll teamets flöde rent: planering, stoppade spår, filer och säljare på samma yta.",
+      primaryHref: "/admin/users",
+      primaryLabel: "Hantera team",
+      secondaryHref: "/orders/new",
+      secondaryLabel: "Ny order",
+      cards: [
+        ["Kapacitet", "Se vilka spår som saknar planering."],
+        ["Kvalitet", "Öppna ordern direkt när filer eller tider saknas."],
+        ["Styrning", "Filtrera på säljare, status och spår."],
+      ],
+    };
+  }
+
+  const track = role === "A_TEAM" ? "A" : role === "B_TEAM" ? "B" : role === "C_TEAM" ? "C" : role === "D_TEAM" ? "D" : "A";
+  return {
+    title: "Dagens arbetskö",
+    description: "Fokusera på rätt spår, planera nästa lucka och håll tidrapporteringen nära jobbet.",
+    primaryHref: `/orders/track/${track}`,
+    primaryLabel: "Öppna spåret",
+    secondaryHref: `/calendar/${track.toLowerCase()}`,
+    secondaryLabel: "Kalender",
+    cards: [
+      ["Status", "Flytta ordern när arbetet går vidare."],
+      ["Tid", "Registrera minuter direkt på ordern."],
+      ["Plan", "Öppna kalendern från orderkortet."],
+    ],
+  };
+}
+
+const RoleOnboardingPanel = memo(function RoleOnboardingPanel({
+  role,
+  ordersCount,
+  filteredCount,
+}: {
+  role: Role | undefined;
+  ordersCount: number;
+  filteredCount: number;
+}) {
+  const focus = roleFocus(role);
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 text-white shadow-[0_26px_80px_-54px_rgba(15,23,42,0.8)]">
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="p-5 sm:p-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/70">
+            <Compass className="h-3.5 w-3.5" aria-hidden />
+            Rollbaserad start
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold leading-tight">{focus.title}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/68">{focus.description}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              href={focus.primaryHref}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-white px-3.5 text-sm font-semibold text-neutral-950 shadow-sm transition hover:bg-brand-50"
+            >
+              {focus.primaryLabel}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link
+              href={focus.secondaryHref}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3.5 text-sm font-semibold text-white transition hover:bg-white/15"
+            >
+              {focus.secondaryLabel}
+            </Link>
+          </div>
+        </div>
+        <div className="grid gap-3 border-t border-white/10 bg-white/[0.04] p-4 sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
+          <div className="grid grid-cols-2 gap-3 sm:col-span-3 lg:col-span-1">
+            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+                <Layers3 className="h-4 w-4" aria-hidden />
+                Aktiva
+              </div>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{ordersCount}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+                <Target className="h-4 w-4" aria-hidden />
+                Visas
+              </div>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{filteredCount}</p>
+            </div>
+          </div>
+          {focus.cards.map(([title, description], index) => {
+            const Icon = index === 0 ? ClipboardCheck : index === 1 ? UsersRound : CalendarClock;
+            return (
+              <div key={title} className="rounded-xl border border-white/10 bg-white/8 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Icon className="h-4 w-4 text-brand-200" aria-hidden />
+                  {title}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-white/58">{description}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+});
+
+const EmptyState = memo(function EmptyState({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
   return (
     <Card className="rounded-2xl border-dashed border-neutral-300 bg-white/90 p-10 text-center text-neutral-600 shadow-[0_22px_70px_-56px_rgba(15,23,42,0.6)]">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500">
@@ -587,6 +720,7 @@ const EmptyState = memo(function EmptyState({ title, description }: { title: str
       </div>
       <h2 className="mt-4 text-lg font-semibold text-neutral-900">{title}</h2>
       <p className="mt-2 text-sm text-neutral-600">{description}</p>
+      {children ? <div className="mt-5 flex flex-wrap justify-center gap-2">{children}</div> : null}
     </Card>
   );
 });
@@ -1042,6 +1176,8 @@ export default function OrdersOverviewPage() {
           </div>
         </section>
 
+        <RoleOnboardingPanel role={role} ordersCount={orders.length} filteredCount={filtered.length} />
+
         <div className="space-y-6">
           {loading && <LoadingList />}
 
@@ -1052,8 +1188,25 @@ export default function OrdersOverviewPage() {
           {!loading && !err && !hasResults && (
             <EmptyState
               title="Inga ordrar hittades"
-              description="Justera filtren eller sökningen för att hitta det du letar efter."
-            />
+              description={
+                orders.length === 0
+                  ? "När nya ordrar skapas visas de här med spår, planering, filer och nästa åtgärd."
+                  : "Justera filtren eller sökningen för att hitta det du letar efter."
+              }
+            >
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                Nollställ filter
+              </button>
+              <Link href="/orders/new" className={actionButton}>
+                Skapa order
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </EmptyState>
           )}
 
           {!loading && !err && hasResults && (

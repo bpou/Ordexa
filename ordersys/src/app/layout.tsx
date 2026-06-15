@@ -6,6 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import HeaderUserMenu from "@/components/HeaderUserMenu";
 import RegisterMenu from "@/components/RegisterMenu";
+import GlobalCommandMenu from "@/components/GlobalCommandMenu";
+import NotificationCenter from "@/components/NotificationCenter";
 import Footer from "@/components/Footer";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { AppSessionProvider } from "@/components/AppSessionProvider";
@@ -87,6 +89,8 @@ export default async function RootLayout({
                   </div>
 
                   <div className="flex items-center gap-3">
+                    <GlobalCommandMenu isLoggedIn={!!session} />
+                    <NotificationCenter isLoggedIn={!!session} />
                     <RegisterMenu />
                     <HeaderUserMenu
                       isLoggedIn={!!session}
@@ -118,6 +122,8 @@ export default async function RootLayout({
                   </Link>
 
                   <div className="z-10 flex items-center gap-2">
+                    <GlobalCommandMenu isLoggedIn={!!session} compact />
+                    <NotificationCenter isLoggedIn={!!session} compact />
                     <HeaderUserMenu
                       isLoggedIn={!!session}
                       name={session?.user?.name ?? ""}
