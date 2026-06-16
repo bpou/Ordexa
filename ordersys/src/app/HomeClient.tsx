@@ -67,6 +67,21 @@ type FreeEvent = {
   extendedProps?: { label?: string | null };
 };
 
+type ScheduleTagTone = "green" | "blue" | "gray" | "red";
+
+type ScheduleGroupKey = "today" | "tomorrow" | "week";
+
+type ScheduleItem = {
+  id: string;
+  title: string;
+  detail: string;
+  when: Date;
+  href: string;
+  tag: string;
+  tagTone: ScheduleTagTone;
+  group: ScheduleGroupKey;
+};
+
 type AttentionItem = {
   id: string;
   level: AttentionLevel;
@@ -132,6 +147,7 @@ const STATUS_LABEL: Record<TrackStatus, string> = {
 
 const dateFmt = new Intl.DateTimeFormat("sv-SE", { dateStyle: "medium" });
 const dateTimeFmt = new Intl.DateTimeFormat("sv-SE", { dateStyle: "short", timeStyle: "short" });
+const timeFmt = new Intl.DateTimeFormat("sv-SE", { timeStyle: "short" });
 
 const toDate = (value: string | null | undefined) => {
   if (!value) return null;
@@ -205,6 +221,56 @@ const relativeDeadline = (date: Date | null) => {
   if (diff === 0) return "Förfaller idag";
   if (diff <= 3) return `Förfaller om ${diff}d`;
   return dateFmt.format(date);
+};
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const dayDiff = (from: Date, to: Date) =>
+  Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / 86400000);
+
+const getScheduleGroup = (date: Date, now: Date): ScheduleGroupKey | null => {
+  const diff = dayDiff(now, date);
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff > 1 && diff <= 6) return "week";
+  return null;
+};
+
+const scheduleGroupMeta: Record<
+  ScheduleGroupKey,
+  { label: string; empty: string }
+> = {
+  today: { label: "Idag", empty: "Inget planerat idag." },
+  tomorrow: { label: "Imorgon", empty: "Inget planerat imorgon." },
+  week: { label: "Denna vecka", empty: "Inget mer planerat denna vecka." },
+};
+
+const scheduleTagStyles: Record<ScheduleTagTone, string> = {
+  green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  blue: "border-sky-200 bg-sky-50 text-sky-700",
+  gray: "border-neutral-200 bg-neutral-100 text-neutral-700",
+  red: "border-red-200 bg-red-50 text-red-700",
+};
+
+const classifyScheduleTag = ({
+  title,
+  detail,
+  track,
+  isOverdue,
+}: {
+  title: string;
+  detail: string;
+  track?: AppTrack | null;
+  isOverdue?: boolean;
+}): { tag: string; tagTone: ScheduleTagTone } => {
+  if (isOverdue) return { tag: "Försenad", tagTone: "red" };
+
+  const haystack = `${title} ${detail}`.toLowerCase();
+  if (haystack.includes("lunch")) return { tag: "Lunch", tagTone: "gray" };
+  if (track === "A" || haystack.includes("atelj")) return { tag: "Ateljé", tagTone: "green" };
+  if (track === "B") return { tag: "Montage", tagTone: "blue" };
+  if (haystack.includes("montage")) return { tag: "Montage", tagTone: "blue" };
+  return { tag: "Planerad", tagTone: "gray" };
 };
 
 export default function HomeClient({ name: _name, role }: { name: string; role: Role }) {
@@ -442,38 +508,63 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
       .slice(0, 8);
   }, [scopedOrders, perms.tracks]);
 
-  const schedule = useMemo(() => {
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
+  const schedule = useMemo<ScheduleItem[]>(() => {
+    const from = startOfDay(new Date());
     const to = new Date(from);
     to.setDate(to.getDate() + 7);
 
-    const items: Array<{ id: string; title: string; detail: string; when: Date; href: string }> = [];
+    const items: ScheduleItem[] = [];
 
     for (const order of scopedOrders) {
       const baseHref = `/orders/${encodeURIComponent(order.orderNumber)}`;
+      const overdue = Boolean(toDate(order.dueDate) && orderRisk(order, perms.tracks) === "blocked");
       for (const event of order.events) {
         const start = toDate(event.start);
         if (!start || start < from || start > to) continue;
         if (event.track && !perms.tracks.includes(event.track)) continue;
+        const group = getScheduleGroup(start, from);
+        if (!group) continue;
+        const detail = `${order.customerName ?? "Okänd kund"} · ${event.track ? TRACK_NAMES[event.track] : "Delad"}`;
+        const tagMeta = classifyScheduleTag({
+          title: event.title,
+          detail,
+          track: event.track,
+          isOverdue: overdue,
+        });
         items.push({
           id: `order-${event.id}`,
           title: event.title,
-          detail: `${order.customerName ?? "Okänd kund"} · ${event.track ? TRACK_NAMES[event.track] : "Delad"}`,
+          detail,
           when: start,
           href: baseHref,
+          tag: tagMeta.tag,
+          tagTone: tagMeta.tagTone,
+          group,
         });
       }
       for (const track of order.tracks) {
         const start = toDate(track.plannedStartAt);
         if (!start || start < from || start > to) continue;
         if (!perms.tracks.includes(track.track)) continue;
+        const group = getScheduleGroup(start, from);
+        if (!group) continue;
+        const title = `${TRACK_NAMES[track.track]} planerad`;
+        const detail = `${order.title} · ${order.customerName ?? "Okänd kund"}`;
+        const tagMeta = classifyScheduleTag({
+          title,
+          detail,
+          track: track.track,
+          isOverdue: overdue,
+        });
         items.push({
           id: `${order.orderNumber}-${track.track}`,
-          title: `${TRACK_NAMES[track.track]} planerad`,
-          detail: `${order.title} · ${order.customerName ?? "Okänd kund"}`,
+          title,
+          detail,
           when: start,
           href: `${baseHref}/track/${track.track}`,
+          tag: tagMeta.tag,
+          tagTone: tagMeta.tagTone,
+          group,
         });
       }
     }
@@ -481,17 +572,38 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
     for (const event of freeEvents) {
       const start = toDate(event.start);
       if (!start || start < from || start > to) continue;
+      const group = getScheduleGroup(start, from);
+      if (!group) continue;
+      const detail = event.extendedProps?.label ? `Team: ${event.extendedProps.label}` : "Teamkalender";
+      const tagMeta = classifyScheduleTag({
+        title: event.title,
+        detail,
+      });
       items.push({
         id: `free-${event.id}`,
         title: event.title,
-        detail: event.extendedProps?.label ? `Team: ${event.extendedProps.label}` : "Teamkalender",
+        detail,
         when: start,
         href: "/personal-calendar",
+        tag: tagMeta.tag,
+        tagTone: tagMeta.tagTone,
+        group,
       });
     }
 
-    return items.sort((a, b) => a.when.getTime() - b.when.getTime()).slice(0, 6);
+    return items.sort((a, b) => a.when.getTime() - b.when.getTime()).slice(0, 8);
   }, [scopedOrders, freeEvents, perms.tracks]);
+
+  const groupedSchedule = useMemo(
+    () =>
+      (Object.keys(scheduleGroupMeta) as ScheduleGroupKey[]).map((group) => ({
+        group,
+        label: scheduleGroupMeta[group].label,
+        empty: scheduleGroupMeta[group].empty,
+        items: schedule.filter((item) => item.group === group),
+      })),
+    [schedule],
+  );
 
   const activity = useMemo(() => {
     const items: Array<{ id: string; text: string; when: Date; tone: "neutral" | "warning" | "success" }> = [];
@@ -590,7 +702,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
             </CardContent>
           </Card>
 
-          <div className="space-y-6"><Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Kalenderöversikt</h2><p className="text-sm text-neutral-600"></p></CardHeader><CardContent className="space-y-3 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar schema...</div>}{!loading && !schedule.length && <p className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inget planerat de kommande 7 dagarna.</p>}{!loading && schedule.map((item) => <Link key={item.id} href={item.href} className="group flex items-start justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"><div><p className="text-sm font-semibold text-neutral-900">{item.title}</p><p className="text-xs text-neutral-600">{item.detail}</p><p className="mt-1 text-xs font-medium text-neutral-500">{dateTimeFmt.format(item.when)}</p></div><ArrowRight className="mt-1 h-4 w-4 text-neutral-400 transition group-hover:translate-x-1" /></Link>)}<Button asChild variant="outline" size="sm" className="w-full justify-center"><Link href={plannerLink}>{plannerLabel}</Link></Button></CardContent></Card>
+          <div className="space-y-6"><Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Kalenderöversikt</h2><p className="text-sm text-neutral-600">Planerat per dag med tydliga taggar för typ och läge.</p></CardHeader><CardContent className="space-y-4 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar schema...</div>}{!loading && !schedule.length && <p className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inget planerat de kommande 7 dagarna.</p>}{!loading && groupedSchedule.map((section) => <div key={section.group} className="space-y-2"><div className="flex items-center justify-between"><h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{section.label}</h3><span className="text-xs text-neutral-400">{section.items.length ? `${section.items.length} st` : ""}</span></div>{section.items.length ? section.items.map((item) => <Link key={item.id} href={item.href} className="group flex items-start justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"><div className="min-w-0 space-y-1"><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${scheduleTagStyles[item.tagTone]}`}>{item.tag}</span><span className="text-xs font-medium text-neutral-500">{timeFmt.format(item.when)}</span></div><p className="text-sm font-semibold text-neutral-900">{item.title}</p><p className="text-xs text-neutral-600">{item.detail}</p></div><ArrowRight className="mt-1 h-4 w-4 shrink-0 text-neutral-400 transition group-hover:translate-x-1" /></Link>) : <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{section.empty}</p>}</div>)}<Button asChild variant="outline" size="sm" className="w-full justify-center"><Link href={plannerLink}>{plannerLabel}</Link></Button></CardContent></Card>
           <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Snabbåtgärder</h2><p className="text-sm text-neutral-600"></p></CardHeader><CardContent className="grid gap-2 px-4 pb-5 pt-4 sm:px-6">{perms.quick.map((key) => { const meta = key === "planner" ? { ...QUICK_META.planner, href: plannerLink, description: plannerLabel } : QUICK_META[key]; const Icon = meta.icon; return <Link key={key} href={meta.href} className="group flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 transition hover:shadow-sm"><span className="flex min-w-0 items-center gap-3"><span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700"><Icon className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-semibold text-neutral-900">{meta.title}</span><span className="block truncate text-xs text-neutral-500">{meta.description}</span></span></span><span className="inline-flex items-center gap-2 text-xs text-neutral-500">{key === "completed" && invoiceReady !== null ? `${invoiceReady}` : ""}<ChevronRight className="h-4 w-4" /></span></Link>; })}</CardContent></Card></div>
         </div>
 
