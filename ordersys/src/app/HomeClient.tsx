@@ -115,9 +115,9 @@ type QuickMeta = {
 const QUICK_META: Record<QuickLinkKey, QuickMeta> = {
   new: { title: "Ny order", description: "Skapa en ny order", href: "/orders/new", icon: PlusCircle },
   newQuote: { title: "Ny offert", description: "Skapa en offert", href: "/quotes/new", icon: Quote },
-  overview: { title: "Alla ordrar", description: "Öppna orderöversikt", href: "/orders/overview", icon: LayoutDashboard },
-  planner: { title: "Öppna planering", description: "Visa teamets schema", href: "/calendar/a", icon: CalendarDays },
-  completed: { title: "Fakturering", description: "Granska färdiga ordrar", href: "/orders/completed", icon: ClipboardList },
+  overview: { title: "Alla ordrar", description: "Ã–ppna orderÃ¶versikt", href: "/orders/overview", icon: LayoutDashboard },
+  planner: { title: "Ã–ppna planering", description: "Visa teamets schema", href: "/calendar/a", icon: CalendarDays },
+  completed: { title: "Fakturering", description: "Granska fÃ¤rdiga ordrar", href: "/orders/completed", icon: ClipboardList },
 };
 
 const PERMS: Record<Role, { quick: QuickLinkKey[]; tracks: AppTrack[]; calendar: AppTrack }> = {
@@ -139,8 +139,8 @@ const STATUS_WEIGHT: Record<TrackStatus, number> = {
 
 const STATUS_LABEL: Record<TrackStatus, string> = {
   INKOMMANDE: "Inkommande",
-  PAGAENDE: "Pågående",
-  PALACK: "Väntar",
+  PAGAENDE: "PÃ¥gÃ¥ende",
+  PALACK: "VÃ¤ntar",
   LEVERANS: "Klar",
   AVSLUTAD: "Avslutad",
 };
@@ -199,8 +199,8 @@ const currentStatusLabel = (order: ApiOrder, tracks: AppTrack[]) => {
     .map((item) => item.status ?? "INKOMMANDE");
   if (!statuses.length) return "Ingen status";
   if (statuses.every((s) => s === "AVSLUTAD")) return "Avslutad";
-  if (statuses.some((s) => s === "PAGAENDE")) return "Pågående";
-  if (statuses.some((s) => s === "PALACK")) return "Väntar";
+  if (statuses.some((s) => s === "PAGAENDE")) return "PÃ¥gÃ¥ende";
+  if (statuses.some((s) => s === "PALACK")) return "VÃ¤ntar";
   if (statuses.some((s) => s === "LEVERANS")) return "Klar";
   return "Inkommande";
 };
@@ -217,9 +217,9 @@ const relativeDeadline = (date: Date | null) => {
   const dayA = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const dayB = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
   const diff = Math.round((dayB - dayA) / 86400000);
-  if (diff < 0) return `${Math.abs(diff)}d försenad`;
-  if (diff === 0) return "Förfaller idag";
-  if (diff <= 3) return `Förfaller om ${diff}d`;
+  if (diff < 0) return `${Math.abs(diff)}d fÃ¶rsenad`;
+  if (diff === 0) return "FÃ¶rfaller idag";
+  if (diff <= 3) return `FÃ¶rfaller om ${diff}d`;
   return dateFmt.format(date);
 };
 
@@ -263,11 +263,11 @@ const classifyScheduleTag = ({
   track?: AppTrack | null;
   isOverdue?: boolean;
 }): { tag: string; tagTone: ScheduleTagTone } => {
-  if (isOverdue) return { tag: "Försenad", tagTone: "red" };
+  if (isOverdue) return { tag: "FÃ¶rsenad", tagTone: "red" };
 
   const haystack = `${title} ${detail}`.toLowerCase();
   if (haystack.includes("lunch")) return { tag: "Lunch", tagTone: "gray" };
-  if (track === "A" || haystack.includes("atelj")) return { tag: "Ateljé", tagTone: "green" };
+  if (track === "A" || haystack.includes("atelj")) return { tag: "AteljÃ©", tagTone: "green" };
   if (track === "B") return { tag: "Montage", tagTone: "blue" };
   if (haystack.includes("montage")) return { tag: "Montage", tagTone: "blue" };
   return { tag: "Planerad", tagTone: "gray" };
@@ -408,7 +408,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
           id: order.orderNumber,
           href: `/orders/${encodeURIComponent(order.orderNumber)}`,
           title: order.title,
-          customer: order.customerName ?? "OkÃ¤nd kund",
+          customer: order.customerName ?? "OkÃƒÂ¤nd kund",
           createdAt: toDate(order.createdAt),
         };
       })
@@ -427,9 +427,9 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         items.push({
           id: `${order.orderNumber}-overdue`,
           level: "urgent",
-          title: `${order.title} är försenad`,
+          title: `${order.title} Ã¤r fÃ¶rsenad`,
           description: `Deadline ${dateFmt.format(due)} har passerat.`,
-          actionLabel: "Öppna order",
+          actionLabel: "Ã–ppna order",
           href: baseHref,
           date: due,
         });
@@ -447,9 +447,9 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
             items.push({
               id: `${order.orderNumber}-dep-${track}`,
               level: "warning",
-              title: `${TRACK_NAMES[track]} väntar på ${TRACK_NAMES[previous]}`,
-              description: `Order ${order.orderNumber} beror på föregående steg.`,
-              actionLabel: `Öppna ${TRACK_NAMES[track]}`,
+              title: `${TRACK_NAMES[track]} vÃ¤ntar pÃ¥ ${TRACK_NAMES[previous]}`,
+              description: `Order ${order.orderNumber} beror pÃ¥ fÃ¶regÃ¥ende steg.`,
+              actionLabel: `Ã–ppna ${TRACK_NAMES[track]}`,
               href: `${baseHref}/track/${track}`,
               date: due,
             });
@@ -461,9 +461,9 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
           items.push({
             id: `${order.orderNumber}-plan-${track}`,
             level: "warning",
-            title: `${TRACK_NAMES[track]} är inte schemalagd`,
-            description: `Ingen planerad start för order ${order.orderNumber}.`,
-            actionLabel: "Öppna planering",
+            title: `${TRACK_NAMES[track]} Ã¤r inte schemalagd`,
+            description: `Ingen planerad start fÃ¶r order ${order.orderNumber}.`,
+            actionLabel: "Ã–ppna planering",
             href: `/calendar/${TRACK_SLUGS[track]}`,
             date: due,
           });
@@ -474,8 +474,8 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         items.push({
           id: `${order.orderNumber}-ready`,
           level: "ready",
-          title: `${order.title} redo för nästa steg`,
-          description: "Alla synliga steg är klara eller i leverans.",
+          title: `${order.title} redo fÃ¶r nÃ¤sta steg`,
+          description: "Alla synliga steg Ã¤r klara eller i leverans.",
           actionLabel: "Granska",
           href: baseHref,
           date: due,
@@ -496,7 +496,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         id: order.orderNumber,
         orderNumber: order.orderNumber,
         title: order.title,
-        customer: order.customerName ?? "Okänd kund",
+        customer: order.customerName ?? "OkÃ¤nd kund",
         currentStage: currentStageLabel(order, perms.tracks),
         status: currentStatusLabel(order, perms.tracks),
         progress: progressValue(order, perms.tracks),
@@ -524,7 +524,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         if (event.track && !perms.tracks.includes(event.track)) continue;
         const group = getScheduleGroup(start, from);
         if (!group) continue;
-        const detail = `${order.customerName ?? "Okänd kund"} · ${event.track ? TRACK_NAMES[event.track] : "Delad"}`;
+        const detail = `${order.customerName ?? "OkÃ¤nd kund"} Â· ${event.track ? TRACK_NAMES[event.track] : "Delad"}`;
         const tagMeta = classifyScheduleTag({
           title: event.title,
           detail,
@@ -549,7 +549,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         const group = getScheduleGroup(start, from);
         if (!group) continue;
         const title = `${TRACK_NAMES[track.track]} planerad`;
-        const detail = `${order.title} · ${order.customerName ?? "Okänd kund"}`;
+        const detail = `${order.title} Â· ${order.customerName ?? "OkÃ¤nd kund"}`;
         const tagMeta = classifyScheduleTag({
           title,
           detail,
@@ -615,7 +615,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         const startedAt = toDate(track.actualStartAt);
         if (startedAt) items.push({ id: `${order.orderNumber}-${track.track}-start`, text: `${TRACK_NAMES[track.track]} startade ${order.title}`, when: startedAt, tone: "warning" });
         const endedAt = toDate(track.actualEndAt);
-        if (endedAt) items.push({ id: `${order.orderNumber}-${track.track}-end`, text: `${TRACK_NAMES[track.track]} slutförde ${order.title}`, when: endedAt, tone: "success" });
+        if (endedAt) items.push({ id: `${order.orderNumber}-${track.track}-end`, text: `${TRACK_NAMES[track.track]} slutfÃ¶rde ${order.title}`, when: endedAt, tone: "success" });
       }
     }
     return items.sort((a, b) => b.when.getTime() - a.when.getTime()).slice(0, 7);
@@ -626,8 +626,8 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
 
   const summaryCards = [
     { title: "Aktiva ordrar", value: scopedOrders.length, cls: "border-neutral-200 bg-white text-neutral-900" },
-    { title: "Pågående jobb", value: attention.filter((item) => item.level === "warning").length, cls: "border-amber-200 bg-amber-50 text-amber-900" },
-    { title: "Försenade", value: attention.filter((item) => item.level === "urgent").length, cls: "border-red-200 bg-red-50 text-red-900" },
+    { title: "PÃ¥gÃ¥ende jobb", value: attention.filter((item) => item.level === "warning").length, cls: "border-amber-200 bg-amber-50 text-amber-900" },
+    { title: "FÃ¶rsenade", value: attention.filter((item) => item.level === "urgent").length, cls: "border-red-200 bg-red-50 text-red-900" },
     ...(canSeeBilling
       ? [{ title: "Fakturering", value: invoiceReady ?? 0, cls: "border-emerald-200 bg-emerald-50 text-emerald-900" }]
       : []),
@@ -641,14 +641,14 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
           <CardHeader className="border-b-0 px-6 pt-6 pb-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">Översikt</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">Ã–versikt</p>
                 <p className="max-w-2xl text-sm text-neutral-600">
                   {loading
                     ? "Laddar aktuell arbetsbelastning..."
-                    : `${scopedOrders.length} aktiva ordrar över ${perms.tracks.length} spår${perms.tracks.length === 1 ? "" : ""}`}
+                    : `${scopedOrders.length} aktiva ordrar Ã¶ver ${perms.tracks.length} spÃ¥r${perms.tracks.length === 1 ? "" : ""}`}
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-neutral-500"><Clock3 className="h-4 w-4" />Livestatus för arbetsflöde</div>
+              <div className="flex items-center gap-2 text-xs text-neutral-500"><Clock3 className="h-4 w-4" />Livestatus fÃ¶r arbetsflÃ¶de</div>
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-4 gap-1 px-2 pb-6 pt-0 sm:gap-1.5 sm:px-3 md:gap-2 md:px-4 xl:gap-3 xl:px-6">
@@ -677,7 +677,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
               )}
               {!loading && !recentOpenedOrders.length && (
                 <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
-                  Inga nyligen öppnade ordrar än.
+                  Inga nyligen Ã¶ppnade ordrar Ã¤n.
                 </div>
               )}
               {!loading &&
@@ -693,7 +693,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
                       <p className="text-xs text-neutral-500">{order.createdAt ? `Skapad ${dateFmt.format(order.createdAt)}` : ""}</p>
                     </div>
                     <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-neutral-600">
-                      Öppna
+                      Ã–ppna
                       <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>
                   </Link>
@@ -701,15 +701,15 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-neutral-900">Aktiva ordrar och projekt</h2><p className="text-sm text-neutral-600">PÃ¥gÃ¥ende jobb med steg, progress, deadline och risknivÃ¥.</p></div><Button asChild variant="outline" size="sm"><Link href="/orders/overview">Visa alla ordrar</Link></Button></div></CardHeader><CardContent className="space-y-3 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={20} />Laddar aktiva ordrar...</div>}{!loading && !activeOrders.length && <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inga aktiva ordrar i din vy.</div>}{!loading && activeOrders.map((order) => <Link key={order.id} href={`/orders/${encodeURIComponent(order.orderNumber)}`} className="group block rounded-xl border border-neutral-200 bg-white p-4 transition hover:border-neutral-300 hover:bg-neutral-50"><div className="flex flex-wrap items-start justify-between gap-3"><div className="space-y-1"><p className="text-sm font-semibold text-neutral-900">{order.title}</p><p className="text-sm text-neutral-600">#{order.orderNumber} Â· {order.customer}</p></div><span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${order.risk === "blocked" ? "border-red-200 bg-red-50 text-red-700" : order.risk === "risk" ? "border-amber-200 bg-amber-50 text-amber-700" : order.risk === "ready" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-neutral-200 bg-neutral-50 text-neutral-700"}`}>{order.risk === "blocked" ? "Blockerad" : order.risk === "risk" ? "BehÃ¶ver planering" : order.risk === "ready" ? "Klar" : "PÃ¥ rÃ¤tt spÃ¥r"}</span></div><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs uppercase tracking-wide text-neutral-500">Nuvarande steg</p><p className="text-sm font-medium text-neutral-800">{order.currentStage}</p></div><div><p className="text-xs uppercase tracking-wide text-neutral-500">Status</p><p className="text-sm font-medium text-neutral-800">{order.status}</p></div><div><p className="text-xs uppercase tracking-wide text-neutral-500">Deadline</p><p className="text-sm font-medium text-neutral-800">{relativeDeadline(order.deadline)}</p></div></div><div className="mt-3"><div className="mb-1 flex items-center justify-between text-xs text-neutral-500"><span>Progress</span><span>{order.progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-neutral-800" style={{ width: `${order.progress}%` }} /></div></div><div className="mt-3 flex flex-wrap gap-2">{order.tracks.map((track) => <span key={`${order.id}-${track.track}`} className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-600"><span className="font-semibold">{TRACK_NAMES[track.track]}</span><span>{STATUS_LABEL[track.status ?? "INKOMMANDE"]}</span></span>)}</div></Link>)}</CardContent></Card>
+          <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-neutral-900">Aktiva ordrar och projekt</h2><p className="text-sm text-neutral-600">PÃƒÂ¥gÃƒÂ¥ende jobb med steg, progress, deadline och risknivÃƒÂ¥.</p></div><Button asChild variant="outline" size="sm"><Link href="/orders/overview">Visa alla ordrar</Link></Button></div></CardHeader><CardContent className="space-y-3 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={20} />Laddar aktiva ordrar...</div>}{!loading && !activeOrders.length && <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inga aktiva ordrar i din vy.</div>}{!loading && activeOrders.map((order) => <Link key={order.id} href={`/orders/${encodeURIComponent(order.orderNumber)}`} className="group block rounded-xl border border-neutral-200 bg-white p-4 transition hover:border-neutral-300 hover:bg-neutral-50"><div className="flex flex-wrap items-start justify-between gap-3"><div className="space-y-1"><p className="text-sm font-semibold text-neutral-900">{order.title}</p><p className="text-sm text-neutral-600">#{order.orderNumber} Ã‚Â· {order.customer}</p></div><span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${order.risk === "blocked" ? "border-red-200 bg-red-50 text-red-700" : order.risk === "risk" ? "border-amber-200 bg-amber-50 text-amber-700" : order.risk === "ready" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-neutral-200 bg-neutral-50 text-neutral-700"}`}>{order.risk === "blocked" ? "Blockerad" : order.risk === "risk" ? "BehÃƒÂ¶ver planering" : order.risk === "ready" ? "Klar" : "PÃƒÂ¥ rÃƒÂ¤tt spÃƒÂ¥r"}</span></div><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs uppercase tracking-wide text-neutral-500">Nuvarande steg</p><p className="text-sm font-medium text-neutral-800">{order.currentStage}</p></div><div><p className="text-xs uppercase tracking-wide text-neutral-500">Status</p><p className="text-sm font-medium text-neutral-800">{order.status}</p></div><div><p className="text-xs uppercase tracking-wide text-neutral-500">Deadline</p><p className="text-sm font-medium text-neutral-800">{relativeDeadline(order.deadline)}</p></div></div><div className="mt-3"><div className="mb-1 flex items-center justify-between text-xs text-neutral-500"><span>Progress</span><span>{order.progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-neutral-800" style={{ width: `${order.progress}%` }} /></div></div><div className="mt-3 flex flex-wrap gap-2">{order.tracks.map((track) => <span key={`${order.id}-${track.track}`} className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-600"><span className="font-semibold">{TRACK_NAMES[track.track]}</span><span>{STATUS_LABEL[track.status ?? "INKOMMANDE"]}</span></span>)}</div></Link>)}</CardContent></Card>
 
           </div>
-          <div className="space-y-6"><Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Kalenderöversikt</h2><p className="text-sm text-neutral-600">Planerat per dag med tydliga taggar för typ och läge.</p></CardHeader><CardContent className="space-y-4 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar schema...</div>}{!loading && !schedule.length && <p className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inget planerat de kommande 7 dagarna.</p>}{!loading && groupedSchedule.map((section) => <div key={section.group} className="space-y-2"><div className="flex items-center justify-between"><h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{section.label}</h3><span className="text-xs text-neutral-400">{section.items.length ? `${section.items.length} st` : ""}</span></div>{section.items.length ? section.items.map((item) => <Link key={item.id} href={item.href} className="group flex items-start justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"><div className="min-w-0 space-y-1"><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${scheduleTagStyles[item.tagTone]}`}>{item.tag}</span><span className="text-xs font-medium text-neutral-500">{timeFmt.format(item.when)}</span></div><p className="text-sm font-semibold text-neutral-900">{item.title}</p><p className="text-xs text-neutral-600">{item.detail}</p></div><ArrowRight className="mt-1 h-4 w-4 shrink-0 text-neutral-400 transition group-hover:translate-x-1" /></Link>) : <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{section.empty}</p>}</div>)}<Button asChild variant="outline" size="sm" className="w-full justify-center"><Link href={plannerLink}>{plannerLabel}</Link></Button></CardContent></Card>
-          <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Snabbåtgärder</h2><p className="text-sm text-neutral-600"></p></CardHeader><CardContent className="grid gap-2 px-4 pb-5 pt-4 sm:px-6">{perms.quick.map((key) => { const meta = key === "planner" ? { ...QUICK_META.planner, href: plannerLink, description: plannerLabel } : QUICK_META[key]; const Icon = meta.icon; return <Link key={key} href={meta.href} className="group flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 transition hover:shadow-sm"><span className="flex min-w-0 items-center gap-3"><span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700"><Icon className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-semibold text-neutral-900">{meta.title}</span><span className="block truncate text-xs text-neutral-500">{meta.description}</span></span></span><span className="inline-flex items-center gap-2 text-xs text-neutral-500">{key === "completed" && invoiceReady !== null ? `${invoiceReady}` : ""}<ChevronRight className="h-4 w-4" /></span></Link>; })}</CardContent></Card></div>
+          <div className="space-y-6"><Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">KalenderÃ¶versikt</h2><p className="text-sm text-neutral-600">Planerat per dag med tydliga taggar fÃ¶r typ och lÃ¤ge.</p></CardHeader><CardContent className="space-y-4 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar schema...</div>}{!loading && !schedule.length && <p className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Inget planerat de kommande 7 dagarna.</p>}{!loading && groupedSchedule.map((section) => <div key={section.group} className="space-y-2"><div className="flex items-center justify-between"><h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{section.label}</h3><span className="text-xs text-neutral-400">{section.items.length ? `${section.items.length} st` : ""}</span></div>{section.items.length ? section.items.map((item) => <Link key={item.id} href={item.href} className="group flex items-start justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"><div className="min-w-0 space-y-1"><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${scheduleTagStyles[item.tagTone]}`}>{item.tag}</span><span className="text-xs font-medium text-neutral-500">{timeFmt.format(item.when)}</span></div><p className="text-sm font-semibold text-neutral-900">{item.title}</p><p className="text-xs text-neutral-600">{item.detail}</p></div><ArrowRight className="mt-1 h-4 w-4 shrink-0 text-neutral-400 transition group-hover:translate-x-1" /></Link>) : <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{section.empty}</p>}</div>)}<Button asChild variant="outline" size="sm" className="w-full justify-center"><Link href={plannerLink}>{plannerLabel}</Link></Button></CardContent></Card>
+          <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">SnabbÃ¥tgÃ¤rder</h2><p className="text-sm text-neutral-600"></p></CardHeader><CardContent className="grid gap-2 px-4 pb-5 pt-4 sm:px-6">{perms.quick.map((key) => { const meta = key === "planner" ? { ...QUICK_META.planner, href: plannerLink, description: plannerLabel } : QUICK_META[key]; const Icon = meta.icon; return <Link key={key} href={meta.href} className="group flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 transition hover:shadow-sm"><span className="flex min-w-0 items-center gap-3"><span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700"><Icon className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-semibold text-neutral-900">{meta.title}</span><span className="block truncate text-xs text-neutral-500">{meta.description}</span></span></span><span className="inline-flex items-center gap-2 text-xs text-neutral-500">{key === "completed" && invoiceReady !== null ? `${invoiceReady}` : ""}<ChevronRight className="h-4 w-4" /></span></Link>; })}</CardContent></Card></div>
         </div>
 
 
-        <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Team- och arbetsflödesaktivitet</h2><p className="text-sm text-neutral-600">Senaste rörelser mellan avdelningar och arbetssteg.</p></CardHeader><CardContent className="space-y-2 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar teamaktivitet...</div>}{!loading && !activity.length && <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Ingen nylig aktivitet registrerad.</div>}{!loading && activity.map((item) => <div key={item.id} className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3"><span className="mt-0.5">{item.tone === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : item.tone === "warning" ? <AlertTriangle className="h-4 w-4 text-amber-600" /> : <Clock3 className="h-4 w-4 text-neutral-500" />}</span><div><p className="text-sm font-medium text-neutral-900">{item.text}</p><p className="text-xs text-neutral-500">{dateTimeFmt.format(item.when)}</p></div></div>)}</CardContent></Card>
+        <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm xl:ml-auto xl:w-[calc((100%-1.5rem)/2.65)]"><CardHeader className="border-neutral-200 px-6 py-5"><h2 className="text-lg font-semibold text-neutral-900">Team- och arbetsflÃ¶desaktivitet</h2><p className="text-sm text-neutral-600">Senaste rÃ¶relser mellan avdelningar och arbetssteg.</p></CardHeader><CardContent className="space-y-2 px-4 pb-5 pt-4 sm:px-6">{loading && <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600"><OrdinaLogoSpinner size={18} />Laddar teamaktivitet...</div>}{!loading && !activity.length && <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">Ingen nylig aktivitet registrerad.</div>}{!loading && activity.map((item) => <div key={item.id} className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3"><span className="mt-0.5">{item.tone === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : item.tone === "warning" ? <AlertTriangle className="h-4 w-4 text-amber-600" /> : <Clock3 className="h-4 w-4 text-neutral-500" />}</span><div><p className="text-sm font-medium text-neutral-900">{item.text}</p><p className="text-xs text-neutral-500">{dateTimeFmt.format(item.when)}</p></div></div>)}</CardContent></Card>
       </main>
     </div>
   );

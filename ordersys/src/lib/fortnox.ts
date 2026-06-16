@@ -141,6 +141,30 @@ export type FortnoxSupplier = {
   currency?: string;
   active?: boolean;
 };
+export type FortnoxSupplierInvoiceStatus =
+  | "overdue"
+  | "open"
+  | "paid"
+  | "cancelled"
+  | "draft";
+export type FortnoxSupplierInvoice = {
+  supplierInvoiceNumber: string;
+  givenNumber?: string;
+  supplierNumber?: string;
+  supplierName: string;
+  invoiceDate?: string;
+  dueDate?: string;
+  finalPayDate?: string;
+  total?: number;
+  balance?: number;
+  currency?: string;
+  ocr?: string;
+  paymentReference?: string;
+  booked?: boolean;
+  cancelled?: boolean;
+  status: FortnoxSupplierInvoiceStatus;
+  rawStatus?: string;
+};
 export type FortnoxCustomer = {
   customerNumber: string;
   name: string;
@@ -969,6 +993,166 @@ export async function listFortnoxSuppliers({
   }));
 
   return { items };
+}
+
+function readFortnoxString(raw: any, ...keys: string[]) {
+  for (const key of keys) {
+    const value = raw?.[key];
+    if (value === null || value === undefined) continue;
+    const stringValue = String(value).trim();
+    if (stringValue) return stringValue;
+  }
+  return undefined;
+}
+
+function normalizeFortnoxSupplierInvoice(raw: any): FortnoxSupplierInvoice {
+  const supplierInvoiceNumber =
+    readFortnoxString(
+      raw,
+      "SupplierInvoiceNumber",
+      "supplierInvoiceNumber",
+      "Number",
+      "number"
+    ) ?? "";
+  const dueDate = readFortnoxString(raw, "DueDate", "dueDate");
+  const finalPayDate = readFortnoxString(raw, "FinalPayDate", "finalPayDate");
+  const total = parseFortnoxNumber(raw?.Total ?? raw?.total);
+  const balance = parseFortnoxNumber(
+    raw?.Balance ?? raw?.balance ?? raw?.AmountLeft ?? raw?.amountLeft
+  );
+  const cancelled =
+    parseFortnoxBoolean(raw?.Cancelled ?? raw?.cancelled) ?? false;
+  const booked = parseFortnoxBoolean(raw?.Booked ?? raw?.booked);
+  const rawStatus = readFortnoxString(raw, "Status", "status");
+  const dueTime = dueDate ? new Date(dueDate).getTime() : Number.NaN;
+  const isOverdue =
+    Number.isFinite(dueTime) &&
+    dueTime < new Date(new Date().toDateString()).getTime();
+  const isPaid =
+    Boolean(finalPayDate) || (typeof balance === "number" && balance <= 0);
+
+  const status: FortnoxSupplierInvoiceStatus = cancelled
+    ? "cancelled"
+    : isPaid
+      ? "paid"
+      : booked === false
+        ? "draft"
+        : isOverdue
+          ? "overdue"
+          : "open";
+
+  return {
+    supplierInvoiceNumber,
+    givenNumber: readFortnoxString(raw, "GivenNumber", "givenNumber"),
+    supplierNumber: readFortnoxString(raw, "SupplierNumber", "supplierNumber"),
+    supplierName:
+      readFortnoxString(raw, "SupplierName", "supplierName", "Name", "name") ??
+      "Okand leverantor",
+    invoiceDate: readFortnoxString(raw, "InvoiceDate", "invoiceDate"),
+    dueDate,
+    finalPayDate,
+    total,
+    balance,
+    currency: readFortnoxString(raw, "Currency", "currency") ?? "SEK",
+    ocr: readFortnoxString(raw, "OCR", "ocr"),
+    paymentReference: readFortnoxString(
+      raw,
+      "PaymentReference",
+      "paymentReference",
+      "ExternalInvoiceReference1",
+      "externalInvoiceReference1"
+    ),
+    booked,
+    cancelled,
+    status,
+    rawStatus,
+  };
+}
+
+export async function listFortnoxSupplierInvoices({
+  page = 1,
+  limit = 100,
+  tenantId,
+}: {
+  page?: number;
+  limit?: number;
+  tenantId?: string;
+}): Promise<{
+  items: FortnoxSupplierInvoice[];
+  meta: {
+    currentPage: number;
+    totalPages?: number;
+    totalResources?: number;
+  };
+}> {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  const { text, ok, status } = await fortnoxRequestWithRefresh(
+    tenantId,
+    `${API_BASE}/supplierinvoices?${params.toString()}`
+  );
+  if (!ok) throw new Error(`Fortnox supplier invoices failed (${status}): ${text}`);
+
+  const json: any = safeJSON(text);
+  const rows =
+    json?.SupplierInvoices ??
+    json?.SupplierInvoiceSubset ??
+    json?.supplierInvoices ??
+    json?.Items ??
+    json?.items ??
+    [];
+
+  const items = Array.isArray(rows)
+    ? rows
+        .map(normalizeFortnoxSupplierInvoice)
+        .filter((item) => item.supplierInvoiceNumber)
+    : [];
+
+  return {
+    items,
+    meta: {
+      currentPage: Number(
+        json?.MetaInformation?.CurrentPage ??
+          json?.Meta?.CurrentPage ??
+          json?.currentPage ??
+          page
+      ),
+      totalPages: parseFortnoxNumber(
+        json?.MetaInformation?.TotalPages ??
+          json?.Meta?.TotalPages ??
+          json?.totalPages
+      ),
+      totalResources: parseFortnoxNumber(
+        json?.MetaInformation?.TotalResources ??
+          json?.Meta?.TotalResources ??
+          json?.totalResources
+      ),
+    },
+  };
+}
+
+export async function getFortnoxSupplierInvoice({
+  supplierInvoiceNumber,
+  tenantId,
+}: {
+  supplierInvoiceNumber: string;
+  tenantId?: string;
+}): Promise<FortnoxSupplierInvoice> {
+  const number = supplierInvoiceNumber.trim();
+  if (!number) throw new Error("Supplier invoice number is required.");
+
+  const { text, ok, status } = await fortnoxRequestWithRefresh(
+    tenantId,
+    `${API_BASE}/supplierinvoices/${encodeURIComponent(number)}`
+  );
+  if (!ok) throw new Error(`Fortnox supplier invoice failed (${status}): ${text}`);
+
+  const json: any = safeJSON(text);
+  return normalizeFortnoxSupplierInvoice(
+    json?.SupplierInvoice ?? json?.supplierInvoice ?? json
+  );
 }
 
 type FortnoxArticleUpdateInput = {

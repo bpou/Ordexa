@@ -90,6 +90,7 @@ const sectionMap: Record<
           { title: "Ny offert", url: "/quotes/new" },
           { title: "Arkiverade", url: "/orders/archived" },
           { title: "Slutförda", url: "/orders/completed" },
+          { title: "Leverantörsfakturor", url: "/supplier-invoices" },
         ],
       },
       {
@@ -129,6 +130,7 @@ const sectionMap: Record<
           { title: "Spårtavla", url: "/orders/track/B_TEAM" },
           { title: "Arkiverade", url: "/orders/archived" },
           { title: "Slutförda", url: "/orders/completed" },
+          { title: "Leverantörsfakturor", url: "/supplier-invoices" },
         ],
       },
       {
@@ -298,6 +300,7 @@ function withActiveState(navMain: SidebarMainItem[], pathname: string) {
 }
 
 function getSectionKey(pathname: string) {
+  if (pathname.startsWith("/supplier-invoices")) return "orders";
   if (pathname.startsWith("/orders")) return "orders";
   if (pathname.startsWith("/customers")) return "customers";
   if (pathname.startsWith("/articles")) return "articles";
