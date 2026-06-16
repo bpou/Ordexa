@@ -1107,7 +1107,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.01"
+          step="1"
 
           value={Number(row.OrderedQuantity ?? 0)}
 
@@ -1127,7 +1127,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.01"
+          step="1"
 
           value={Number(row.ReservedQuantity ?? 0)}
 
@@ -1147,7 +1147,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.01"
+          step="1"
 
           value={Number(row.DeliveredQuantity ?? 0)}
 
