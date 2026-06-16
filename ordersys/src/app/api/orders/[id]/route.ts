@@ -6,14 +6,132 @@ import { authOptions } from "@/lib/auth";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { getStoredFileUrl } from "@/lib/file-storage";
-import { updateFortnoxOrder } from "@/lib/fortnox";
+import { getFortnoxOrder, updateFortnoxOrder } from "@/lib/fortnox";
 
 export const runtime = "nodejs";
 const FILE_URL_TTL_SEC = 600;
 
 type Ctx = { params: Promise<{ id: string }> };
 
+type EditableFortnoxOrderRow = {
+  rowId?: string | number | null;
+  articleNumber?: string | null;
+  description: string;
+  orderedQuantity: number;
+  unit?: string | null;
+  price: number;
+  discount?: number | null;
+  discountType?: string | null;
+  accountNumber?: string | number | null;
+  costCenter?: string | null;
+};
+
+function readFortnoxOrderRows(order: any): EditableFortnoxOrderRow[] {
+  const rawRows = Array.isArray(order?.OrderRows)
+    ? order.OrderRows
+    : Array.isArray(order?.orderRows)
+      ? order.orderRows
+      : [];
+
+  return rawRows.map((row: any, index: number) => ({
+    rowId: row.RowId ?? row.RowNumber ?? row.rowId ?? index + 1,
+    articleNumber: row.ArticleNumber ?? row.articleNumber ?? null,
+    description: String(row.Description ?? row.description ?? "").trim(),
+    orderedQuantity: Number(row.OrderedQuantity ?? row.Quantity ?? row.orderedQuantity ?? 0),
+    unit: row.Unit ?? row.unit ?? null,
+    price: Number(row.Price ?? row.price ?? 0),
+    discount:
+      row.Discount !== undefined || row.discount !== undefined ? Number(row.Discount ?? row.discount ?? 0) : null,
+    discountType: row.DiscountType ?? row.discountType ?? null,
+    accountNumber: row.AccountNumber ?? row.accountNumber ?? null,
+    costCenter: row.CostCenter ?? row.costCenter ?? null,
+  }));
+}
+
+function parseFortnoxOrderRows(rawRows: unknown): EditableFortnoxOrderRow[] | undefined {
+  if (rawRows === undefined) return undefined;
+  if (!Array.isArray(rawRows)) {
+    throw new Error("Orderrader måste vara en lista.");
+  }
+  if (rawRows.length === 0) {
+    throw new Error("Ordern måste ha minst en orderrad.");
+  }
+  if (rawRows.length > 100) {
+    throw new Error("Max 100 orderrader kan sparas åt gången.");
+  }
+
+  return rawRows.map((rawRow, index) => {
+    if (typeof rawRow !== "object" || rawRow === null || Array.isArray(rawRow)) {
+      throw new Error(`Orderrad ${index + 1} är ogiltig.`);
+    }
+    const row = rawRow as Record<string, unknown>;
+    const description = typeof row.description === "string" ? row.description.trim() : "";
+    if (!description) {
+      throw new Error(`Orderrad ${index + 1} saknar beskrivning.`);
+    }
+
+    const quantity = Number(row.orderedQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new Error(`Orderrad ${index + 1} måste ha ett antal större än 0.`);
+    }
+
+    const price = Number(row.price);
+    if (!Number.isFinite(price)) {
+      throw new Error(`Orderrad ${index + 1} har ett ogiltigt pris.`);
+    }
+
+    const discount = row.discount === null || row.discount === undefined || row.discount === "" ? null : Number(row.discount);
+    if (discount !== null && !Number.isFinite(discount)) {
+      throw new Error(`Orderrad ${index + 1} har en ogiltig rabatt.`);
+    }
+
+    const readOptionalText = (key: string, max = 120) => {
+      const value = row[key];
+      if (value === null || value === undefined) return null;
+      const text = String(value).trim();
+      if (!text) return null;
+      if (text.length > max) {
+        throw new Error(`Orderrad ${index + 1}: ${key} är för långt.`);
+      }
+      return text;
+    };
+
+    return {
+      rowId: row.rowId === undefined ? null : (row.rowId as string | number | null),
+      articleNumber: readOptionalText("articleNumber", 80),
+      description,
+      orderedQuantity: quantity,
+      unit: readOptionalText("unit", 40) ?? "st",
+      price,
+      discount,
+      discountType: readOptionalText("discountType", 40),
+      accountNumber: readOptionalText("accountNumber", 40),
+      costCenter: readOptionalText("costCenter", 40),
+    };
+  });
+}
+
+function toFortnoxOrderRows(rows: EditableFortnoxOrderRow[]) {
+  return rows.map((row) => {
+    const payload: Record<string, unknown> = {
+      Description: row.description,
+      OrderedQuantity: row.orderedQuantity,
+      Unit: row.unit || "st",
+      Price: row.price,
+    };
+    if (row.articleNumber) payload.ArticleNumber = row.articleNumber;
+    if (row.discount !== null && row.discount !== undefined) payload.Discount = row.discount;
+    if (row.discountType) payload.DiscountType = row.discountType;
+    if (row.accountNumber) payload.AccountNumber = row.accountNumber;
+    if (row.costCenter) payload.CostCenter = row.costCenter;
+    return payload;
+  });
+}
+
 export async function GET(_req: NextRequest, ctx: Ctx) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: Role } | undefined)?.role;
+  const canReadFortnoxRows = role === Role.ADMIN || role === Role.SALJARE;
   const { id: orderId } = await ctx.params;
 
   const order = await prisma.order.findFirst({
@@ -29,6 +147,22 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  let fortnoxOrderRows: EditableFortnoxOrderRow[] = Array.isArray(order.fortnoxOrderRows)
+    ? (order.fortnoxOrderRows as EditableFortnoxOrderRow[])
+    : [];
+  let fortnoxRowsError: string | null = order.fortnoxOrderRowsSyncError ?? null;
+
+  if (canReadFortnoxRows) {
+    try {
+      const fortnoxOrder = await getFortnoxOrder(orderId);
+      fortnoxOrderRows = readFortnoxOrderRows(fortnoxOrder);
+      fortnoxRowsError = null;
+    } catch (error) {
+      fortnoxRowsError = error instanceof Error ? error.message : "Fortnox orderrader kunde inte hämtas.";
+      console.warn(`[orders/${orderId}] Could not fetch Fortnox order rows`, error);
+    }
   }
 
   const files = order.files;
@@ -159,6 +293,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       tracks,
       timeEntries: serializedTimeEntries,
       files: signed,
+      fortnoxOrderRows,
+      fortnoxRowsError,
+      fortnoxOrderRowsSyncedAt: order.fortnoxOrderRowsSyncedAt?.toISOString() ?? null,
       billingConfirmedAt: order.billingConfirmedAt?.toISOString() ?? null,
     },
   });
@@ -232,6 +369,9 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
       dueDate: true,
       deliveryAddress: true,
       deliveryMethod: true,
+      fortnoxOrderRows: true,
+      fortnoxOrderRowsSyncedAt: true,
+      fortnoxOrderRowsSyncError: true,
       billingConfirmedAt: true,
     },
   });
@@ -281,6 +421,16 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
     return NextResponse.json({ error: "Titel krävs." }, { status: 400 });
   }
 
+  let orderRows: EditableFortnoxOrderRow[] | undefined;
+  try {
+    orderRows = parseFortnoxOrderRows(patch.orderRows);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Orderraderna är ogiltiga." },
+      { status: 400 },
+    );
+  }
+
   let dueDate: Date | null | undefined;
   if ("dueDate" in patch) {
     const raw = patch.dueDate;
@@ -313,6 +463,9 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
     DeliveryAddress1: next.deliveryAddress || null,
     WayOfDelivery: next.deliveryMethod || null,
   };
+  if (orderRows) {
+    fortnoxPayload.OrderRows = toFortnoxOrderRows(orderRows);
+  }
 
   try {
     await updateFortnoxOrder(orderId, fortnoxPayload);
@@ -332,6 +485,13 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
       ...(dueDate !== undefined ? { dueDate: next.dueDate } : {}),
       ...(deliveryAddress !== undefined ? { deliveryAddress: next.deliveryAddress } : {}),
       ...(deliveryMethod !== undefined ? { deliveryMethod: next.deliveryMethod } : {}),
+      ...(orderRows
+        ? {
+            fortnoxOrderRows: orderRows as unknown as Prisma.InputJsonValue,
+            fortnoxOrderRowsSyncedAt: new Date(),
+            fortnoxOrderRowsSyncError: null,
+          }
+        : {}),
     },
     select: {
       orderNumber: true,
@@ -340,6 +500,8 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
       dueDate: true,
       deliveryAddress: true,
       deliveryMethod: true,
+      fortnoxOrderRows: true,
+      fortnoxOrderRowsSyncedAt: true,
       updatedAt: true,
     },
   });
@@ -353,6 +515,11 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
       dueDate: updated.dueDate?.toISOString() ?? null,
       deliveryAddress: updated.deliveryAddress ?? null,
       deliveryMethod: updated.deliveryMethod ?? null,
+      fortnoxOrderRows: Array.isArray(updated.fortnoxOrderRows)
+        ? (updated.fortnoxOrderRows as EditableFortnoxOrderRow[])
+        : orderRows ?? [],
+      fortnoxOrderRowsSyncedAt: updated.fortnoxOrderRowsSyncedAt?.toISOString() ?? null,
+      fortnoxRowsError: null,
       updatedAt: updated.updatedAt.toISOString(),
     },
   });

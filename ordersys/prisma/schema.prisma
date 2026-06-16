@@ -40,6 +40,9 @@ model Order {
   updatedAt          DateTime              @updatedAt
   deliveryAddress    String?
   deliveryMethod     String?
+  fortnoxOrderRows   Json?
+  fortnoxOrderRowsSyncedAt DateTime?
+  fortnoxOrderRowsSyncError String?
   billingConfirmedAt DateTime?
   createdById        String?
   createdByName      String?

@@ -28,8 +28,12 @@ import {
   History,
   Link2,
   MapPin,
+  PackageCheck,
   PencilLine,
+  Plus,
+  RotateCcw,
   Save,
+  Trash2,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -80,6 +84,19 @@ type CalendarEventItem = {
   notes?: string | null;
 };
 
+type FortnoxOrderLine = {
+  rowId?: string | number | null;
+  articleNumber?: string | null;
+  description: string;
+  orderedQuantity: number;
+  unit?: string | null;
+  price: number;
+  discount?: number | null;
+  discountType?: string | null;
+  accountNumber?: string | number | null;
+  costCenter?: string | null;
+};
+
 type OrderData = {
   orderNumber: string | number;
   title: string;
@@ -104,6 +121,9 @@ type OrderData = {
   }[];
   timeEntries: TimeEntry[];
   files: FileItem[];
+  fortnoxOrderRows?: FortnoxOrderLine[];
+  fortnoxRowsError?: string | null;
+  fortnoxOrderRowsSyncedAt?: string | null;
   billingConfirmedAt?: string | null;
 };
 
@@ -145,6 +165,56 @@ function canDeleteFilesForRole(role: Role | undefined) {
 
 function canEditOrderForRole(role: Role | undefined) {
   return role === "ADMIN" || role === "SALJARE";
+}
+
+function createEmptyFortnoxLine(): FortnoxOrderLine {
+  return {
+    rowId: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    articleNumber: "",
+    description: "",
+    orderedQuantity: 1,
+    unit: "st",
+    price: 0,
+    discount: null,
+    discountType: null,
+    accountNumber: null,
+    costCenter: null,
+  };
+}
+
+function normalizeFortnoxLines(rows: FortnoxOrderLine[] | undefined): FortnoxOrderLine[] {
+  if (!Array.isArray(rows) || rows.length === 0) return [createEmptyFortnoxLine()];
+  return rows.map((row, index) => ({
+    rowId: row.rowId ?? `row-${index}`,
+    articleNumber: row.articleNumber ?? "",
+    description: row.description ?? "",
+    orderedQuantity: Number.isFinite(Number(row.orderedQuantity)) ? Number(row.orderedQuantity) : 1,
+    unit: row.unit ?? "st",
+    price: Number.isFinite(Number(row.price)) ? Number(row.price) : 0,
+    discount: row.discount === null || row.discount === undefined ? null : Number(row.discount),
+    discountType: row.discountType ?? null,
+    accountNumber: row.accountNumber ?? null,
+    costCenter: row.costCenter ?? null,
+  }));
+}
+
+function lineAmount(row: FortnoxOrderLine) {
+  const quantity = Number(row.orderedQuantity) || 0;
+  const price = Number(row.price) || 0;
+  const discount = Number(row.discount) || 0;
+  const gross = quantity * price;
+  if (String(row.discountType ?? "").toUpperCase() === "PERCENT") {
+    return gross * (1 - discount / 100);
+  }
+  return gross - discount;
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("sv-SE", {
+    style: "currency",
+    currency: "SEK",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function userDisplayName(user: Pick<UserOption, "name" | "email">) {
@@ -537,6 +607,217 @@ function OrderEditPanel({
   );
 }
 
+function FortnoxOrderLinesPanel({
+  rows,
+  saving,
+  error,
+  syncedAt,
+  onRowsChange,
+  onSave,
+  onReset,
+}: {
+  rows: FortnoxOrderLine[];
+  saving: boolean;
+  error: string | null;
+  syncedAt?: string | null;
+  onRowsChange: (rows: FortnoxOrderLine[]) => void;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  const total = rows.reduce((sum, row) => sum + lineAmount(row), 0);
+  const hasInvalidRows = rows.some((row) => !row.description.trim() || Number(row.orderedQuantity) <= 0);
+
+  const patchRow = (index: number, patch: Partial<FortnoxOrderLine>) => {
+    onRowsChange(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  };
+
+  const removeRow = (index: number) => {
+    if (rows.length <= 1) {
+      onRowsChange([createEmptyFortnoxLine()]);
+      return;
+    }
+    onRowsChange(rows.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_24px_70px_-44px_rgba(15,23,42,0.65)]">
+      <div className="border-b border-neutral-100 bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_48%,#eef6ff_100%)] p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+              <PackageCheck className="h-3.5 w-3.5" aria-hidden />
+              Fortnox orderrader
+            </div>
+            <h2 className="mt-3 text-lg font-semibold text-neutral-950">Radredigering</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Redigera artikel, beskrivning, antal, pris och rabatt. Sparas i Fortnox och Ordexa samtidigt.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-right shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Rader</div>
+              <div className="text-base font-semibold text-neutral-950">{rows.length}</div>
+            </div>
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-right shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">Summa</div>
+              <div className="text-base font-semibold text-sky-950">{formatMoney(total)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4 sm:p-5">
+        <div className="hidden grid-cols-[0.85fr_1.8fr_0.6fr_0.5fr_0.7fr_0.65fr_0.7fr_44px] gap-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:grid">
+          <span>Artikel</span>
+          <span>Beskrivning</span>
+          <span>Antal</span>
+          <span>Enhet</span>
+          <span>Pris</span>
+          <span>Rabatt</span>
+          <span className="text-right">Rad</span>
+          <span />
+        </div>
+
+        <div className="space-y-2">
+          {rows.map((row, index) => (
+            <div
+              key={String(row.rowId ?? index)}
+              className="grid gap-2 rounded-xl border border-neutral-200 bg-neutral-50/70 p-3 transition focus-within:border-sky-300 focus-within:bg-white focus-within:shadow-[0_18px_40px_-34px_rgba(14,165,233,0.8)] lg:grid-cols-[0.85fr_1.8fr_0.6fr_0.5fr_0.7fr_0.65fr_0.7fr_44px] lg:items-center"
+            >
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Artikel
+                </span>
+                <input
+                  value={row.articleNumber ?? ""}
+                  onChange={(event) => patchRow(index, { articleNumber: event.target.value })}
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Beskrivning
+                </span>
+                <input
+                  value={row.description}
+                  onChange={(event) => patchRow(index, { description: event.target.value })}
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-950 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Antal
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={row.orderedQuantity}
+                  onChange={(event) => patchRow(index, { orderedQuantity: Number(event.target.value) })}
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Enhet
+                </span>
+                <input
+                  value={row.unit ?? ""}
+                  onChange={(event) => patchRow(index, { unit: event.target.value })}
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Pris
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={row.price}
+                  onChange={(event) => patchRow(index, { price: Number(event.target.value) })}
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <label className="flex flex-col gap-1 lg:block">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Rabatt
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={row.discount ?? ""}
+                  onChange={(event) =>
+                    patchRow(index, {
+                      discount: event.target.value === "" ? null : Number(event.target.value),
+                    })
+                  }
+                  className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                />
+              </label>
+              <div className="flex h-10 items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-900 lg:justify-end">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 lg:hidden">
+                  Rad
+                </span>
+                {formatMoney(lineAmount(row))}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeRow(index)}
+                className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 transition hover:border-red-200 hover:bg-red-50 lg:w-10"
+                aria-label="Ta bort orderrad"
+                title="Ta bort orderrad"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {error ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3 border-t border-neutral-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-neutral-500">
+            {syncedAt ? `Synkad ${new Date(syncedAt).toLocaleString("sv-SE")}` : "Ingen lokal radsynk sparad ännu."}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onRowsChange([...rows, createEmptyFortnoxLine()])}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-800"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Lägg till rad
+            </button>
+            <button
+              type="button"
+              onClick={onReset}
+              disabled={saving}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Återställ
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving || hasInvalidRows}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-sky-600 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" aria-hidden />
+              {saving ? "Sparar rader..." : "Spara orderrader"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TrackCard({
   track,
   currentStatus,
@@ -892,6 +1173,9 @@ export default function OrderPage() {
   });
   const [savingOrderEdit, setSavingOrderEdit] = useState(false);
   const [orderEditError, setOrderEditError] = useState<string | null>(null);
+  const [orderLines, setOrderLines] = useState<FortnoxOrderLine[]>([createEmptyFortnoxLine()]);
+  const [savingOrderLines, setSavingOrderLines] = useState(false);
+  const [orderLinesError, setOrderLinesError] = useState<string | null>(null);
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarTrack, setCalendarTrack] = useState<Track>(APP_TRACKS[0]);
@@ -933,6 +1217,7 @@ export default function OrderPage() {
       const json = await res.json();
       const order = json.order as OrderData;
       order.timeEntries = Array.isArray(order.timeEntries) ? order.timeEntries : [];
+      order.fortnoxOrderRows = normalizeFortnoxLines(order.fortnoxOrderRows);
 
       // Check if order is archived (billed)
       if (order.billingConfirmedAt) {
@@ -942,11 +1227,13 @@ export default function OrderPage() {
       }
 
       setData(order);
+      setOrderLines(normalizeFortnoxLines(order.fortnoxOrderRows));
       setOrderEditDraft(draftFromOrder(order));
       lastSavedNotesRef.current = order.notes ?? "";
       setNotesDraft(order.notes ?? "");
       setNotesError(null);
       setOrderEditError(null);
+      setOrderLinesError(order.fortnoxRowsError ?? null);
     } catch (e: any) {
       console.error(e);
       setErr("Tekniskt fel nÃ¤r order skulle hÃ¤mtas.");
@@ -1146,6 +1433,72 @@ export default function OrderPage() {
     }
   }
 
+  function resetOrderLines() {
+    if (!data) return;
+    setOrderLines(normalizeFortnoxLines(data.fortnoxOrderRows));
+    setOrderLinesError(data.fortnoxRowsError ?? null);
+  }
+
+  async function saveOrderLines() {
+    if (!orderId || !data) return;
+
+    const payloadRows = orderLines.map((row) => ({
+      rowId: row.rowId ?? null,
+      articleNumber: row.articleNumber ?? "",
+      description: row.description.trim(),
+      orderedQuantity: Number(row.orderedQuantity),
+      unit: row.unit || "st",
+      price: Number(row.price),
+      discount: row.discount === null || row.discount === undefined ? null : Number(row.discount),
+      discountType: row.discountType ?? null,
+      accountNumber: row.accountNumber ?? null,
+      costCenter: row.costCenter ?? null,
+    }));
+
+    const invalidRow = payloadRows.findIndex((row) => !row.description || !Number.isFinite(row.orderedQuantity) || row.orderedQuantity <= 0);
+    if (invalidRow >= 0) {
+      setOrderLinesError(`Orderrad ${invalidRow + 1} behöver beskrivning och antal större än 0.`);
+      return;
+    }
+
+    setSavingOrderLines(true);
+    setOrderLinesError(null);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: { orderRows: payloadRows } }),
+      });
+
+      const text = await res.text();
+      const payload = text ? JSON.parse(text) : null;
+
+      if (!res.ok) {
+        setOrderLinesError(payload?.error || "Kunde inte spara orderraderna.");
+        return;
+      }
+
+      const updatedRows = normalizeFortnoxLines(payload?.order?.fortnoxOrderRows);
+      setOrderLines(updatedRows);
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              fortnoxOrderRows: updatedRows,
+              fortnoxRowsError: payload?.order?.fortnoxRowsError ?? null,
+              fortnoxOrderRowsSyncedAt:
+                payload?.order?.fortnoxOrderRowsSyncedAt ?? new Date().toISOString(),
+              updatedAt: payload?.order?.updatedAt ?? prev.updatedAt,
+            }
+          : prev
+      );
+    } catch {
+      setOrderLinesError("Tekniskt fel vid sparande av orderrader.");
+    } finally {
+      setSavingOrderLines(false);
+    }
+  }
+
   useEffect(() => {
     if (!orderId) return;
     if (notesDraft.trim() === lastSavedNotesRef.current) return;
@@ -1340,6 +1693,18 @@ export default function OrderPage() {
           onDraftChange={setOrderEditDraft}
           onSave={() => void saveOrderEdit()}
           onReset={resetOrderEditDraft}
+        />
+      ) : null}
+
+      {canEditOrder ? (
+        <FortnoxOrderLinesPanel
+          rows={orderLines}
+          saving={savingOrderLines}
+          error={orderLinesError}
+          syncedAt={data.fortnoxOrderRowsSyncedAt}
+          onRowsChange={setOrderLines}
+          onSave={() => void saveOrderLines()}
+          onReset={resetOrderLines}
         />
       ) : null}
 

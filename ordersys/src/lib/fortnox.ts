@@ -440,6 +440,37 @@ export async function updateFortnoxOrder(
   throw new Error(lastError || `Fortnox update order failed for ${doc}`);
 }
 
+export async function getFortnoxOrder(documentNumber: string, tenantId?: string): Promise<any> {
+  const doc = String(documentNumber ?? "").trim();
+  if (!doc) {
+    throw new Error("Fortnox document number is required.");
+  }
+
+  const attempts = [
+    { resource: "orders-v2", url: `${API_BASE}/orders-v2/${encodeURIComponent(doc)}` },
+    { resource: "orders", url: `${API_BASE}/orders/${encodeURIComponent(doc)}` },
+  ];
+
+  let lastError = "";
+  for (const attempt of attempts) {
+    const { text, ok, status } = await fortnoxRequestWithRefresh(tenantId, attempt.url, {
+      method: "GET",
+    });
+
+    if (ok) {
+      const json = text ? safeJSON<any>(text) : {};
+      return json?.Order ?? json?.order ?? json;
+    }
+
+    lastError = `Fortnox get order ${attempt.resource} failed (${status}): ${text}`;
+    if (status !== 404 && status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError || `Fortnox get order failed for ${doc}`);
+}
+
 type FortnoxDocumentResource = "orders" | "offers";
 
 export async function listAllFortnoxDocumentNumbers({
