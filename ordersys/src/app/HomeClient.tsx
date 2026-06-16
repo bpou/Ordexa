@@ -664,7 +664,7 @@ export default function HomeClient({ name: _name, role }: { name: string; role: 
         <div className="grid gap-6 xl:grid-cols-[1.65fr_1fr] ">
          
          
-          <Card className="rounded-2xl border-neutral-200 bg-white shadow-sm ">
+          <Card className={`rounded-2xl border-neutral-200 bg-white shadow-sm ${!loading && !recentOpenedOrders.length ? "self-start" : ""}`}>
             <CardHeader className="border-neutral-200 px-6 py-5 ">
               <h2 className="text-lg font-semibold text-neutral-900">Senaste ordrar</h2>
               <p className="text-sm text-neutral-600">De 6 senaste ordrarna du klickade in i.</p>
