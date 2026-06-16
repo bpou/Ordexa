@@ -1058,7 +1058,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.01"
+          step="1"
 
           value={Number(row.price ?? 0)}
 
@@ -1078,7 +1078,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.01"
+          step="1"
 
           value={Number(row.Discount ?? 0)}
 
@@ -1262,7 +1262,7 @@ function OrderRow({
 
           type="number"
 
-          step="0.1"
+          step="1"
 
           value={Number(row.ContributionPercent ?? 0)}
 
