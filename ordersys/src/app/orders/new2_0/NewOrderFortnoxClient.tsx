@@ -8,6 +8,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import type { ChangeEvent, CSSProperties } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 import {
 
@@ -189,6 +190,25 @@ type PlanningSectionProps = {
   manualD: ManualSlot;
   formatManualSlotRange: (slot?: ManualSlot) => string | null;
 };
+
+type FloatingDropdownPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
+
+function getFloatingDropdownPosition(
+  element: HTMLElement | null,
+  minWidth = 0,
+): FloatingDropdownPosition | null {
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return {
+    top: rect.bottom + 4,
+    left: rect.left,
+    width: Math.max(rect.width, minWidth),
+  };
+}
 
 function PlanningSection({
   calendarOpen,
@@ -447,11 +467,23 @@ function OrderRow({
 
   const accountContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const accountDropdownRef = useRef<HTMLDivElement | null>(null);
+
   const accountInputRef = useRef<HTMLInputElement | null>(null);
+
+  const unitContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const unitDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [accountInputValue, setAccountInputValue] = useState(row.AccountNumber ?? "");
 
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+
+  const [accountDropdownPosition, setAccountDropdownPosition] = useState<FloatingDropdownPosition | null>(null);
+
+  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
+
+  const [unitDropdownPosition, setUnitDropdownPosition] = useState<FloatingDropdownPosition | null>(null);
 
   const accountSelectionRef = useRef(false);
 
@@ -626,7 +658,8 @@ function OrderRow({
 
     const handleClickOutside = (event: MouseEvent) => {
 
-      if (!accountContainerRef.current || accountContainerRef.current.contains(event.target as Node)) return;
+      if (accountContainerRef.current?.contains(event.target as Node)) return;
+      if (accountDropdownRef.current?.contains(event.target as Node)) return;
 
       setAccountDropdownOpen(false);
 
@@ -637,6 +670,77 @@ function OrderRow({
     return () => document.removeEventListener("mousedown", handleClickOutside);
 
   }, [accountDropdownOpen]);
+
+
+
+  useEffect(() => {
+
+    if (!unitDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+
+      if (unitContainerRef.current?.contains(event.target as Node)) return;
+      if (unitDropdownRef.current?.contains(event.target as Node)) return;
+
+      setUnitDropdownOpen(false);
+
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+  }, [unitDropdownOpen]);
+
+
+
+  useEffect(() => {
+
+    if (!accountDropdownOpen) return;
+
+    const updatePosition = () => {
+
+      setAccountDropdownPosition(getFloatingDropdownPosition(accountContainerRef.current, 320));
+
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+
+    };
+
+  }, [accountDropdownOpen]);
+
+
+
+  useEffect(() => {
+
+    if (!unitDropdownOpen) return;
+
+    const updatePosition = () => {
+
+      setUnitDropdownPosition(getFloatingDropdownPosition(unitContainerRef.current, 240));
+
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+
+    };
+
+  }, [unitDropdownOpen]);
 
 
 
@@ -872,6 +976,16 @@ function OrderRow({
     onUpdate(index, { AccountNumber: accountNumber });
 
     setAccountDropdownOpen(false);
+
+  };
+
+
+
+  const handleSelectUnit = (unitCode: string) => {
+
+    onUpdate(index, { unit: unitCode });
+
+    setUnitDropdownOpen(false);
 
   };
 
@@ -1161,19 +1275,55 @@ function OrderRow({
 
 
 
-      <div className="col-span-1">
+      <div ref={unitContainerRef} className="relative col-span-1">
 
-        <select
+        <input
+
           value={normalizeFortnoxUnitCode(row.unit)}
-          onChange={(e) => onUpdate(index, { unit: e.target.value })}
-          className="block h-full w-full bg-transparent px-2 py-0.5 text-[12px] focus:outline-none focus:ring-0"
+
+          readOnly
+
+          onFocus={() => setUnitDropdownOpen(true)}
+
+          onClick={() => setUnitDropdownOpen(true)}
+
+          className="block h-full w-full bg-transparent px-2 py-0.5 pr-7 text-[12px] focus:outline-none focus:ring-0"
+
+        />
+
+        <button
+
+          type="button"
+
+          onClick={() => setUnitDropdownOpen((prev) => !prev)}
+
+          aria-label="Visa enheter"
+
+          className="absolute inset-y-0 right-0 flex items-center justify-center rounded px-1 text-[#6b7165] hover:text-[#2f4d1f]"
+
         >
-          {FORTNOX_UNIT_OPTIONS.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.code} - {option.text}
-            </option>
-          ))}
-        </select>
+
+          <svg width="16" height="16" viewBox="0 0 24 24">
+
+            <path
+
+              d="M6 9l6 6 6-6"
+
+              fill="none"
+
+              stroke="currentColor"
+
+              strokeWidth="2"
+
+              strokeLinecap="round"
+
+              strokeLinejoin="round"
+
+            />
+
+          </svg>
+
+        </button>
 
       </div>
 
@@ -1321,9 +1471,17 @@ function OrderRow({
 
 
 
-        {accountDropdownOpen ? (
+        {accountDropdownOpen && accountDropdownPosition ? createPortal(
 
-          <div className="absolute z-40 mt-1 max-h-60 min-w-[320px] overflow-auto rounded-md border border-[#d9ddd4] bg-white shadow-xl">
+          <div
+            ref={accountDropdownRef}
+            className="fixed z-[200] max-h-60 overflow-auto rounded-md border border-[#d9ddd4] bg-white shadow-xl"
+            style={{
+              top: accountDropdownPosition.top,
+              left: accountDropdownPosition.left,
+              width: accountDropdownPosition.width,
+            }}
+          >
 
             {availableAccounts.length ? (
 
@@ -1375,11 +1533,49 @@ function OrderRow({
 
             )}
 
-          </div>
-
+          </div>,
+          document.body,
         ) : null}
 
       </div>
+
+
+
+      {unitDropdownOpen && unitDropdownPosition ? createPortal(
+
+        <div
+          ref={unitDropdownRef}
+          className="fixed z-[200] max-h-60 overflow-auto rounded-md border border-[#d9ddd4] bg-white shadow-xl"
+          style={{
+            top: unitDropdownPosition.top,
+            left: unitDropdownPosition.left,
+            width: unitDropdownPosition.width,
+          }}
+        >
+          {FORTNOX_UNIT_OPTIONS.map((option) => {
+            const isSelected = option.code === normalizeFortnoxUnitCode(row.unit);
+
+            return (
+              <button
+                key={option.code}
+                type="button"
+                onClick={() => handleSelectUnit(option.code)}
+                className={[
+                  "w-full px-3 py-2 text-left text-[12px] hover:bg-[#f5f8ef]",
+                  isSelected ? "bg-[#e7f5d7]" : "",
+                ].join(" ")}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-[#2f4d1f]">{option.code}</span>
+                  <span className="text-[11px] text-[#61685d]">{option.englishCode}</span>
+                </div>
+                <div className="mt-0.5 text-[11px] text-[#61685d]">{option.text}</div>
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
+      ) : null}
 
 
 
