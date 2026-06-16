@@ -34,11 +34,16 @@ import bcrypt from "bcrypt";
 import { decryptTotpSecret, isEncryptedTotpSecret } from "@/lib/totp-secrets";
 import { authenticator } from "otplib";
 
+function getCredentialsAuthorize() {
+  const provider = (authOptions.providers as any)?.[0];
+  return provider?.options?.authorize ?? provider?.authorize;
+}
+
 describe("Customer Authentication", () => {
   beforeEach(() => {
     resetPrismaMock();
     vi.clearAllMocks();
-    vi.mocked(bcrypt.compare).mockResolvedValue(true);
+    (bcrypt.compare as any).mockResolvedValue(true);
     vi.mocked(decryptTotpSecret).mockReturnValue("secret");
     vi.mocked(isEncryptedTotpSecret).mockReturnValue(true);
     vi.mocked(authenticator.verify).mockReturnValue(true);
@@ -55,7 +60,7 @@ describe("Customer Authentication", () => {
   });
 
   it("successful login", async () => {
-    const authorize = (authOptions.providers as any)[0].authorize;
+    const authorize = getCredentialsAuthorize();
     const result = await authorize({
       email: "customer@example.com",
       password: "password",
@@ -85,7 +90,7 @@ describe("Customer Authentication", () => {
       totpEnabled: true,
       image: null,
     } as any);
-    const authorize = (authOptions.providers as any)[0].authorize;
+    const authorize = getCredentialsAuthorize();
     const result = await authorize({
       email: "customer2@example.com",
       password: "password",
@@ -102,8 +107,8 @@ describe("Customer Authentication", () => {
   });
 
   it("failed login - wrong password", async () => {
-    vi.mocked(bcrypt.compare).mockResolvedValue(false);
-    const authorize = (authOptions.providers as any)[0].authorize;
+    (bcrypt.compare as any).mockResolvedValue(false);
+    const authorize = getCredentialsAuthorize();
     const result = await authorize({
       email: "customer@example.com",
       password: "wrongpassword",
@@ -122,7 +127,7 @@ describe("Customer Authentication", () => {
       totpEnabled: true,
       image: null,
     } as any);
-    const authorize = (authOptions.providers as any)[0].authorize;
+    const authorize = getCredentialsAuthorize();
     try {
       await authorize({
         email: "customer2@example.com",
@@ -146,7 +151,7 @@ describe("Customer Authentication", () => {
       image: null,
     } as any);
     vi.mocked(authenticator.verify).mockReturnValue(false);
-    const authorize = (authOptions.providers as any)[0].authorize;
+    const authorize = getCredentialsAuthorize();
     try {
       await authorize({
         email: "customer2@example.com",
@@ -161,7 +166,7 @@ describe("Customer Authentication", () => {
 
   it("failed login - user not found", async () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
-    const authorize = (authOptions.providers as any)[0].authorize;
+    const authorize = getCredentialsAuthorize();
     const result = await authorize({
       email: "notfound@example.com",
       password: "password",

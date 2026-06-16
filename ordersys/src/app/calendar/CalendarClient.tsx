@@ -251,9 +251,6 @@ const VIEW_OPTIONS: { key: CalendarView; label: string }[] = [
   { key: "dayGridMonth", label: "Månad" },
 ];
 
-const DUMMY_LONG_JOB_PREFIX = "dummy-long-job";
-const DUMMY_STATUS_KEY = "dummy-long-job-statuses";
-
 const WEEKDAY_NAMES = [
   "Söndag",
   "Måndag",
@@ -345,30 +342,6 @@ function formatRelativeWeek(target: Date) {
   if (weekDiff === 2) return `${weekday} om två veckor`;
   return `${weekday} om ${weekDiff} veckor`;
 }
-
-const isDummyLongJobId = (id?: string | null) =>
-  typeof id === "string" && id.startsWith(DUMMY_LONG_JOB_PREFIX);
-
-const readDummyStatusMap = (): Record<string, CalendarStatus> => {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(DUMMY_STATUS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, CalendarStatus>) : {};
-  } catch {
-    return {};
-  }
-};
-
-const persistDummyStatus = (id: string, status: CalendarStatus) => {
-  if (typeof window === "undefined") return;
-  const map = readDummyStatusMap();
-  map[id] = status;
-  try {
-    localStorage.setItem(DUMMY_STATUS_KEY, JSON.stringify(map));
-  } catch {
-    // ignore write errors
-  }
-};
 
 const isDone = (s?: Status, l?: Label) =>
   s === "AVSLUTAD" || l === "UTFORT_ARBETE";
@@ -652,30 +625,7 @@ export default function CalendarClient({
         },
       }));
 
-      // Add dummy long jobs for testing
-      const dummyStatusMap = readDummyStatusMap();
-
-      const day = 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      const dummyLongJobs = Array.from({ length: 8 }).map((_, idx) => {
-        const startOffset = (idx + 1) * -5; // staggered starts in the past
-        const endOffset = (idx + 1) * 7 + idx * 3; // different future lengths
-        return {
-          id: `dummy-long-job-${idx + 1}`,
-          title: `Test långt jobb ${idx + 1}`,
-          start: new Date(now + startOffset * day).toISOString(),
-          end: new Date(now + endOffset * day).toISOString(),
-          extendedProps: {
-            orderId: `TEST-LONG-${idx + 1}`,
-            orderTitle: `Test långt jobb ${idx + 1}`,
-            status: (dummyStatusMap[`dummy-long-job-${idx + 1}`] as Status) || "PAGAENDE",
-            kind: "order",
-          },
-          allDay: false,
-        };
-      });
-
-      setEvents([...orders, ...free, ...dummyLongJobs]);
+      setEvents([...orders, ...free]);
     } catch (e) {
       console.error(e);
       setEvents([]);
@@ -694,10 +644,7 @@ export default function CalendarClient({
     return durationDays > 7;
   });
 
-  /* ===== Filter out dummy long job from calendar display ===== */
-  const calendarEvents = events.filter(
-    (event) => !(typeof event.id === "string" && event.id.startsWith("dummy-long-job")),
-  );
+  const calendarEvents = events;
 
   const longJobsDays = useMemo(() => {
     if (!longJobsWindow) return [] as Date[];
@@ -1090,30 +1037,9 @@ export default function CalendarClient({
     [track, load, closeEventMenu],
   );
 
-  // Handle status change for long jobs (including dummy)
+  // Handle status change for long jobs
   const setLongJobStatus = useCallback(
     async (eventId: string, next: CalendarStatus) => {
-      if (isDummyLongJobId(eventId)) {
-        setEvents((prev) =>
-          prev.map((e) =>
-            String(e.id) === String(eventId)
-              ? {
-                  ...e,
-                  extendedProps: {
-                    ...(e.extendedProps || {}),
-                    status: next,
-                    label: null,
-                  },
-                }
-              : e,
-          ),
-        );
-        persistDummyStatus(eventId, next);
-        closeEventMenu();
-        return;
-      }
-
-      // Handle real events via API
       setEvents((prev) =>
         prev.map((e) =>
           String(e.id) === String(eventId)
@@ -1151,24 +1077,6 @@ export default function CalendarClient({
 
   const setCalendarLabel = useCallback(
     async (eventId: string, label: Label | null) => {
-      if (isDummyLongJobId(eventId)) {
-        setEvents((prev) =>
-          prev.map((e) =>
-            String(e.id) === String(eventId)
-              ? {
-                  ...e,
-                  extendedProps: {
-                    ...(e.extendedProps || {}),
-                    label,
-                  },
-                }
-              : e,
-          ),
-        );
-        closeEventMenu();
-        return;
-      }
-
       const meta = getEventMetaById(eventId, events);
       const kind = meta.kind;
       const realId = meta.realId ?? eventId;
@@ -1859,8 +1767,7 @@ export default function CalendarClient({
                     className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 flex items-center gap-2"
                     onClick={() => {
                       if (menuEventId) {
-                        // Check if it's a long job (dummy or real)
-                        if (isDummyLongJobId(menuEventId)) {
+                        if (longJobs.some((job) => String(job.id) === String(menuEventId))) {
                           setLongJobStatus(menuEventId, s);
                         } else {
                           setEventStatus(menuEventId, s);

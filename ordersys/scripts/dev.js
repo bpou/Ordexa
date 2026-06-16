@@ -2,6 +2,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const net = require("net");
 
 const projectRoot = path.join(__dirname, "..");
 const isWindows = process.platform === "win32";
@@ -109,6 +110,38 @@ function startProcess(label, command, args, options = {}) {
   }
 }
 
+function ensurePortAvailable(host, port) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+
+    server.once("error", (error) => {
+      if (error && error.code === "EADDRINUSE") {
+        reject(
+          new Error(
+            `[dev] Port ${port} is already in use. An Ordina dev server may already be running.\n` +
+              `[dev] Reuse the existing server, stop the running process, or start on another port with: PORT=3001 npm run dev`,
+          ),
+        );
+        return;
+      }
+
+      reject(error);
+    });
+
+    server.once("listening", () => {
+      server.close((closeError) => {
+        if (closeError) {
+          reject(closeError);
+          return;
+        }
+        resolve();
+      });
+    });
+
+    server.listen(Number(port), host);
+  });
+}
+
 function getLanAddress() {
   for (const addresses of Object.values(os.networkInterfaces())) {
     for (const address of addresses || []) {
@@ -136,26 +169,33 @@ if (detectedLanAddress) {
 }
 console.log(`[dev] NextAuth URL: ${nextAuthUrl}`);
 
-nextProcess = startProcess(
-  "Next.js",
-  nextExecutable,
-  ["dev", "--turbopack", "-H", devHost, "-p", devPort],
-  {
-    env: {
-      ...process.env,
-      NEXT_TELEMETRY_DISABLED: "1",
-      NEXTAUTH_URL: nextAuthUrl,
-      ORDINA_DEV_ORIGIN: detectedLanAddress || "",
-    },
-    cwd: projectRoot,
-  },
-);
+ensurePortAvailable(devHost, devPort)
+  .then(() => {
+    nextProcess = startProcess(
+      "Next.js",
+      nextExecutable,
+      ["dev", "--turbopack", "-H", devHost, "-p", devPort],
+      {
+        env: {
+          ...process.env,
+          NEXT_TELEMETRY_DISABLED: "1",
+          NEXTAUTH_URL: nextAuthUrl,
+          ORDINA_DEV_ORIGIN: detectedLanAddress || "",
+        },
+        cwd: projectRoot,
+      },
+    );
 
-if (!nextProcess) {
-  process.exit(1);
-}
+    if (!nextProcess) {
+      process.exit(1);
+    }
 
-registerProcess(nextProcess);
+    registerProcess(nextProcess);
+  })
+  .catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
 
 function handleSignal(signal) {
   return () => {

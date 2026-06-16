@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFortnoxArticle, updateFortnoxArticle } from "@/lib/fortnox";
 
 type RouteParams = { articleNumber?: string };
+type RouteContext = { params: Promise<RouteParams> };
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: RouteParams }
+  { params }: RouteContext
 ) {
-  const articleNumber = decodeURIComponent(params?.articleNumber ?? "").trim();
+  const resolvedParams = await params;
+  const articleNumber = decodeURIComponent(resolvedParams?.articleNumber ?? "").trim();
   if (!articleNumber) {
     return NextResponse.json(
       { error: "Missing article number in request path." },
@@ -255,9 +257,10 @@ export async function PATCH(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: RouteParams }
+  { params }: RouteContext
 ) {
-  const articleNumber = decodeURIComponent(params?.articleNumber ?? "").trim();
+  const resolvedParams = await params;
+  const articleNumber = decodeURIComponent(resolvedParams?.articleNumber ?? "").trim();
   if (!articleNumber) {
     return NextResponse.json(
       { error: "Missing article number in request path." },

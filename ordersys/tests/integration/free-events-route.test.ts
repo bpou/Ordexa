@@ -12,6 +12,13 @@ vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({
   getServerSession: getServerSessionMock,
 }));
+vi.mock("@/lib/outlook", () => ({
+  isOutlookSchemaMissingError: vi.fn(() => false),
+  syncOutlookTrackCalendar: vi.fn(async () => undefined),
+  upsertPublicFreeEventToTrackOutlook: vi.fn(async () => undefined),
+  upsertPersonalEventToOutlook: vi.fn(async () => undefined),
+  removePersonalEventFromOutlook: vi.fn(async () => undefined),
+}));
 
 import {
   POST as createFreeEvent,

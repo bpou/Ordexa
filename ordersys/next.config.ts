@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.ORDINA_DIST_DIR?.trim() || ".next",
   serverExternalPackages: [],
   allowedDevOrigins: process.env.ORDINA_DEV_ORIGIN
     ? [process.env.ORDINA_DEV_ORIGIN]

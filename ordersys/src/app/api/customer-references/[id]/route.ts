@@ -4,13 +4,15 @@ import { Role } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+type RouteContext = { params: Promise<{ id: string }> };
+
 function resolveTenantId(param: string | null) {
   if (param === null) return null;
   const trimmed = param.trim();
   return trimmed.length ? trimmed : null;
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const id = params?.id;
+  const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: "Missing reference id" }, { status: 400 });
   }
@@ -84,7 +86,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -95,7 +97,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const id = params?.id;
+  const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: "Missing reference id" }, { status: 400 });
   }

@@ -373,7 +373,7 @@ export default function LandingCalendarPreview({
         </div>
         <div className="flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs text-neutral-600">
           <CalendarRange className="h-4 w-4 text-brand-600" />
-          Riktig kalendervy med dummydata
+          Kalenderöversikt i marknadsvyn
         </div>
       </div>
 

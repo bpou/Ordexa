@@ -4,17 +4,19 @@ import { prismaMock, resetPrismaMock } from "../utils/prisma-mock";
 
 const {
   getServerSessionMock,
-  s3UploadObjectMock,
-  s3PresignGetUrlMock,
-  s3DeleteObjectMock,
+  uploadStoredFileMock,
+  deleteStoredFileMock,
   pusherTriggerMock,
 } = vi.hoisted(() => ({
   getServerSessionMock: vi.fn(async () => ({
     user: { id: "user-123", role: "ADMIN" },
   })),
-  s3UploadObjectMock: vi.fn(async () => undefined),
-  s3PresignGetUrlMock: vi.fn(async (key: string) => `https://mock-s3/${key}`),
-  s3DeleteObjectMock: vi.fn(async () => undefined),
+  uploadStoredFileMock: vi.fn(async ({ key }: { key: string }) => ({
+    key,
+    url: `https://mock-s3/${key}`,
+    expiresAt: Date.now() + 600_000,
+  })),
+  deleteStoredFileMock: vi.fn(async () => undefined),
   pusherTriggerMock: vi.fn(async () => undefined),
 }));
 
@@ -23,10 +25,9 @@ vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({
   getServerSession: getServerSessionMock,
 }));
-vi.mock("@/lib/s3", () => ({
-  s3UploadObject: s3UploadObjectMock,
-  s3PresignGetUrl: s3PresignGetUrlMock,
-  s3DeleteObject: s3DeleteObjectMock,
+vi.mock("@/lib/file-storage", () => ({
+  uploadStoredFile: uploadStoredFileMock,
+  deleteStoredFile: deleteStoredFileMock,
 }));
 vi.mock("@/lib/pusher-server", () => ({
   pusherServer: {
@@ -46,6 +47,13 @@ describe("Order file routes", () => {
 
   it("uploads and deletes an order file via S3", async () => {
     const orderId = "ORD-100";
+    await prismaMock.order.create({
+      data: {
+        orderNumber: orderId,
+        title: "Test order",
+      },
+    });
+
     const form = new FormData();
     const fileName = "Nästa steg.pdf";
     const file = new File([Buffer.from("test")], fileName, { type: "application/pdf" });
@@ -69,15 +77,11 @@ describe("Order file routes", () => {
     expect(uploadPayload.file.filename).toBe("nasta-steg.pdf");
     expect(uploadPayload.file.track).toBe("A");
 
-    expect(s3UploadObjectMock).toHaveBeenCalledWith(
+    expect(uploadStoredFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
         key: expect.stringMatching(/^orders\/ORD-100\//),
         contentType: "application/pdf",
       })
-    );
-    expect(s3PresignGetUrlMock).toHaveBeenCalledWith(
-      expect.stringMatching(/^orders\/ORD-100\//),
-      expect.any(Number)
     );
     expect(prismaMock.file.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -108,7 +112,7 @@ describe("Order file routes", () => {
     expect(deleteResponse.status).toBe(200);
     const deletePayload = await deleteResponse.json();
     expect(deletePayload).toEqual({ ok: true });
-    expect(s3DeleteObjectMock).toHaveBeenCalledWith(
+    expect(deleteStoredFileMock).toHaveBeenCalledWith(
       expect.stringMatching(/^orders\/ORD-100\//)
     );
     expect(prismaMock.file.delete).toHaveBeenCalledWith({

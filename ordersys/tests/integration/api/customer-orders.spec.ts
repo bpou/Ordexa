@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prismaMock, resetPrismaMock } from "../../utils/prisma-mock";
+import { onlyRealFortnoxOrders } from "@/lib/filters";
 
 const {
   getServerSessionMock,
@@ -58,7 +59,7 @@ describe("Customer Orders API", () => {
     const data = await response.json();
     expect(data.orders).toEqual(mockOrders);
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
-      where: {},
+      where: onlyRealFortnoxOrders,
       include: { tracks: true, fortnox: true, events: true, files: true, createdBy: true },
       orderBy: { createdAt: "desc" },
     });
@@ -72,6 +73,7 @@ describe("Customer Orders API", () => {
 
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
       where: {
+        ...onlyRealFortnoxOrders,
         tracks: {
           some: {
             track: "A",
@@ -91,6 +93,7 @@ describe("Customer Orders API", () => {
 
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
       where: {
+        ...onlyRealFortnoxOrders,
         tracks: {
           some: {
             status: "PAGAENDE",
@@ -110,6 +113,7 @@ describe("Customer Orders API", () => {
 
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
       where: {
+        ...onlyRealFortnoxOrders,
         tracks: {
           some: {
             track: "B",

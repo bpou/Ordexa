@@ -69,12 +69,24 @@ function cloneEvent(event: PersonalEventRecord) {
 }
 
 export const prismaMock = {
+  $transaction: vi.fn(async (operations: any) => {
+    if (Array.isArray(operations)) {
+      return Promise.all(operations);
+    }
+    if (typeof operations === "function") {
+      return operations(prismaMock);
+    }
+    return operations;
+  }),
+  $executeRaw: vi.fn(async () => 0),
+  $executeRawUnsafe: vi.fn(async () => 0),
   user: {
     findUnique: vi.fn(),
     update: vi.fn(),
   },
   calendarEvent: {
     findMany: vi.fn(async () => [] as Array<{ start: Date; end: Date }>),
+    findUnique: vi.fn(async () => null),
   },
   order: {
     create: vi.fn(async ({ data }: { data: any }) => {
@@ -128,6 +140,12 @@ export const prismaMock = {
         files: include?.files ? [] : undefined,
         createdBy: include?.createdBy ? null : undefined,
       }));
+    }),
+    findFirst: vi.fn(async ({ where }: any = {}) => {
+      const orderNumber = where?.orderNumber;
+      if (!orderNumber) return null;
+      const row = store.orders.get(orderNumber);
+      return row ? { orderNumber: row.orderNumber } : null;
     }),
   },
   fortnoxOrderLink: {
@@ -245,6 +263,32 @@ export const prismaMock = {
       store.files.delete(where.id);
       return { ...existing };
     }),
+  },
+  storedFile: {
+    upsert: vi.fn(async ({ create, update, where }: { create?: any; update?: any; where: { key: string } }) => ({
+      key: where.key,
+      ...(create ?? {}),
+      ...(update ?? {}),
+    })),
+    deleteMany: vi.fn(async () => ({ count: 0 })),
+  },
+  outlookCalendarConnection: {
+    findUnique: vi.fn(async () => null),
+    findFirst: vi.fn(async () => null),
+    update: vi.fn(async ({ data }: { data: any }) => ({ ...data })),
+  },
+  outlookCalendarSync: {
+    findUnique: vi.fn(async () => null),
+    findFirst: vi.fn(async () => null),
+    update: vi.fn(async ({ data }: { data: any }) => ({ ...data })),
+    upsert: vi.fn(async ({ create, update }: { create: any; update: any }) => ({ ...create, ...update })),
+  },
+  outlookTrackCalendarSubscription: {
+    findUnique: vi.fn(async () => null),
+  },
+  outlookTrackCalendarSync: {
+    findUnique: vi.fn(async () => null),
+    findFirst: vi.fn(async () => null),
   },
 };
 

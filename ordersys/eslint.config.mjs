@@ -15,6 +15,7 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      ".next-build/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
@@ -29,6 +30,12 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       "react-hooks/exhaustive-deps": "off",
       "@next/next/no-img-element": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 ];
