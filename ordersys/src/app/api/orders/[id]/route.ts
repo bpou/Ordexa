@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import type { OrderTrack } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { getStoredFileUrl } from "@/lib/file-storage";
+import { updateFortnoxOrder } from "@/lib/fortnox";
 
 export const runtime = "nodejs";
 const FILE_URL_TTL_SEC = 600;
@@ -178,6 +179,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  if ((body as { order?: unknown }).order !== undefined) {
+    return updateOrderMasterData(orderId, (body as { order?: unknown }).order, session.user as any);
+  }
+
   if (body.notes !== undefined && body.notes !== null && typeof body.notes !== "string") {
     return NextResponse.json({ error: "Anteckningar måste vara text." }, { status: 400 });
   }
@@ -202,6 +207,152 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     order: {
       orderNumber: updated.orderNumber,
       notes: updated.notes ?? null,
+      updatedAt: updated.updatedAt.toISOString(),
+    },
+  });
+}
+
+async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: { id?: string; role?: Role }) {
+  if (typeof rawPatch !== "object" || rawPatch === null || Array.isArray(rawPatch)) {
+    return NextResponse.json({ error: "Orderuppdatering måste vara ett objekt." }, { status: 400 });
+  }
+
+  const role = user?.role;
+  if (role !== Role.ADMIN && role !== Role.SALJARE) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const existing = await prisma.order.findFirst({
+    where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
+    select: {
+      orderNumber: true,
+      createdById: true,
+      title: true,
+      customerName: true,
+      dueDate: true,
+      deliveryAddress: true,
+      deliveryMethod: true,
+      billingConfirmedAt: true,
+    },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "Order saknas." }, { status: 404 });
+  }
+  if (existing.billingConfirmedAt) {
+    return NextResponse.json({ error: "Fakturerade ordrar kan inte ändras här." }, { status: 409 });
+  }
+  if (role === Role.SALJARE && existing.createdById && user?.id && existing.createdById !== user.id) {
+    return NextResponse.json({ error: "Du kan bara ändra egna ordrar." }, { status: 403 });
+  }
+
+  const patch = rawPatch as Record<string, unknown>;
+  const readText = (key: string, max: number) => {
+    if (!(key in patch)) return undefined;
+    const value = patch[key];
+    if (value === null) return null;
+    if (typeof value !== "string") {
+      throw new Error(`${key} måste vara text.`);
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > max) {
+      throw new Error(`${key} är för långt.`);
+    }
+    return trimmed || null;
+  };
+
+  let title: string | null | undefined;
+  let customerName: string | null | undefined;
+  let deliveryAddress: string | null | undefined;
+  let deliveryMethod: string | null | undefined;
+  try {
+    title = readText("title", 180);
+    customerName = readText("customerName", 180);
+    deliveryAddress = readText("deliveryAddress", 800);
+    deliveryMethod = readText("deliveryMethod", 120);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Ogiltig orderdata." },
+      { status: 400 },
+    );
+  }
+
+  if (title !== undefined && !title) {
+    return NextResponse.json({ error: "Titel krävs." }, { status: 400 });
+  }
+
+  let dueDate: Date | null | undefined;
+  if ("dueDate" in patch) {
+    const raw = patch.dueDate;
+    if (raw === null || raw === "") {
+      dueDate = null;
+    } else if (typeof raw === "string") {
+      const parsed = new Date(raw);
+      if (Number.isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: "Leveransdatum är ogiltigt." }, { status: 400 });
+      }
+      dueDate = parsed;
+    } else {
+      return NextResponse.json({ error: "Leveransdatum måste vara text." }, { status: 400 });
+    }
+  }
+
+  const next = {
+    title: title ?? existing.title,
+    customerName: customerName !== undefined ? customerName : existing.customerName,
+    dueDate: dueDate !== undefined ? dueDate : existing.dueDate,
+    deliveryAddress: deliveryAddress !== undefined ? deliveryAddress : existing.deliveryAddress,
+    deliveryMethod: deliveryMethod !== undefined ? deliveryMethod : existing.deliveryMethod,
+  };
+
+  const fortnoxPayload: Record<string, unknown> = {
+    Remarks: next.title,
+    YourReference: next.customerName ?? next.title,
+    DeliveryName: next.customerName ?? next.title,
+    DeliveryDate: next.dueDate ? next.dueDate.toISOString().slice(0, 10) : null,
+    DeliveryAddress1: next.deliveryAddress || null,
+    WayOfDelivery: next.deliveryMethod || null,
+  };
+
+  try {
+    await updateFortnoxOrder(orderId, fortnoxPayload);
+  } catch (error) {
+    console.error(`[orders/${orderId}] Fortnox update failed`, error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Fortnox kunde inte uppdatera ordern." },
+      { status: 502 },
+    );
+  }
+
+  const updated = await prisma.order.update({
+    where: { orderNumber: orderId },
+    data: {
+      ...(title !== undefined ? { title: next.title } : {}),
+      ...(customerName !== undefined ? { customerName: next.customerName } : {}),
+      ...(dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+      ...(deliveryAddress !== undefined ? { deliveryAddress: next.deliveryAddress } : {}),
+      ...(deliveryMethod !== undefined ? { deliveryMethod: next.deliveryMethod } : {}),
+    },
+    select: {
+      orderNumber: true,
+      title: true,
+      customerName: true,
+      dueDate: true,
+      deliveryAddress: true,
+      deliveryMethod: true,
+      updatedAt: true,
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    order: {
+      orderNumber: updated.orderNumber,
+      title: updated.title,
+      customerName: updated.customerName ?? null,
+      dueDate: updated.dueDate?.toISOString() ?? null,
+      deliveryAddress: updated.deliveryAddress ?? null,
+      deliveryMethod: updated.deliveryMethod ?? null,
       updatedAt: updated.updatedAt.toISOString(),
     },
   });

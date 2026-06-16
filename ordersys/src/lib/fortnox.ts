@@ -403,6 +403,43 @@ export async function createFortnoxOrder(
   return { documentNumber };
 }
 
+export async function updateFortnoxOrder(
+  documentNumber: string,
+  payload: any,
+  tenantId?: string
+): Promise<any> {
+  const doc = String(documentNumber ?? "").trim();
+  if (!doc) {
+    throw new Error("Fortnox document number is required.");
+  }
+
+  const body = JSON.stringify({ Order: { ...payload, DocumentNumber: doc } });
+  const attempts = [
+    { resource: "orders-v2", url: `${API_BASE}/orders-v2/${encodeURIComponent(doc)}` },
+    { resource: "orders", url: `${API_BASE}/orders/${encodeURIComponent(doc)}` },
+  ];
+
+  let lastError = "";
+  for (const attempt of attempts) {
+    const { text, ok, status } = await fortnoxRequestWithRefresh(tenantId, attempt.url, {
+      method: "PUT",
+      body,
+    });
+
+    if (ok) {
+      const json = text ? safeJSON<any>(text) : {};
+      return json?.Order ?? json?.order ?? json;
+    }
+
+    lastError = `Fortnox update order ${attempt.resource} failed (${status}): ${text}`;
+    if (status !== 404 && status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError || `Fortnox update order failed for ${doc}`);
+}
+
 type FortnoxDocumentResource = "orders" | "offers";
 
 export async function listAllFortnoxDocumentNumbers({

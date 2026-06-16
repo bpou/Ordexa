@@ -28,7 +28,10 @@ import {
   History,
   Link2,
   MapPin,
+  PencilLine,
+  Save,
   UploadCloud,
+  X,
 } from "lucide-react";
 type TrackType = AppTrack | "SHARED";
 type Track = AppTrack;
@@ -140,6 +143,10 @@ function canDeleteFilesForRole(role: Role | undefined) {
   return role === "ADMIN" || role === "SALJARE";
 }
 
+function canEditOrderForRole(role: Role | undefined) {
+  return role === "ADMIN" || role === "SALJARE";
+}
+
 function userDisplayName(user: Pick<UserOption, "name" | "email">) {
   return user.name || user.email;
 }
@@ -187,6 +194,11 @@ function parseDate(value: string | number | null | undefined) {
 function formatAuditDate(value: string) {
   const date = parseDate(value);
   return date ? date.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" }) : "-";
+}
+
+function toDateInputValue(value: string | null | undefined) {
+  const date = parseDate(value);
+  return date ? date.toISOString().slice(0, 10) : "";
 }
 
 function auditIcon(icon: AuditItem["icon"]) {
@@ -359,6 +371,168 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+type OrderEditDraft = {
+  title: string;
+  customerName: string;
+  dueDate: string;
+  deliveryAddress: string;
+  deliveryMethod: string;
+};
+
+function OrderEditPanel({
+  order,
+  draft,
+  open,
+  saving,
+  error,
+  onOpenChange,
+  onDraftChange,
+  onSave,
+  onReset,
+}: {
+  order: OrderData;
+  draft: OrderEditDraft;
+  open: boolean;
+  saving: boolean;
+  error: string | null;
+  onOpenChange: (open: boolean) => void;
+  onDraftChange: (draft: OrderEditDraft) => void;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  const patchDraft = (patch: Partial<OrderEditDraft>) => onDraftChange({ ...draft, ...patch });
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-40px_rgba(15,23,42,0.55)]">
+      <div className="flex flex-col gap-4 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 via-white to-brand-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-700">
+            <PencilLine className="h-3.5 w-3.5" aria-hidden />
+            Fortnox + lokalt
+          </div>
+          <h2 className="mt-3 text-lg font-semibold text-neutral-950">Orderuppgifter</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Ändringar sparas först i Fortnox och därefter lokalt i Ordexa.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (open) onReset();
+            onOpenChange(!open);
+          }}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
+        >
+          {open ? <X className="h-4 w-4" aria-hidden /> : <PencilLine className="h-4 w-4" aria-hidden />}
+          {open ? "Stäng" : "Redigera order"}
+        </button>
+      </div>
+
+      {open ? (
+        <div className="p-4 sm:p-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Titel</span>
+              <input
+                value={draft.title}
+                onChange={(event) => patchDraft({ title: event.target.value })}
+                className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Kund / referens</span>
+              <input
+                value={draft.customerName}
+                onChange={(event) => patchDraft({ customerName: event.target.value })}
+                className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Leveransdatum</span>
+              <input
+                type="date"
+                value={draft.dueDate}
+                onChange={(event) => patchDraft({ dueDate: event.target.value })}
+                className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Leveranssätt</span>
+              <input
+                value={draft.deliveryMethod}
+                onChange={(event) => patchDraft({ deliveryMethod: event.target.value })}
+                placeholder="T.ex. Hämtas, Bud, Montör"
+                className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Leveransadress</span>
+              <textarea
+                value={draft.deliveryAddress}
+                onChange={(event) => patchDraft({ deliveryAddress: event.target.value })}
+                rows={3}
+                className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-neutral-500">
+              Senast uppdaterad {order.updatedAt ? new Date(order.updatedAt).toLocaleString("sv-SE") : "-"}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onReset}
+                disabled={saving}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Återställ
+              </button>
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={saving || !draft.title.trim()}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-600 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {saving ? "Sparar..." : "Spara i Fortnox"}
+              </button>
+            </div>
+          </div>
+
+          {error ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="grid gap-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Kund</div>
+            <div className="mt-1 truncate font-semibold text-neutral-900">{order.customerName ?? "-"}</div>
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Leverans</div>
+            <div className="mt-1 font-semibold text-neutral-900">
+              {order.dueDate ? new Date(order.dueDate).toLocaleDateString("sv-SE") : "-"}
+            </div>
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Leveranssätt</div>
+            <div className="mt-1 truncate font-semibold text-neutral-900">{order.deliveryMethod ?? "-"}</div>
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Adress</div>
+            <div className="mt-1 truncate font-semibold text-neutral-900">{order.deliveryAddress ?? "-"}</div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -689,6 +863,7 @@ export default function OrderPage() {
   const role = sessionUser?.role;
   const currentUserId = sessionUser?.id;
   const canDeleteFiles = canDeleteFilesForRole(role);
+  const canEditOrder = canEditOrderForRole(role);
   const orderId = String(id ?? "");
   const [data, setData] = useState<OrderData | null>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -707,6 +882,16 @@ export default function OrderPage() {
   const [savingTimeTracks, setSavingTimeTracks] = useState<Set<Track>>(new Set());
   const [timeErrorsByTrack, setTimeErrorsByTrack] = useState<Partial<Record<Track, string>>>({});
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [orderEditOpen, setOrderEditOpen] = useState(false);
+  const [orderEditDraft, setOrderEditDraft] = useState<OrderEditDraft>({
+    title: "",
+    customerName: "",
+    dueDate: "",
+    deliveryAddress: "",
+    deliveryMethod: "",
+  });
+  const [savingOrderEdit, setSavingOrderEdit] = useState(false);
+  const [orderEditError, setOrderEditError] = useState<string | null>(null);
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarTrack, setCalendarTrack] = useState<Track>(APP_TRACKS[0]);
@@ -723,6 +908,16 @@ export default function OrderPage() {
       setTrack("SHARED");
     }
   }, [track, uploadTrackOptions]);
+
+  function draftFromOrder(order: OrderData): OrderEditDraft {
+    return {
+      title: String(order.title ?? ""),
+      customerName: order.customerName ?? "",
+      dueDate: toDateInputValue(order.dueDate),
+      deliveryAddress: order.deliveryAddress ?? "",
+      deliveryMethod: order.deliveryMethod ?? "",
+    };
+  }
 
   async function load() {
     if (!orderId) return;
@@ -747,9 +942,11 @@ export default function OrderPage() {
       }
 
       setData(order);
+      setOrderEditDraft(draftFromOrder(order));
       lastSavedNotesRef.current = order.notes ?? "";
       setNotesDraft(order.notes ?? "");
       setNotesError(null);
+      setOrderEditError(null);
     } catch (e: any) {
       console.error(e);
       setErr("Tekniskt fel nÃ¤r order skulle hÃ¤mtas.");
@@ -879,6 +1076,73 @@ export default function OrderPage() {
       setNotesError("Tekniskt fel vid sparande av anteckningarna.");
     } finally {
       setSavingNotes(false);
+    }
+  }
+
+  function resetOrderEditDraft() {
+    if (!data) return;
+    setOrderEditDraft(draftFromOrder(data));
+    setOrderEditError(null);
+  }
+
+  async function saveOrderEdit() {
+    if (!orderId || !data) return;
+    if (!orderEditDraft.title.trim()) {
+      setOrderEditError("Titel krävs.");
+      return;
+    }
+
+    setSavingOrderEdit(true);
+    setOrderEditError(null);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order: {
+            title: orderEditDraft.title,
+            customerName: orderEditDraft.customerName,
+            dueDate: orderEditDraft.dueDate || null,
+            deliveryAddress: orderEditDraft.deliveryAddress,
+            deliveryMethod: orderEditDraft.deliveryMethod,
+          },
+        }),
+      });
+
+      const text = await res.text();
+      const payload = text ? JSON.parse(text) : null;
+
+      if (!res.ok) {
+        setOrderEditError(payload?.error || "Kunde inte uppdatera ordern.");
+        return;
+      }
+
+      const updated = payload?.order ?? {};
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          title: updated.title ?? prev.title,
+          customerName: updated.customerName ?? null,
+          dueDate: updated.dueDate ?? null,
+          deliveryAddress: updated.deliveryAddress ?? null,
+          deliveryMethod: updated.deliveryMethod ?? null,
+          updatedAt: updated.updatedAt ?? prev.updatedAt,
+        };
+      });
+      setOrderEditDraft((prev) => ({
+        ...prev,
+        title: updated.title ?? prev.title,
+        customerName: updated.customerName ?? "",
+        dueDate: toDateInputValue(updated.dueDate),
+        deliveryAddress: updated.deliveryAddress ?? "",
+        deliveryMethod: updated.deliveryMethod ?? "",
+      }));
+      setOrderEditOpen(false);
+    } catch {
+      setOrderEditError("Tekniskt fel vid uppdatering av ordern.");
+    } finally {
+      setSavingOrderEdit(false);
     }
   }
 
@@ -1063,6 +1327,20 @@ export default function OrderPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
           {statusError}
         </div>
+      ) : null}
+
+      {canEditOrder ? (
+        <OrderEditPanel
+          order={data}
+          draft={orderEditDraft}
+          open={orderEditOpen}
+          saving={savingOrderEdit}
+          error={orderEditError}
+          onOpenChange={setOrderEditOpen}
+          onDraftChange={setOrderEditDraft}
+          onSave={() => void saveOrderEdit()}
+          onReset={resetOrderEditDraft}
+        />
       ) : null}
 
       
