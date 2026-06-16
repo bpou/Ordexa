@@ -20,7 +20,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type SupplierInvoiceStatus = "overdue" | "open" | "paid" | "cancelled" | "draft";
+type SupplierInvoiceStatus =
+  | "overdue"
+  | "open"
+  | "paid"
+  | "cancelled"
+  | "draft";
 
 type SupplierInvoice = {
   supplierInvoiceNumber: string;
@@ -112,8 +117,16 @@ function daysUntil(value: string | undefined) {
   const date = toDate(value);
   if (!date) return "Saknar förfallodatum";
   const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  ).getTime();
+  const target = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
   const diff = Math.round((target - start) / 86400000);
   if (diff < 0) return `${Math.abs(diff)} dagar sen`;
   if (diff === 0) return "Förfaller idag";
@@ -170,10 +183,14 @@ export default function SupplierInvoicesClient() {
         ? (json.supplierInvoices as SupplierInvoice[])
         : [];
       setInvoices(rows);
-      setSelectedId((current) => current ?? rows[0]?.supplierInvoiceNumber ?? null);
+      setSelectedId(
+        (current) => current ?? rows[0]?.supplierInvoiceNumber ?? null,
+      );
 
       if (json?.warning === "missing_scope") {
-        setWarning("Fortnox-kopplingen saknar behörighet för leverantörsfakturor.");
+        setWarning(
+          "Fortnox-kopplingen saknar scope: supplierinvoice. Koppla om Fortnox för att godkänna leverantörsfakturor.",
+        );
       }
     } catch (err: any) {
       setError(err?.message ?? "Kunde inte ladda leverantörsfakturor.");
@@ -189,7 +206,9 @@ export default function SupplierInvoicesClient() {
   }, []);
 
   const stats = useMemo(() => {
-    const open = invoices.filter((item) => item.status === "open" || item.status === "overdue");
+    const open = invoices.filter(
+      (item) => item.status === "open" || item.status === "overdue",
+    );
     const overdue = invoices.filter((item) => item.status === "overdue");
     const drafts = invoices.filter((item) => item.status === "draft");
     const dueSoon = open.filter((item) => {
@@ -197,8 +216,13 @@ export default function SupplierInvoicesClient() {
       if (!date) return false;
       const today = new Date();
       const diff = Math.round(
-        (date.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) /
-          86400000
+        (date.getTime() -
+          new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
+          ).getTime()) /
+          86400000,
       );
       return diff >= 0 && diff <= 7;
     });
@@ -208,8 +232,14 @@ export default function SupplierInvoicesClient() {
       overdueCount: overdue.length,
       draftCount: drafts.length,
       dueSoonCount: dueSoon.length,
-      openBalance: open.reduce((sum, item) => sum + (item.balance ?? item.total ?? 0), 0),
-      overdueBalance: overdue.reduce((sum, item) => sum + (item.balance ?? item.total ?? 0), 0),
+      openBalance: open.reduce(
+        (sum, item) => sum + (item.balance ?? item.total ?? 0),
+        0,
+      ),
+      overdueBalance: overdue.reduce(
+        (sum, item) => sum + (item.balance ?? item.total ?? 0),
+        0,
+      ),
     };
   }, [invoices]);
 
@@ -231,7 +261,10 @@ export default function SupplierInvoicesClient() {
       if (sort === "total") {
         return (b.total ?? 0) - (a.total ?? 0);
       }
-      return (toDate(a.dueDate)?.getTime() ?? 9e15) - (toDate(b.dueDate)?.getTime() ?? 9e15);
+      return (
+        (toDate(a.dueDate)?.getTime() ?? 9e15) -
+        (toDate(b.dueDate)?.getTime() ?? 9e15)
+      );
     });
   }, [invoices, query, sort, status]);
 
@@ -254,87 +287,87 @@ export default function SupplierInvoicesClient() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="relative -mx-4 -my-4 min-h-screen bg-neutral-50 px-4 py-6 sm:-mx-6 sm:-my-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
-        <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 text-white shadow-[0_28px_90px_-62px_rgba(15,23,42,0.85)]">
-          <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_430px]">
-            <div className="p-6 sm:p-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-                <Banknote className="h-4 w-4" />
-                Fortnox ekonomi
-              </div>
-              <h1 className="mt-5 text-3xl font-semibold leading-tight sm:text-4xl">
-                Leverantörsfakturor
-              </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65">
-                Se vad som behöver betalas, vad som är försenat och vilka fakturor
-                som behöver följas upp innan de fastnar i flödet.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void load({ silent: true })}
-                  disabled={refreshing}
-                  className="border-white/15 bg-white text-neutral-950 hover:bg-white/90"
-                >
-                  {refreshing ? (
-                    <OrdinaLogoSpinner size={16} />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Uppdatera
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white"
-                  onClick={() => setStatus("overdue")}
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Visa försenade
-                </Button>
-              </div>
+        <section className="grid gap-5 py-2 text-neutral-950 xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
+          <div className="pt-2 sm:pt-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-800">
+              <Banknote className="h-4 w-4" />
+              Fortnox ekonomi
             </div>
+            <h1 className="mt-5 text-3xl font-semibold leading-tight sm:text-4xl">
+              Leverantörsfakturor
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
+              Se vad som behöver betalas, vad som är försenat och vilka fakturor
+              som behöver följas upp innan de fastnar i flödet.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => void load({ silent: true })}
+                disabled={refreshing}
+                className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
+              >
+                {refreshing ? (
+                  <OrdinaLogoSpinner size={16} />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Uppdatera
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                onClick={() => setStatus("overdue")}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Visa försenade
+              </Button>
+            </div>
+          </div>
 
-            <div className="grid gap-3 border-t border-white/10 bg-white/[0.04] p-4 sm:grid-cols-2 xl:border-l xl:border-t-0">
-              <div className="rounded-xl border border-white/10 bg-white/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/55">
-                  Att betala
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {loading ? "..." : formatMoney(stats.openBalance)}
-                </p>
-                <p className="mt-1 text-xs text-white/55">{stats.openCount} fakturor</p>
-              </div>
-              <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-100/75">
-                  Försenat
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-red-50">
-                  {loading ? "..." : formatMoney(stats.overdueBalance)}
-                </p>
-                <p className="mt-1 text-xs text-red-100/65">
-                  {stats.overdueCount} behöver åtgärd
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/55">
-                  Nära förfall
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {loading ? "..." : stats.dueSoonCount}
-                </p>
-                <p className="mt-1 text-xs text-white/55">inom 7 dagar</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/55">
-                  Ej bokförda
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {loading ? "..." : stats.draftCount}
-                </p>
-                <p className="mt-1 text-xs text-white/55">kräver kontroll</p>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-neutral-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Att betala
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-neutral-950">
+                {loading ? "..." : formatMoney(stats.openBalance)}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">
+                {stats.openCount} fakturor
+              </p>
+            </div>
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                Försenat
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-red-900">
+                {loading ? "..." : formatMoney(stats.overdueBalance)}
+              </p>
+              <p className="mt-1 text-xs text-red-700">
+                {stats.overdueCount} behöver åtgärd
+              </p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Nära förfall
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-neutral-950">
+                {loading ? "..." : stats.dueSoonCount}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">inom 7 dagar</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Ej bokförda
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-neutral-950">
+                {loading ? "..." : stats.draftCount}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">kräver kontroll</p>
             </div>
           </div>
         </section>
@@ -375,7 +408,7 @@ export default function SupplierInvoicesClient() {
                         "h-9 rounded-lg border px-3 text-sm font-semibold transition",
                         status === tab.key
                           ? "border-neutral-900 bg-neutral-900 text-white"
-                          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
                       )}
                     >
                       {tab.label}
@@ -429,50 +462,73 @@ export default function SupplierInvoicesClient() {
                   {filtered.map((invoice) => {
                     const meta = statusMeta[invoice.status];
                     const Icon = meta.icon;
-                    const active = invoice.supplierInvoiceNumber === selected?.supplierInvoiceNumber;
+                    const active =
+                      invoice.supplierInvoiceNumber ===
+                      selected?.supplierInvoiceNumber;
 
                     return (
                       <button
                         key={invoice.supplierInvoiceNumber}
                         type="button"
-                        onClick={() => setSelectedId(invoice.supplierInvoiceNumber)}
+                        onClick={() =>
+                          setSelectedId(invoice.supplierInvoiceNumber)
+                        }
                         className={cn(
                           "grid w-full gap-3 px-5 py-4 text-left transition hover:bg-neutral-50 lg:grid-cols-[minmax(0,1.4fr)_120px_120px_130px]",
-                          active && "bg-neutral-50"
+                          active && "bg-neutral-50",
                         )}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold", meta.tone)}>
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
+                                meta.tone,
+                              )}
+                            >
                               <Icon className="h-3.5 w-3.5" />
                               {meta.label}
                             </span>
                             <span className="text-xs font-medium text-neutral-500">
-                              #{invoice.givenNumber ?? invoice.supplierInvoiceNumber}
+                              #
+                              {invoice.givenNumber ??
+                                invoice.supplierInvoiceNumber}
                             </span>
                           </div>
                           <p className="mt-2 truncate text-sm font-semibold text-neutral-900">
                             {invoice.supplierName}
                           </p>
                           <p className="mt-1 truncate text-xs text-neutral-500">
-                            OCR {invoice.ocr ?? invoice.paymentReference ?? "-"} · Fortnox {invoice.supplierInvoiceNumber}
+                            OCR {invoice.ocr ?? invoice.paymentReference ?? "-"}{" "}
+                            · Fortnox {invoice.supplierInvoiceNumber}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-neutral-400">Förfall</p>
+                          <p className="text-xs uppercase tracking-wide text-neutral-400">
+                            Förfall
+                          </p>
                           <p className="mt-1 text-sm font-semibold text-neutral-800">
                             {formatDate(invoice.dueDate)}
                           </p>
-                          <p className="text-xs text-neutral-500">{daysUntil(invoice.dueDate)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-neutral-400">Rest</p>
-                          <p className="mt-1 text-sm font-semibold text-neutral-900">
-                            {formatMoney(invoice.balance ?? invoice.total, invoice.currency)}
+                          <p className="text-xs text-neutral-500">
+                            {daysUntil(invoice.dueDate)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-neutral-400">Bokförd</p>
+                          <p className="text-xs uppercase tracking-wide text-neutral-400">
+                            Rest
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-900">
+                            {formatMoney(
+                              invoice.balance ?? invoice.total,
+                              invoice.currency,
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-neutral-400">
+                            Bokförd
+                          </p>
                           <p className="mt-1 text-sm font-semibold text-neutral-800">
                             {invoice.booked === false ? "Nej" : "Ja"}
                           </p>
@@ -503,28 +559,43 @@ export default function SupplierInvoicesClient() {
                         <p className="text-sm font-semibold text-neutral-900">
                           {selected.supplierName}
                         </p>
-                        <span className={cn("rounded-full border px-2 py-0.5 text-xs font-semibold", statusMeta[selected.status].tone)}>
+                        <span
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-xs font-semibold",
+                            statusMeta[selected.status].tone,
+                          )}
+                        >
                           {statusMeta[selected.status].label}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-neutral-500">
-                        Faktura {selected.givenNumber ?? selected.supplierInvoiceNumber}
+                        Faktura{" "}
+                        {selected.givenNumber ?? selected.supplierInvoiceNumber}
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <p className="text-xs uppercase tracking-wide text-neutral-500">Rest</p>
+                        <p className="text-xs uppercase tracking-wide text-neutral-500">
+                          Rest
+                        </p>
                         <p className="mt-1 text-lg font-semibold text-neutral-950">
-                          {formatMoney(selected.balance ?? selected.total, selected.currency)}
+                          {formatMoney(
+                            selected.balance ?? selected.total,
+                            selected.currency,
+                          )}
                         </p>
                       </div>
                       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <p className="text-xs uppercase tracking-wide text-neutral-500">Förfall</p>
+                        <p className="text-xs uppercase tracking-wide text-neutral-500">
+                          Förfall
+                        </p>
                         <p className="mt-1 text-sm font-semibold text-neutral-950">
                           {formatDate(selected.dueDate)}
                         </p>
-                        <p className="text-xs text-neutral-500">{daysUntil(selected.dueDate)}</p>
+                        <p className="text-xs text-neutral-500">
+                          {daysUntil(selected.dueDate)}
+                        </p>
                       </div>
                     </div>
 
@@ -570,7 +641,13 @@ export default function SupplierInvoicesClient() {
                         type="button"
                         variant="outline"
                         className="justify-start"
-                        onClick={() => window.open("https://www.fortnox.se/", "_blank", "noopener,noreferrer")}
+                        onClick={() =>
+                          window.open(
+                            "https://www.fortnox.se/",
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
                       >
                         <ExternalLink className="h-4 w-4" />
                         Öppna Fortnox
@@ -578,9 +655,10 @@ export default function SupplierInvoicesClient() {
                     </div>
 
                     <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-3 text-xs leading-5 text-neutral-600">
-                      Bokföring, makulering och betalregistrering görs fortfarande i
-                      Fortnox. Här visas kön och betalningsunderlaget så att
-                      ekonomi kan arbeta snabbare utan att riskera felklick.
+                      Bokföring, makulering och betalregistrering görs
+                      fortfarande i Fortnox. Här visas kön och
+                      betalningsunderlaget så att ekonomi kan arbeta snabbare
+                      utan att riskera felklick.
                     </div>
                   </>
                 ) : (
