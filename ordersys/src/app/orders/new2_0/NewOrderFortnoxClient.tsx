@@ -39,7 +39,7 @@ import { AnimatedSelect } from "@/components/AnimatedSelect";
 
 import { CustomerReferencePicker } from "@/components/CustomerReferencePicker";
 
-import { useNewOrderForm } from "../new/useNewOrderForm";
+import { FORTNOX_UNIT_OPTIONS, normalizeFortnoxUnitCode, useNewOrderForm } from "../new/useNewOrderForm";
 
 import type { Account, AppTrack, Article, Row } from "../new/useNewOrderForm";
 
@@ -1163,17 +1163,17 @@ function OrderRow({
 
       <div className="col-span-1">
 
-        <input
-
-          placeholder="st"
-
-          value={row.unit ?? ""}
-
+        <select
+          value={normalizeFortnoxUnitCode(row.unit)}
           onChange={(e) => onUpdate(index, { unit: e.target.value })}
-
-          className="block h-full w-full bg-transparent px-3 py-0.5 focus:outline-none focus:ring-0"
-
-        />
+          className="block h-full w-full bg-transparent px-2 py-0.5 text-[12px] focus:outline-none focus:ring-0"
+        >
+          {FORTNOX_UNIT_OPTIONS.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.code} - {option.text}
+            </option>
+          ))}
+        </select>
 
       </div>
 

@@ -68,6 +68,19 @@ type ManualSlot = {
 
 const DEFAULT_VAT_PERCENT = 25;
 
+export const FORTNOX_UNIT_OPTIONS = [
+  { code: "förp", englishCode: "pack", text: "förpackning" },
+  { code: "h", englishCode: "h", text: "timmar" },
+  { code: "km", englishCode: "km", text: "Kilometer" },
+  { code: "st", englishCode: "pcs", text: "styck" },
+  { code: "utl", englishCode: "exp", text: "Utlägg" },
+] as const;
+
+const FORTNOX_UNIT_CODES = new Set(FORTNOX_UNIT_OPTIONS.map((option) => option.code));
+const FORTNOX_UNIT_ALIASES = new Map(
+  FORTNOX_UNIT_OPTIONS.map((option) => [option.englishCode.toLowerCase(), option.code])
+);
+
 const DISTRIBUTION_METHOD_MAP: Record<string, string> = {
   "Utskrift": "PRINT",
   "E-post": "EMAIL",
@@ -110,6 +123,17 @@ function parseLocaleNumber(value: string | number | null | undefined): number {
     .replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function normalizeFortnoxUnitCode(value: string | null | undefined): string {
+  const unit = value?.trim();
+  if (!unit) return "st";
+
+  if (FORTNOX_UNIT_CODES.has(unit as (typeof FORTNOX_UNIT_OPTIONS)[number]["code"])) {
+    return unit;
+  }
+
+  return FORTNOX_UNIT_ALIASES.get(unit.toLowerCase()) ?? "st";
 }
 
 function createEmptyRow(): Row {
@@ -216,12 +240,13 @@ function normalizeRowFromTransfer(raw: any): Row {
             : undefined,
     OrderedQuantity: normalizedQty,
     price: Number.isFinite(price) ? price : 0,
-    unit:
+    unit: normalizeFortnoxUnitCode(
       typeof raw?.unit === "string"
         ? raw.unit
         : typeof raw?.Unit === "string"
           ? raw.Unit
-          : undefined,
+          : undefined
+    ),
     ReservedQuantity: Number.isFinite(reserved) ? reserved : base.ReservedQuantity,
     DeliveredQuantity: Number.isFinite(delivered) ? delivered : base.DeliveredQuantity,
     Discount: Number.isFinite(discount) ? discount : base.Discount,
@@ -1078,7 +1103,7 @@ export function useNewOrderForm({
         description: r.description || title,
         OrderedQuantity: orderedQuantity > 0 ? orderedQuantity : 1,
         price,
-        unit: r.unit || "st",
+        unit: normalizeFortnoxUnitCode(r.unit),
         ReservedQuantity: reservedQuantity,
         DeliveredQuantity: deliveredQuantity,
         Discount: discount,
@@ -1149,7 +1174,7 @@ export function useNewOrderForm({
         OrderedQuantity: orderedQuantity > 0 ? orderedQuantity : 1,
         ReservedQuantity: reservedQuantity,
         DeliveredQuantity: deliveredQuantity,
-        Unit: r.unit || "st",
+        Unit: normalizeFortnoxUnitCode(r.unit),
         Price: price,
         Discount: discount,
         VAT: Number.isFinite(vat) ? vat : DEFAULT_VAT_PERCENT,
