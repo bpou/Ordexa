@@ -1005,15 +1005,38 @@ function readFortnoxString(raw: any, ...keys: string[]) {
   return undefined;
 }
 
+function readFortnoxUrlId(raw: any) {
+  const url = readFortnoxString(raw, "@url", "url");
+  if (!url) return undefined;
+  const [, id] = url.match(/\/([^/?#]+)(?:[?#].*)?$/) ?? [];
+  return id ? decodeURIComponent(id) : undefined;
+}
+
+function firstFortnoxArray(...values: any[]) {
+  for (const value of values) {
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
 function normalizeFortnoxSupplierInvoice(raw: any): FortnoxSupplierInvoice {
   const supplierInvoiceNumber =
     readFortnoxString(
       raw,
       "SupplierInvoiceNumber",
       "supplierInvoiceNumber",
+      "GivenNumber",
+      "givenNumber",
+      "InvoiceNumber",
+      "invoiceNumber",
       "Number",
       "number"
-    ) ?? "";
+    ) ??
+    readFortnoxUrlId(raw) ??
+    "";
+  const givenNumber =
+    readFortnoxString(raw, "GivenNumber", "givenNumber") ??
+    supplierInvoiceNumber;
   const dueDate = readFortnoxString(raw, "DueDate", "dueDate");
   const finalPayDate = readFortnoxString(raw, "FinalPayDate", "finalPayDate");
   const total = parseFortnoxNumber(raw?.Total ?? raw?.total);
@@ -1043,7 +1066,7 @@ function normalizeFortnoxSupplierInvoice(raw: any): FortnoxSupplierInvoice {
 
   return {
     supplierInvoiceNumber,
-    givenNumber: readFortnoxString(raw, "GivenNumber", "givenNumber"),
+    givenNumber,
     supplierNumber: readFortnoxString(raw, "SupplierNumber", "supplierNumber"),
     supplierName:
       readFortnoxString(raw, "SupplierName", "supplierName", "Name", "name") ??
@@ -1096,13 +1119,21 @@ export async function listFortnoxSupplierInvoices({
   if (!ok) throw new Error(`Fortnox supplier invoices failed (${status}): ${text}`);
 
   const json: any = safeJSON(text);
-  const rows =
-    json?.SupplierInvoices ??
-    json?.SupplierInvoiceSubset ??
-    json?.supplierInvoices ??
-    json?.Items ??
-    json?.items ??
-    [];
+  const rows = firstFortnoxArray(
+    json?.SupplierInvoices,
+    json?.SupplierInvoiceSubset,
+    json?.SupplierInvoiceSubsets,
+    json?.SupplierInvoice,
+    json?.supplierInvoices,
+    json?.supplierInvoiceSubset,
+    json?.supplierInvoiceSubsets,
+    json?.items,
+    json?.Items,
+    json?.SupplierInvoices?.SupplierInvoiceSubset,
+    json?.SupplierInvoices?.SupplierInvoice,
+    json?.SupplierInvoiceSubset?.SupplierInvoice,
+    json?.SupplierInvoiceSubsets?.SupplierInvoice
+  );
 
   const items = Array.isArray(rows)
     ? rows

@@ -47,10 +47,16 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     const message = String(error?.message ?? "");
     if (message.includes("2000663") || message.toLowerCase().includes("scope")) {
-      return NextResponse.json({
-        supplierInvoices: [],
-        warning: "missing_scope",
-      });
+      return NextResponse.json(
+        {
+          error:
+            "Fortnox-kopplingen saknar scope: supplierinvoice. Koppla om Fortnox och godkänn leverantörsfakturor.",
+          requiredScope: "supplierinvoice",
+          supplierInvoices: [],
+          warning: "missing_scope",
+        },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json(
