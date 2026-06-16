@@ -120,7 +120,7 @@ function createEmptyRow(): Row {
     price: 0,
     unit: "st",
     ReservedQuantity: 0,
-    DeliveredQuantity: 0,
+    DeliveredQuantity: 1,
     Discount: 0,
     VatPercent: DEFAULT_VAT_PERCENT,
     AccountNumber: "",
@@ -183,7 +183,11 @@ function normalizeRowFromTransfer(raw: any): Row {
   const qty = Number(raw?.OrderedQuantity ?? raw?.orderedQuantity ?? raw?.quantity ?? 1);
   const price = Number(raw?.price ?? raw?.Price ?? 0);
   const reserved = Number(raw?.ReservedQuantity ?? raw?.reservedQuantity ?? 0);
-  const delivered = Number(raw?.DeliveredQuantity ?? raw?.deliveredQuantity ?? 0);
+  const normalizedQty = Number.isFinite(qty) && qty > 0 ? qty : 1;
+  const hasDeliveredQuantity = raw?.DeliveredQuantity !== undefined || raw?.deliveredQuantity !== undefined;
+  const delivered = hasDeliveredQuantity
+    ? Number(raw?.DeliveredQuantity ?? raw?.deliveredQuantity)
+    : normalizedQty;
   const discount = Number(raw?.Discount ?? raw?.discount ?? 0);
   const vat =
     Number(
@@ -210,7 +214,7 @@ function normalizeRowFromTransfer(raw: any): Row {
           : typeof raw?.Description === "string"
             ? raw.Description
             : undefined,
-    OrderedQuantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
+    OrderedQuantity: normalizedQty,
     price: Number.isFinite(price) ? price : 0,
     unit:
       typeof raw?.unit === "string"
@@ -760,7 +764,21 @@ export function useNewOrderForm({
 
   const updateRow = useCallback(
     (i: number, patch: Partial<Row>) =>
-      setRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row))),
+      setRows((r) =>
+        r.map((row, idx) => {
+          if (idx !== i) return row;
+
+          const shouldSyncDelivered =
+            Object.prototype.hasOwnProperty.call(patch, "OrderedQuantity") &&
+            !Object.prototype.hasOwnProperty.call(patch, "DeliveredQuantity");
+
+          return {
+            ...row,
+            ...patch,
+            ...(shouldSyncDelivered ? { DeliveredQuantity: patch.OrderedQuantity } : {}),
+          };
+        })
+      ),
     []
   );
 
