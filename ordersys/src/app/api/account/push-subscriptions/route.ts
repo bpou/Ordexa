@@ -104,12 +104,12 @@ export async function PUT() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await sendWebPushToUser(userId, {
+  const result = await sendWebPushToUser(userId, {
     title: "Ordexa-notiser är aktiva",
     body: "Den här datorn kan ta emot notiser även när Ordexa-fliken är stängd.",
     url: "/account",
     tag: "push-test",
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...result });
 }

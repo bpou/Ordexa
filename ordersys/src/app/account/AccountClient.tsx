@@ -323,12 +323,19 @@ export default function AccountClient({ user }: AccountClientProps) {
 
       const registration = await navigator.serviceWorker.register("/sw.js");
       const existing = await registration.pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
+      if (existing) {
+        await fetch("/api/account/push-subscriptions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+        });
+        await existing.unsubscribe();
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
 
       const res = await fetch("/api/account/push-subscriptions", {
         method: "POST",
@@ -381,8 +388,13 @@ export default function AccountClient({ user }: AccountClientProps) {
     setPushMessage(null);
     try {
       const res = await fetch("/api/account/push-subscriptions", { method: "PUT" });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setPushMessage({ kind: "error", text: "Kunde inte skicka testnotis." });
+        return;
+      }
+      if (typeof data?.sent === "number" && data.sent < 1) {
+        setPushMessage({ kind: "error", text: "Ingen aktiv enhet hittades. Tryck Förnya och testa igen." });
         return;
       }
       setPushMessage({ kind: "success", text: "Testnotis skickad." });
@@ -912,6 +924,15 @@ export default function AccountClient({ user }: AccountClientProps) {
                       >
                         {pushBusy ? <OrdinaLogoSpinner size={16} /> : <Bell className="h-4 w-4" aria-hidden />}
                         Testa
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void enableDesktopNotifications()}
+                        disabled={pushBusy || pushStatus.configured === false}
+                      >
+                        Förnya
                       </Button>
                       <Button
                         type="button"
