@@ -10,6 +10,8 @@ import { randomUUID } from "crypto";
 import { normalizeTrack } from "@/lib/tracks";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
+import { sendNotificationEmail } from "@/lib/email";
+import { canSendNotification, getNotificationPreferences } from "@/lib/notification-preferences";
 import { sendWebPushToUser } from "@/lib/web-push";
 
 export const runtime = "nodejs";
@@ -56,7 +58,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const order = await prisma.order.findFirst({
       where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
-      select: { orderNumber: true, title: true, createdById: true },
+      select: {
+        orderNumber: true,
+        title: true,
+        createdById: true,
+        createdBy: { select: { id: true, email: true, name: true } },
+      },
     });
 
     if (!order) {
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       rawTrack === "SHARED" ? "SHARED" : normalizeTrack(rawTrack ?? undefined);
 
     if (rawTrack !== "SHARED" && !normalizedTrack) {
-      return NextResponse.json({ error: "Ogiltigt spår" }, { status: 400 });
+      return NextResponse.json({ error: "Ogiltigt spar" }, { status: 400 });
     }
 
     const trackForSave = (normalizedTrack ?? "SHARED") as Track;
@@ -124,13 +131,33 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     };
 
     await pusherServer.trigger(`order-${orderId}`, "file:created", payload);
-    if (order.createdById && order.createdById !== uploadedById) {
-      await sendWebPushToUser(order.createdById, {
-        title: "Ny fil uppladdad",
-        body: `${saved.filename} lades till på order #${order.orderNumber} ${order.title}.`,
-        url: `/orders/${order.orderNumber}`,
-        tag: `file-${saved.id}`,
-      });
+
+    if (order.createdBy && order.createdById !== uploadedById) {
+      const preferences = await getNotificationPreferences(order.createdBy.id);
+      const viewLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/orders/${order.orderNumber}`;
+      const notificationBody = `${saved.filename} lades till pa order #${order.orderNumber} ${order.title}.`;
+
+      if (order.createdBy.email && canSendNotification(preferences, "orderUpdates", "email")) {
+        await sendNotificationEmail({
+          to: order.createdBy.email,
+          subject: `Ny fil uppladdad pa order ${order.orderNumber}`,
+          title: "Ny fil uppladdad",
+          body: notificationBody,
+          actionUrl: viewLink,
+          actionLabel: "Oppna order",
+        }).catch((error) => {
+          console.error("Failed to send file upload email notification:", error);
+        });
+      }
+
+      if (canSendNotification(preferences, "orderUpdates", "desktop")) {
+        await sendWebPushToUser(order.createdBy.id, {
+          title: "Ny fil uppladdad",
+          body: notificationBody,
+          url: `/orders/${order.orderNumber}`,
+          tag: `file-${saved.id}`,
+        });
+      }
     }
 
     return NextResponse.json({ ok: true, file: payload });

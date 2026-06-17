@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { Prisma, Role, Track } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
+import { getNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -69,6 +70,12 @@ function trackLabel(track: Track) {
   return "Delad";
 }
 
+function isKindEnabled(kind: NotificationItem["kind"], preferences: NotificationPreferences) {
+  if (kind === "calendar" || kind === "planning") return preferences.calendarDigest;
+  if (kind === "order" || kind === "file" || kind === "billing") return preferences.orderUpdates;
+  return preferences.securityAlerts;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as
@@ -79,7 +86,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [orders, outlookConnection] = await Promise.all([
+  const [orders, outlookConnection, preferences] = await Promise.all([
     prisma.order.findMany({
       where: {
         ...orderVisibilityWhere(sessionUser),
@@ -99,6 +106,7 @@ export async function GET() {
           select: { syncError: true, lastSyncedAt: true, updatedAt: true },
         })
       : Promise.resolve(null),
+    sessionUser.id ? getNotificationPreferences(sessionUser.id) : Promise.resolve(null),
   ]);
 
   const now = Date.now();
@@ -190,6 +198,7 @@ export async function GET() {
   }
 
   const sorted = items
+    .filter((item) => (preferences ? isKindEnabled(item.kind, preferences) : true))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 12);
 

@@ -18,6 +18,61 @@ export interface OrderCompletionEmailData {
   sellerName?: string;
 }
 
+type NotificationEmailData = {
+  to: string;
+  subject: string;
+  title: string;
+  body: string;
+  actionUrl?: string;
+  actionLabel?: string;
+};
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export async function sendNotificationEmail(data: NotificationEmailData) {
+  const actionHtml =
+    data.actionUrl && data.actionLabel
+      ? `<p style="margin:28px 0 0;"><a href="${escapeHtml(data.actionUrl)}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;border-radius:10px;padding:12px 18px;font-weight:700;">${escapeHtml(data.actionLabel)}</a></p>`
+      : "";
+
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL,
+    to: data.to,
+    subject: data.subject,
+    html: `
+      <!DOCTYPE html>
+      <html lang="sv">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${escapeHtml(data.title)}</title>
+      </head>
+      <body style="margin:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#111827;">
+        <div style="max-width:620px;margin:32px auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <div style="padding:24px 28px;border-bottom:1px solid #e5e7eb;">
+            <h1 style="margin:0;font-size:22px;line-height:1.3;">${escapeHtml(data.title)}</h1>
+          </div>
+          <div style="padding:26px 28px;">
+            <p style="margin:0;color:#374151;font-size:15px;line-height:1.65;">${escapeHtml(data.body)}</p>
+            ${actionHtml}
+          </div>
+          <div style="padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+            Automatisk notifiering från Ordexa.
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  });
+}
+
 export async function sendOrderCompletionNotification(data: OrderCompletionEmailData) {
   const { orderId, completionDate, viewLink, sellerEmail, sellerName } = data;
 

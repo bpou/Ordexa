@@ -6,6 +6,7 @@ import type { Role, Track, TrackStatus } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { authOptions } from "@/lib/auth";
 import { sendOrderCompletionNotification } from "@/lib/email";
+import { canSendNotification, getNotificationPreferences } from "@/lib/notification-preferences";
 import { sendWebPushToUser } from "@/lib/web-push";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyActiveOrders } from "@/lib/filters";
@@ -32,7 +33,7 @@ export async function POST(
     return NextResponse.json({ error: "Saknar order-id" }, { status: 400 });
   }
   if (!normalizedTrack) {
-    return NextResponse.json({ error: "Ogiltigt spår" }, { status: 400 });
+    return NextResponse.json({ error: "Ogiltigt spar" }, { status: 400 });
   }
 
   const session = await getServerSession(authOptions);
@@ -44,7 +45,7 @@ export async function POST(
 
   if (!canManageTrack(role, normalizedTrack as Track)) {
     return NextResponse.json(
-      { error: "Du saknar behörighet för att uppdatera detta spår" },
+      { error: "Du saknar behorighet for att uppdatera detta spar" },
       { status: 403 }
     );
   }
@@ -59,7 +60,7 @@ export async function POST(
   const status = (body as { status?: TrackStatus })?.status;
   if (!status || !VALID_STATUS.includes(status)) {
     return NextResponse.json(
-      { error: "Ogiltig status. Tillåtna: INKOMMANDE, PÅGÅENDE, LEVERANS, AVSLUTAD, PALACK" },
+      { error: "Ogiltig status. Tillatna: INKOMMANDE, PAGAENDE, LEVERANS, AVSLUTAD, PALACK" },
       { status: 400 }
     );
   }
@@ -72,7 +73,7 @@ export async function POST(
 
     if (!order) {
       return NextResponse.json(
-        { error: "Order saknas eller är redan fakturerad" },
+        { error: "Order saknas eller ar redan fakturerad" },
         { status: 404 }
       );
     }
@@ -97,17 +98,15 @@ export async function POST(
       },
     });
 
-    // Check if all tracks are completed (AVSLUTAD)
     if (status === "AVSLUTAD") {
       const allTracks = await prisma.orderTrack.findMany({
         where: { orderId: order.orderNumber },
         select: { status: true },
       });
 
-      const allCompleted = allTracks.every(track => track.status === "AVSLUTAD");
+      const allCompleted = allTracks.every((track) => track.status === "AVSLUTAD");
 
       if (allCompleted) {
-        // Get order details and seller info
         const orderDetails = await prisma.order.findUnique({
           where: { orderNumber: order.orderNumber },
           select: {
@@ -123,26 +122,32 @@ export async function POST(
           },
         });
 
-        if (orderDetails?.createdBy?.email) {
-          try {
-            await sendOrderCompletionNotification({
-              orderId: orderDetails.orderNumber,
-              completionDate: new Date().toLocaleDateString('sv-SE'),
-              viewLink: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/orders/${orderDetails.orderNumber}`,
-              sellerEmail: orderDetails.createdBy.email,
-              sellerName: orderDetails.createdBy.name || undefined,
-            });
-          } catch (emailError) {
-            console.error('Failed to send completion notification:', emailError);
-            // Don't fail the request if email fails
+        if (orderDetails?.createdBy) {
+          const preferences = await getNotificationPreferences(orderDetails.createdBy.id);
+          const viewLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/orders/${orderDetails.orderNumber}`;
+
+          if (orderDetails.createdBy.email && canSendNotification(preferences, "orderUpdates", "email")) {
+            try {
+              await sendOrderCompletionNotification({
+                orderId: orderDetails.orderNumber,
+                completionDate: new Date().toLocaleDateString("sv-SE"),
+                viewLink,
+                sellerEmail: orderDetails.createdBy.email,
+                sellerName: orderDetails.createdBy.name || undefined,
+              });
+            } catch (emailError) {
+              console.error("Failed to send completion notification:", emailError);
+            }
           }
 
-          await sendWebPushToUser(orderDetails.createdBy.id, {
-            title: "Redo för fakturering",
-            body: `Order #${orderDetails.orderNumber} ${orderDetails.title} är avslutad i alla spår.`,
-            url: `/orders/${orderDetails.orderNumber}`,
-            tag: `billing-${orderDetails.orderNumber}`,
-          });
+          if (canSendNotification(preferences, "orderUpdates", "desktop")) {
+            await sendWebPushToUser(orderDetails.createdBy.id, {
+              title: "Redo for fakturering",
+              body: `Order #${orderDetails.orderNumber} ${orderDetails.title} ar avslutad i alla spar.`,
+              url: `/orders/${orderDetails.orderNumber}`,
+              tag: `billing-${orderDetails.orderNumber}`,
+            });
+          }
         }
       }
     }
@@ -151,7 +156,7 @@ export async function POST(
   } catch (error) {
     console.error(`[orders/${orderId}/tracks/${normalizedTrack}]`, error);
     return NextResponse.json(
-      { error: "Kunde inte uppdatera status för spår" },
+      { error: "Kunde inte uppdatera status for spar" },
       { status: 500 }
     );
   }

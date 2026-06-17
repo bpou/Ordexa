@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useOrderRealtime } from "@/lib/useOrderRealtime";
@@ -1670,10 +1671,23 @@ export default function OrderPage() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">
-          Order #{data.orderNumber} â€“ {data.title}
-        </h1>
-        <p className="text-gray-600">Kund: {data.customerName ?? "-"}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">
+              Order #{data.orderNumber} - {data.title}
+            </h1>
+            <p className="text-gray-600">Kund: {data.customerName ?? "-"}</p>
+          </div>
+          {canEditOrder ? (
+            <Link
+              href={`/orders/${encodeURIComponent(String(data.orderNumber))}/edit`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
+            >
+              <PencilLine className="h-4 w-4" aria-hidden />
+              Redigera order
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {statusError ? (
@@ -1682,34 +1696,6 @@ export default function OrderPage() {
         </div>
       ) : null}
 
-      {canEditOrder ? (
-        <OrderEditPanel
-          order={data}
-          draft={orderEditDraft}
-          open={orderEditOpen}
-          saving={savingOrderEdit}
-          error={orderEditError}
-          onOpenChange={setOrderEditOpen}
-          onDraftChange={setOrderEditDraft}
-          onSave={() => void saveOrderEdit()}
-          onReset={resetOrderEditDraft}
-        />
-      ) : null}
-
-      {canEditOrder ? (
-        <FortnoxOrderLinesPanel
-          rows={orderLines}
-          saving={savingOrderLines}
-          error={orderLinesError}
-          syncedAt={data.fortnoxOrderRowsSyncedAt}
-          onRowsChange={setOrderLines}
-          onSave={() => void saveOrderLines()}
-          onReset={resetOrderLines}
-        />
-      ) : null}
-
-      
-    
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {APP_TRACKS.map((t) => {
             const trackRow = data.tracks.find((x) => x.track === t);
@@ -1979,6 +1965,5 @@ export default function OrderPage() {
     </div>
   );
 }
-
 
 

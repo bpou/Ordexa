@@ -41,7 +41,13 @@ type AccountClientProps = {
   };
 };
 
-type NotificationPrefs = typeof notificationDefaults;
+type NotificationPrefs = {
+  desktopEnabled: boolean;
+  emailEnabled: boolean;
+  orderUpdates: boolean;
+  calendarDigest: boolean;
+  securityAlerts: boolean;
+};
 
 type TotpSetupState = {
   qrCode: string;
@@ -78,10 +84,27 @@ type PushSubscriptionStatus = {
 };
 
 const notificationDefaults = {
+  desktopEnabled: true,
+  emailEnabled: true,
   orderUpdates: true,
   calendarDigest: true,
   securityAlerts: true,
 };
+
+const notificationChannelCopy = [
+  {
+    key: "desktopEnabled" as const,
+    label: "Desktopnotiser",
+    description: "Skicka notiser till aktiverade datorer även när Ordexa-fliken är stängd.",
+    icon: Smartphone,
+  },
+  {
+    key: "emailEnabled" as const,
+    label: "E-postnotiser",
+    description: "Skicka notiser till e-postadressen på ditt konto.",
+    icon: Mail,
+  },
+];
 
 const notificationCopy = [
   {
@@ -193,6 +216,24 @@ export default function AccountClient({ user }: AccountClientProps) {
     let cancelled = false;
     (async () => {
       try {
+        const res = await fetch("/api/account/notification-preferences", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setPrefs({ ...notificationDefaults, ...(data?.preferences ?? {}) });
+      } catch (error) {
+        console.error("Kunde inte ladda notisinställningar", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
         const res = await fetch("/api/account/outlook/connection", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
@@ -285,7 +326,17 @@ export default function AccountClient({ user }: AccountClientProps) {
   }, [user.role]);
 
   function togglePref(key: keyof NotificationPrefs) {
-    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+    setPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      void fetch("/api/account/notification-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: next[key] }),
+      }).catch((error) => {
+        console.error("Kunde inte spara notisinställning", error);
+      });
+      return next;
+    });
   }
 
   async function refreshPushStatus() {
@@ -920,7 +971,7 @@ export default function AccountClient({ user }: AccountClientProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => void sendTestDesktopNotification()}
-                        disabled={pushBusy || pushStatus.configured === false}
+                        disabled={pushBusy || pushStatus.configured === false || !prefs.desktopEnabled}
                       >
                         {pushBusy ? <OrdinaLogoSpinner size={16} /> : <Bell className="h-4 w-4" aria-hidden />}
                         Testa
@@ -959,6 +1010,29 @@ export default function AccountClient({ user }: AccountClientProps) {
                 </div>
               </div>
             </div>
+            {notificationChannelCopy.map((pref) => {
+              const enabled = prefs[pref.key];
+              const Icon = pref.icon;
+              return (
+                <div
+                  key={pref.key}
+                  className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-card/80 p-4 shadow-sm"
+                >
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Icon className="h-4 w-4 text-primary" aria-hidden />
+                      {pref.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{pref.description}</p>
+                  </div>
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={() => togglePref(pref.key)}
+                    aria-label={pref.label}
+                  />
+                </div>
+              );
+            })}
             {notificationCopy.map((pref) => {
               const enabled = prefs[pref.key];
               return (
@@ -979,7 +1053,7 @@ export default function AccountClient({ user }: AccountClientProps) {
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground">Dina val sparas lokalt just nu.</p>
+          <p className="text-xs text-muted-foreground">Dina val sparas på kontot och styr både e-post och desktopnotiser.</p>
         </section>
 
         {cropSrc ? (
