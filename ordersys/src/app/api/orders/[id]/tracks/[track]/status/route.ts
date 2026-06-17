@@ -125,6 +125,14 @@ export async function POST(
         if (orderDetails?.createdBy) {
           const preferences = await getNotificationPreferences(orderDetails.createdBy.id);
           const viewLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/orders/${orderDetails.orderNumber}`;
+          console.info("Order completion notification preferences", {
+            orderNumber: orderDetails.orderNumber,
+            userId: orderDetails.createdBy.id,
+            emailEnabled: preferences.emailEnabled,
+            desktopEnabled: preferences.desktopEnabled,
+            orderUpdates: preferences.orderUpdates,
+            hasEmail: Boolean(orderDetails.createdBy.email),
+          });
 
           if (orderDetails.createdBy.email && canSendNotification(preferences, "orderUpdates", "email")) {
             try {
@@ -135,17 +143,41 @@ export async function POST(
                 sellerEmail: orderDetails.createdBy.email,
                 sellerName: orderDetails.createdBy.name || undefined,
               });
+              console.info("Order completion email sent", {
+                orderNumber: orderDetails.orderNumber,
+                userId: orderDetails.createdBy.id,
+              });
             } catch (emailError) {
               console.error("Failed to send completion notification:", emailError);
             }
+          } else {
+            console.info("Order completion email skipped", {
+              orderNumber: orderDetails.orderNumber,
+              userId: orderDetails.createdBy.id,
+              hasEmail: Boolean(orderDetails.createdBy.email),
+              emailEnabled: preferences.emailEnabled,
+              orderUpdates: preferences.orderUpdates,
+            });
           }
 
           if (canSendNotification(preferences, "orderUpdates", "desktop")) {
-            await sendWebPushToUser(orderDetails.createdBy.id, {
+            const pushResult = await sendWebPushToUser(orderDetails.createdBy.id, {
               title: "Redo for fakturering",
               body: `Order #${orderDetails.orderNumber} ${orderDetails.title} ar avslutad i alla spar.`,
               url: `/orders/${orderDetails.orderNumber}`,
               tag: `billing-${orderDetails.orderNumber}`,
+            });
+            console.info("Order completion desktop push attempted", {
+              orderNumber: orderDetails.orderNumber,
+              userId: orderDetails.createdBy.id,
+              ...pushResult,
+            });
+          } else {
+            console.info("Order completion desktop push skipped", {
+              orderNumber: orderDetails.orderNumber,
+              userId: orderDetails.createdBy.id,
+              desktopEnabled: preferences.desktopEnabled,
+              orderUpdates: preferences.orderUpdates,
             });
           }
         }

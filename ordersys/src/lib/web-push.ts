@@ -41,6 +41,11 @@ export async function sendWebPushToUser(userId: string, payload: PushPayload) {
     select: { id: true, endpoint: true, p256dh: true, auth: true },
   });
 
+  if (subscriptions.length === 0) {
+    console.info("No web push subscriptions found for user", { userId, tag: payload.tag ?? null });
+    return { sent: 0, failed: 0 };
+  }
+
   let sent = 0;
   let failed = 0;
 
@@ -74,5 +79,6 @@ export async function sendWebPushToUser(userId: string, payload: PushPayload) {
     })
   );
 
+  console.info("Web push delivery result", { userId, tag: payload.tag ?? null, sent, failed });
   return { sent, failed };
 }
