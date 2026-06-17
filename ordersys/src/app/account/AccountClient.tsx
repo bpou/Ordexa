@@ -175,6 +175,8 @@ export default function AccountClient({ user }: AccountClientProps) {
   const [pushStatus, setPushStatus] = useState<PushSubscriptionStatus | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -454,6 +456,25 @@ export default function AccountClient({ user }: AccountClientProps) {
       setPushMessage({ kind: "error", text: "Kunde inte skicka testnotis." });
     } finally {
       setPushBusy(false);
+    }
+  }
+
+  async function sendTestEmailNotification() {
+    setEmailBusy(true);
+    setEmailMessage(null);
+    try {
+      const res = await fetch("/api/account/notification-preferences", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEmailMessage({ kind: "error", text: data?.error ?? "Kunde inte skicka testmail." });
+        return;
+      }
+      setEmailMessage({ kind: "success", text: "Testmail skickat." });
+    } catch (error) {
+      console.error("Email notification test error", error);
+      setEmailMessage({ kind: "error", text: "Kunde inte skicka testmail." });
+    } finally {
+      setEmailBusy(false);
     }
   }
 
@@ -1024,12 +1045,31 @@ export default function AccountClient({ user }: AccountClientProps) {
                       {pref.label}
                     </p>
                     <p className="text-xs text-muted-foreground">{pref.description}</p>
+                    {pref.key === "emailEnabled" && emailMessage ? (
+                      <p className={`text-xs ${emailMessage.kind === "error" ? "text-red-600" : "text-emerald-600"}`}>
+                        {emailMessage.text}
+                      </p>
+                    ) : null}
                   </div>
-                  <Switch
-                    checked={enabled}
-                    onCheckedChange={() => togglePref(pref.key)}
-                    aria-label={pref.label}
-                  />
+                  <div className="flex shrink-0 items-center gap-2">
+                    {pref.key === "emailEnabled" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void sendTestEmailNotification()}
+                        disabled={emailBusy || !prefs.emailEnabled || !prefs.orderUpdates}
+                      >
+                        {emailBusy ? <OrdinaLogoSpinner size={16} /> : <Mail className="h-4 w-4" aria-hidden />}
+                        Testa
+                      </Button>
+                    ) : null}
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={() => togglePref(pref.key)}
+                      aria-label={pref.label}
+                    />
+                  </div>
                 </div>
               );
             })}
