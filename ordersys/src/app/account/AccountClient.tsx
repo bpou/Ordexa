@@ -70,6 +70,13 @@ type OutlookConnectionStatus = {
   syncError: string | null;
 };
 
+type PushSubscriptionStatus = {
+  configured: boolean;
+  subscribed: boolean;
+  count: number;
+  publicKey: string | null;
+};
+
 const notificationDefaults = {
   orderUpdates: true,
   calendarDigest: true,
@@ -96,6 +103,19 @@ const notificationCopy = [
 
 const CROP_BOX_SIZE = 280;
 const AVATAR_OUTPUT_SIZE = 512;
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  const output = new Uint8Array(raw.length);
+
+  for (let i = 0; i < raw.length; i += 1) {
+    output[i] = raw.charCodeAt(i);
+  }
+
+  return output;
+}
 
 export default function AccountClient({ user }: AccountClientProps) {
   const router = useRouter();
@@ -129,6 +149,9 @@ export default function AccountClient({ user }: AccountClientProps) {
   const [outlookCalendars, setOutlookCalendars] = useState<any[]>([]);
   const [outlookCalendarsLoading, setOutlookCalendarsLoading] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>("primary");
+  const [pushStatus, setPushStatus] = useState<PushSubscriptionStatus | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -160,6 +183,10 @@ export default function AccountClient({ user }: AccountClientProps) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    void refreshPushStatus();
   }, []);
 
   useEffect(() => {
@@ -213,7 +240,7 @@ export default function AccountClient({ user }: AccountClientProps) {
       if (res.ok) {
         setOutlookMessage({ kind: "success", text: "Kalender uppdaterad. En ny synk kommer att användas." });
       }
-    } catch (error) {
+    } catch (_error) {
       setOutlookMessage({ kind: "error", text: "Kunde inte uppdatera kalender." });
     }
   };
@@ -259,6 +286,112 @@ export default function AccountClient({ user }: AccountClientProps) {
 
   function togglePref(key: keyof NotificationPrefs) {
     setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function refreshPushStatus() {
+    try {
+      const res = await fetch("/api/account/push-subscriptions", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as PushSubscriptionStatus;
+      setPushStatus(data);
+    } catch (error) {
+      console.error("Kunde inte ladda desktopnotis-status", error);
+    }
+  }
+
+  async function enableDesktopNotifications() {
+    setPushBusy(true);
+    setPushMessage(null);
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        setPushMessage({ kind: "error", text: "Den här webbläsaren stödjer inte pushnotiser." });
+        return;
+      }
+
+      const status = pushStatus ?? (await fetch("/api/account/push-subscriptions").then((res) => res.json()));
+      const publicKey = (status as PushSubscriptionStatus).publicKey;
+      if (!publicKey) {
+        setPushMessage({ kind: "error", text: "Pushnotiser saknar servernycklar." });
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setPushMessage({ kind: "error", text: "Tillåt notiser i webbläsaren för att aktivera desktopnotiser." });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const existing = await registration.pushManager.getSubscription();
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }));
+
+      const res = await fetch("/api/account/push-subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPushMessage({ kind: "error", text: data?.error ?? "Kunde inte spara desktopnotiser." });
+        return;
+      }
+
+      setPushMessage({ kind: "success", text: "Desktopnotiser är aktiverade för den här datorn." });
+      await refreshPushStatus();
+    } catch (error) {
+      console.error("Desktop notification setup error", error);
+      setPushMessage({ kind: "error", text: "Kunde inte aktivera desktopnotiser." });
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function disableDesktopNotifications() {
+    setPushBusy(true);
+    setPushMessage(null);
+    try {
+      const registration = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration("/sw.js") : null;
+      const subscription = await registration?.pushManager.getSubscription();
+
+      await fetch("/api/account/push-subscriptions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription?.endpoint }),
+      });
+
+      await subscription?.unsubscribe();
+      setPushMessage({ kind: "success", text: "Desktopnotiser är avstängda för den här datorn." });
+      await refreshPushStatus();
+    } catch (error) {
+      console.error("Desktop notification disable error", error);
+      setPushMessage({ kind: "error", text: "Kunde inte stänga av desktopnotiser." });
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function sendTestDesktopNotification() {
+    setPushBusy(true);
+    setPushMessage(null);
+    try {
+      const res = await fetch("/api/account/push-subscriptions", { method: "PUT" });
+      if (!res.ok) {
+        setPushMessage({ kind: "error", text: "Kunde inte skicka testnotis." });
+        return;
+      }
+      setPushMessage({ kind: "success", text: "Testnotis skickad." });
+    } catch (error) {
+      console.error("Desktop notification test error", error);
+      setPushMessage({ kind: "error", text: "Kunde inte skicka testnotis." });
+    } finally {
+      setPushBusy(false);
+    }
   }
 
   function toggleTheme(enabled: boolean) {
@@ -742,6 +875,69 @@ export default function AccountClient({ user }: AccountClientProps) {
             <h2 className="text-2xl font-semibold">Notifikationer</h2>
           </div>
           <div className="space-y-3">
+            <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Smartphone className="h-4 w-4 text-primary" aria-hidden />
+                    Desktopnotiser
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Ta emot viktiga Ordexa-notiser på den här datorn även när fliken är stängd.
+                  </p>
+                  {pushStatus ? (
+                    <p className="text-xs text-muted-foreground">
+                      {pushStatus.configured
+                        ? pushStatus.subscribed
+                          ? `${pushStatus.count} aktiv enhet för ditt konto.`
+                          : "Ingen enhet är aktiverad ännu."
+                        : "Servernycklar saknas för pushnotiser."}
+                    </p>
+                  ) : null}
+                  {pushMessage ? (
+                    <p className={`text-xs ${pushMessage.kind === "error" ? "text-red-600" : "text-emerald-600"}`}>
+                      {pushMessage.text}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {pushStatus?.subscribed ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void sendTestDesktopNotification()}
+                        disabled={pushBusy || pushStatus.configured === false}
+                      >
+                        {pushBusy ? <OrdinaLogoSpinner size={16} /> : <Bell className="h-4 w-4" aria-hidden />}
+                        Testa
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void disableDesktopNotifications()}
+                        disabled={pushBusy}
+                      >
+                        Stäng av
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={() => void enableDesktopNotifications()}
+                      disabled={pushBusy || pushStatus?.configured === false}
+                    >
+                      {pushBusy ? <OrdinaLogoSpinner size={16} /> : <Bell className="h-4 w-4" aria-hidden />}
+                      Aktivera
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
             {notificationCopy.map((pref) => {
               const enabled = prefs[pref.key];
               return (

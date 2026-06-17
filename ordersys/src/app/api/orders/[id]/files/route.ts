@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { normalizeTrack } from "@/lib/tracks";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
+import { sendWebPushToUser } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const order = await prisma.order.findFirst({
       where: { orderNumber: orderId, ...onlyRealFortnoxOrders },
-      select: { orderNumber: true },
+      select: { orderNumber: true, title: true, createdById: true },
     });
 
     if (!order) {
@@ -123,6 +124,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     };
 
     await pusherServer.trigger(`order-${orderId}`, "file:created", payload);
+    if (order.createdById && order.createdById !== uploadedById) {
+      await sendWebPushToUser(order.createdById, {
+        title: "Ny fil uppladdad",
+        body: `${saved.filename} lades till på order #${order.orderNumber} ${order.title}.`,
+        url: `/orders/${order.orderNumber}`,
+        tag: `file-${saved.id}`,
+      });
+    }
+
     return NextResponse.json({ ok: true, file: payload });
   } catch (err) {
     console.error("UPLOAD ERROR", err);

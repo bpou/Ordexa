@@ -6,6 +6,7 @@ import type { Role, Track, TrackStatus } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { authOptions } from "@/lib/auth";
 import { sendOrderCompletionNotification } from "@/lib/email";
+import { sendWebPushToUser } from "@/lib/web-push";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyActiveOrders } from "@/lib/filters";
 
@@ -111,8 +112,10 @@ export async function POST(
           where: { orderNumber: order.orderNumber },
           select: {
             orderNumber: true,
+            title: true,
             createdBy: {
               select: {
+                id: true,
                 email: true,
                 name: true,
               },
@@ -133,6 +136,13 @@ export async function POST(
             console.error('Failed to send completion notification:', emailError);
             // Don't fail the request if email fails
           }
+
+          await sendWebPushToUser(orderDetails.createdBy.id, {
+            title: "Redo för fakturering",
+            body: `Order #${orderDetails.orderNumber} ${orderDetails.title} är avslutad i alla spår.`,
+            url: `/orders/${orderDetails.orderNumber}`,
+            tag: `billing-${orderDetails.orderNumber}`,
+          });
         }
       }
     }
