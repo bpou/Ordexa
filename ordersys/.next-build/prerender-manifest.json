@@ -1,0 +1,41 @@
+{
+  "version": 4,
+  "routes": {
+    "/favicon.ico": {
+      "initialHeaders": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "image/x-icon",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/favicon.ico/layout,_N_T_/favicon.ico/route,_N_T_/favicon.ico"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/favicon.ico",
+      "dataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    }
+  },
+  "dynamicRoutes": {},
+  "notFoundRoutes": [],
+  "preview": {
+    "previewModeId": "052c62005f692b1199d10dd859a48160",
+    "previewModeSigningKey": "3de741fbd463d097b2110032d44ef0a0748f99b03cb313d0f26bb325fffd3e76",
+    "previewModeEncryptionKey": "4c13372deffd60707785cfe318795024e130a5bb92d8d710cf14202d6db1f0cb"
+  }
+}

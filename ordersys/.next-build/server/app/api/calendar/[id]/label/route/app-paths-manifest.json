@@ -1,0 +1,3 @@
+{
+  "/api/calendar/[id]/label/route": "app/api/calendar/[id]/label/route.js"
+}

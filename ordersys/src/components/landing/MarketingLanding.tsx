@@ -588,21 +588,29 @@ function HeroSection() {
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(5,150,105,0.18),transparent_32%),radial-gradient(circle_at_85%_8%,rgba(141,216,175,0.35),transparent_36%),linear-gradient(180deg,#f1fbf5_0%,#ffffff_72%)]" />
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:px-8 lg:pb-24">
-        <Reveal className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/90 px-4 py-2 text-xs font-semibold text-brand-800 shadow-sm">
-            <PanelRightOpen className="h-4 w-4" />
-            Ordersystem för skylt-, montage- och produktionsflöden
-          </div>
+<div className="relative mx-auto grid min-h-[82vh] max-w-[90rem] gap-16 px-4 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:px-8 lg:pb-32 lg:pt-28">        <Reveal className="max-w-2xl">
+          
 
-          <h1
-            className={cn(
-              sora.className,
-              "mt-7 text-5xl font-semibold leading-[0.98] tracking-[-0.04em] text-neutral-950 sm:text-6xl lg:text-7xl",
-            )}
-          >
-            Sluta jaga orderstatus, filer och foton.
-          </h1>
+<h1
+  className={cn(
+    sora.className,
+    "mt-8 text-6xl font-semibold leading-[0.92] tracking-[-0.055em] text-neutral-950 sm:text-7xl lg:text-8xl xl:text-[6.5rem]",
+  )}
+>
+  Sluta jaga{" "}
+  <span className="relative inline-block text-brand-700">
+    <span className="animate-[wordFade_12s_infinite]">orderstatus</span>
+    <span className="absolute left-0 top-0 animate-[wordFade_12s_infinite_3s] opacity-0">
+      kollegan
+    </span>
+    <span className="absolute left-0 top-0 animate-[wordFade_12s_infinite_6s] opacity-0">
+      foton
+    </span>
+    <span className="absolute left-0 top-0 animate-[wordFade_12s_infinite_9s] opacity-0">
+      papper
+    </span>
+  </span>
+</h1>
 
           <p className="mt-6 max-w-xl text-lg leading-8 text-neutral-700 sm:text-xl">
             Ordexa samlar order, planering, produktion, filer och överlämningar

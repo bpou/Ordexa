@@ -1,0 +1,3 @@
+{
+  "/api/account/outlook/oauth/callback/route": "app/api/account/outlook/oauth/callback/route.js"
+}

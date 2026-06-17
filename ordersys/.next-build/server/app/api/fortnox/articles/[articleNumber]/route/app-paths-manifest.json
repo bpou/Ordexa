@@ -1,0 +1,3 @@
+{
+  "/api/fortnox/articles/[articleNumber]/route": "app/api/fortnox/articles/[articleNumber]/route.js"
+}

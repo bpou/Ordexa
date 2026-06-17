@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/edge-wrapper_fa177864.js",
+        "server/edge/chunks/[root-of-the-server]__26319148._.js",
+        "server/edge/chunks/turbopack-edge-wrapper_2d8de213.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/orders\\/new(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+          "originalSource": "/orders/new"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/orders\\/archived(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+          "originalSource": "/orders/archived"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/sales(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+          "originalSource": "/sales/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/admin(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+          "originalSource": "/admin/:path*"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "JcbnBso1bE086Yg9hfb3l",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "hj8l2nyQLT7eAI5K+IggfifC5YSmHnDlVj3iV2J8+po=",
+        "__NEXT_PREVIEW_MODE_ID": "052c62005f692b1199d10dd859a48160",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "4c13372deffd60707785cfe318795024e130a5bb92d8d710cf14202d6db1f0cb",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "3de741fbd463d097b2110032d44ef0a0748f99b03cb313d0f26bb325fffd3e76"
+      }
+    }
+  },
+  "sortedMiddleware": [
+    "/"
+  ],
+  "functions": {}
+}

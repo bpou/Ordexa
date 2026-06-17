@@ -1,0 +1,27 @@
+{
+  "pages": {
+    "/orders/overview/page": [
+      "static/chunks/d96012bcfc98706a.js",
+      "static/chunks/2532f69a4166d704.js",
+      "static/chunks/4ed73ef5a213b4e4.css",
+      "static/chunks/962ab73620fd3bcd.css",
+      "static/chunks/605bcd11ebfff0b8.js",
+      "static/chunks/9654f0a322ada94a.js",
+      "static/chunks/4d3dc1ebcb42cd62.js",
+      "static/chunks/f4de231886748286.js",
+      "static/chunks/ce3d121ff07ba3d6.js",
+      "static/chunks/0d98fc88621e99e1.js",
+      "static/chunks/661728703dfd3d83.js",
+      "static/chunks/18d049d3d91a6751.js",
+      "static/chunks/b7a790c54fa63c32.js",
+      "static/chunks/09f1e503dfe5fbed.js",
+      "static/chunks/950c27b67e711f6f.css",
+      "static/chunks/f5835f7fe7d860f7.js",
+      "static/chunks/efaa58374b957228.js",
+      "static/chunks/dff0be058356a9b2.js",
+      "static/chunks/d14fc6b0a854d908.js",
+      "static/chunks/bbf89c5280eb1f0c.js",
+      "static/chunks/turbopack-db3520bb1a54ce65.js"
+    ]
+  }
+}

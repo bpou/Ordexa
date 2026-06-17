@@ -1,0 +1,3 @@
+{
+  "/api/stored-files/[encodedKey]/route": "app/api/stored-files/[encodedKey]/route.js"
+}

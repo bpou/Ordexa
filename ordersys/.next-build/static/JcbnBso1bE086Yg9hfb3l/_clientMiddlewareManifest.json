@@ -1,0 +1,18 @@
+[
+  {
+    "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/orders\\/new(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+    "originalSource": "/orders/new"
+  },
+  {
+    "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/orders\\/archived(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+    "originalSource": "/orders/archived"
+  },
+  {
+    "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/sales(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+    "originalSource": "/sales/:path*"
+  },
+  {
+    "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/admin(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json|\\.rsc|\\.segments\\/.+\\.segment\\.rsc)?[\\/#\\?]?$",
+    "originalSource": "/admin/:path*"
+  }
+]

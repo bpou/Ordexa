@@ -377,7 +377,7 @@ export function useNewOrderForm({
       .then(async (res) => {
         if (!res.ok) {
           const text = await res.text().catch(() => "");
-          throw new Error(text || "Kunde inte hÃ¤mta kalendern");
+          throw new Error(text || "Kunde inte hämta kalendern");
         }
         const data = await res.json();
         if (!cancelled) {
@@ -387,7 +387,7 @@ export function useNewOrderForm({
       })
       .catch((err) => {
         if (!cancelled) {
-          setPlannerError(err?.message ?? "Kunde inte hÃ¤mta kalendern");
+          setPlannerError(err?.message ?? "Kunde inte hämta kalendern");
           setPlannerEvents([]);
         }
       })
@@ -1046,7 +1046,7 @@ export function useNewOrderForm({
     setMsg(null);
 
     if (!title.trim()) {
-      setMsg("Titel krÃ¤vs.");
+      setMsg("Titel krävs.");
       return;
     }
     const maybeDocumentNumber = title.trim();
@@ -1058,7 +1058,7 @@ export function useNewOrderForm({
       return;
     }
     if (!customerNumber) {
-      setMsg("VÃ¤lj kund (Fortnox).");
+      setMsg("Välj kund (Fortnox).");
       return;
     }
 
@@ -1066,25 +1066,25 @@ export function useNewOrderForm({
 
     if (!isOffer) {
       if (!tracks.length) {
-        setMsg("VÃ¤lj minst ett spÃ¥r (A/B/C/D).");
+        setMsg("Välj minst ett spår (A/B/C/D).");
         return;
       }
 
       if (!autoSchedule) {
         if (tracks.includes("A") && !(manualA.start && manualA.end)) {
-          setMsg("Ange manuell start/slut fÃ¶r SpÃ¥r A eller slÃ¥ pÃ¥ automatisk planering.");
+          setMsg("Ange manuell start/slut för Spår A eller slå på automatisk planering.");
           return;
         }
         if (tracks.includes("B") && !(manualB.start && manualB.end)) {
-          setMsg("Ange manuell start/slut fÃ¶r SpÃ¥r B eller slÃ¥ pÃ¥ automatisk planering.");
+          setMsg("Ange manuell start/slut för Spår B eller slå på automatisk planering.");
           return;
         }
         if (tracks.includes("C") && !(manualC.start && manualC.end)) {
-          setMsg("Ange manuell start/slut fÃ¶r SpÃ¥r C eller slÃ¥ pÃ¥ automatisk planering.");
+          setMsg("Ange manuell start/slut för Spår C eller slå på automatisk planering.");
           return;
         }
         if (tracks.includes("D") && !(manualD.start && manualD.end)) {
-          setMsg("Ange manuell start/slut fÃ¶r SpÃ¥r D eller slÃ¥ pÃ¥ automatisk planering.");
+          setMsg("Ange manuell start/slut för Spår D eller slå på automatisk planering.");
           return;
         }
       }

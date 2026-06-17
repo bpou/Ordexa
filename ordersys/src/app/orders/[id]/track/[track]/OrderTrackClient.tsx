@@ -104,7 +104,7 @@ export default function OrderTrackClient({
   const [lastAddedMinutes, setLastAddedMinutes] = useState<number | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
 
-  const trackNames = { A: 'AteljÃ©', B: 'Verkstad', C: 'Montage', D: 'Bilmontage', SHARED: 'Delad' };
+  const trackNames = { A: 'Ateljé', B: 'Verkstad', C: 'Montage', D: 'Bilmontage', SHARED: 'Delad' };
 
   const load = useCallback(async (): Promise<void> => {
     setErr(null);

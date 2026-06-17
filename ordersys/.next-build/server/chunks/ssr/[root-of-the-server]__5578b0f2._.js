@@ -1,0 +1,3 @@
+module.exports=[193695,(a,b,c)=>{b.exports=a.x("next/dist/shared/lib/no-fallback-error.external.js",()=>require("next/dist/shared/lib/no-fallback-error.external.js"))},262212,a=>{a.n(a.i(866114))},812103,(a,b,c)=>{},994037,a=>{"use strict";a.s(["default",()=>c]);var b=a.i(907997);function c(){return(0,b.jsx)("div",{className:"min-h-screen grid place-items-center p-6",children:(0,b.jsxs)("div",{className:"rounded-xl border bg-white p-8 shadow",children:[(0,b.jsx)("h1",{className:"text-xl font-semibold",children:"Åtkomst nekad"}),(0,b.jsx)("p",{className:"mt-2 text-neutral-600",children:"Du har inte behörighet att visa den här sidan."})]})})}}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__5578b0f2._.js.map

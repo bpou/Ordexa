@@ -1,0 +1,124 @@
+{
+  "app": {
+    "[project]/src/app/(marketing)/[marketing]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/403/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/_not-found/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/account/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/admin/business-hours/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/articles/[articleNumber]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/articles/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/articles/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/calendar-old/[track]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/calendar/[track]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/calendar2/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/component-lab/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/cookies/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/customers/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/customers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/dashboard/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/home/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/integritet/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/login/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/c41ca59f1c34ba31-s.p.e20f337c.woff2"
+    ],
+    "[project]/src/app/orders/[id]/fakturerad/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/[id]/track/[track]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/archived/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/completed/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/new2_0/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/orders/overview/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/fa03f7d5839b83f9-s.p.7ac8b9dc.woff2"
+    ],
+    "[project]/src/app/orders/track/[track]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/c41ca59f1c34ba31-s.p.e20f337c.woff2"
+    ],
+    "[project]/src/app/personal-calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/quotes/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/quotes/new2.0/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/sakerhet/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/shimmer-demo/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/snake/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/supplier-invoices/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/test/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/src/app/villkor/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

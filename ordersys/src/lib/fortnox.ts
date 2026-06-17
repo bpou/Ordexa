@@ -5,12 +5,12 @@ import { s3UploadObject } from "@/lib/s3";
 
 /**
  * Fortnox REST base och OAuth-token endpoint.
- * AnvÃ¤nd /3 (nuvarande stabila base).
+ * Använd /3 (nuvarande stabila base).
  */
 const API_BASE = "https://api.fortnox.se/3";
 const TOKEN_URL = "https://apps.fortnox.se/oauth-v1/token";
 
-/* ----------------------- HjÃ¤lpare ----------------------- */
+/* ----------------------- Hjälpare ----------------------- */
 function b64(s: string) {
   return Buffer.from(s).toString("base64");
 }
@@ -72,7 +72,7 @@ async function fortnoxRequestWithRefresh(
     response = await fortnoxFetch(url, tokenInfo.accessToken, init);
 
     if (response.status === 401) {
-      await resetFortnoxConnection(tokenInfo.tenantId, `401 efter forced refresh pÃ¥ ${url}: ${response.text}`);
+      await resetFortnoxConnection(tokenInfo.tenantId, `401 efter forced refresh på ${url}: ${response.text}`);
       throw new Error(FORTNOX_RESET_MESSAGE);
     }
   }
@@ -80,7 +80,7 @@ async function fortnoxRequestWithRefresh(
   return { ...response, tenantId: tokenInfo.tenantId };
 }
 
-/** FÃ¶rsÃ¶k parsa Fortnox-respons utan att krascha klienten. */
+/** Försök parsa Fortnox-respons utan att krascha klienten. */
 function safeJSON<T = any>(text: string): T {
   try {
     return JSON.parse(text) as T;
@@ -90,7 +90,7 @@ function safeJSON<T = any>(text: string): T {
 }
 
 const FORTNOX_RESET_MESSAGE =
-  "Fortnox-anslutningen har gÃ¥tt ut. Koppla om Fortnox under instÃ¤llningar.";
+  "Fortnox-anslutningen har gått ut. Koppla om Fortnox under inställningar.";
 
 async function resetFortnoxConnection(tenantId: string, reason?: string) {
   try {
@@ -105,12 +105,12 @@ async function resetFortnoxConnection(tenantId: string, reason?: string) {
       },
     });
   } catch (error) {
-    console.error(`[Fortnox] Misslyckades att Ã¥terstÃ¤lla koppling fÃ¶r ${tenantId}:`, error);
+    console.error(`[Fortnox] Misslyckades att återställa koppling för ${tenantId}:`, error);
     return;
   }
 
   const context = reason ? ` (${reason})` : "";
-  console.warn(`[Fortnox] Kopplingen Ã¥terstÃ¤lld fÃ¶r ${tenantId}${context}`);
+  console.warn(`[Fortnox] Kopplingen återställd för ${tenantId}${context}`);
 }
 
 /* ----------------------- Typer ----------------------- */
@@ -296,7 +296,7 @@ function getStaticFortnoxTokenFromEnv(tenantId?: string) {
 }
 
 /* =======================================================
-   OAuth: hÃ¤mta (och ev. fÃ¶rnya) access token fÃ¶r en tenant
+   OAuth: hämta (och ev. förnya) access token för en tenant
    ======================================================= */
 export async function getFortnoxAccessToken(
   tenantId?: string,
@@ -327,7 +327,7 @@ export async function getFortnoxAccessToken(
     }
     throw error;
   }
-  if (!row) throw new Error("FortnoxConnection saknas fÃ¶r tenantId=" + tId);
+  if (!row) throw new Error("FortnoxConnection saknas för tenantId=" + tId);
   const resolvedTenantId = row.tenantId;
 
   if (!row.accessToken || !row.refreshToken) {
@@ -339,16 +339,16 @@ export async function getFortnoxAccessToken(
     !row.expiresAt || row.expiresAt.getTime() < Date.now() + 5 * 60_000; // < 5 min kvar
   const shouldRefresh = forceRefresh || willExpireSoon;
 
-  // Returnera cachead token om den Ã¤r giltig
+  // Returnera cachead token om den är giltig
   if (!shouldRefresh) {
     return { accessToken: row.accessToken, tenantId: resolvedTenantId };
   }
 
-  // Refresh token-flÃ¶det
+  // Refresh token-flödet
   const clientId = process.env.FORTNOX_CLIENT_ID!;
   const clientSecret = process.env.FORTNOX_CLIENT_SECRET!;
   if (!clientId || !clientSecret) {
-    throw new Error("FORTNOX_CLIENT_ID / FORTNOX_CLIENT_SECRET saknas i miljÃ¶n.");
+    throw new Error("FORTNOX_CLIENT_ID / FORTNOX_CLIENT_SECRET saknas i miljön.");
   }
 
   const basic = b64(`${clientId}:${clientSecret}`);
@@ -1544,7 +1544,7 @@ export async function getFortnoxArticle({
 }
 
 /* =======================================================
-   Lista leveranssÃ¤tt (WayOfDeliveries)
+   Lista leveranssätt (WayOfDeliveries)
    ======================================================= */
 export async function listFortnoxWayOfDeliveries({
   page = 1,
@@ -1615,7 +1615,7 @@ export async function createFortnoxOffer(
 }
 
 /* =======================================================================
-   Ladda ned och lagra orderbekrÃ¤ftelse som PDF i S3/MinIO (legacy print)
+   Ladda ned och lagra orderbekräftelse som PDF i S3/MinIO (legacy print)
    ======================================================================= */
 export async function uploadFortnoxOrderConfirmation(
   documentNumber: string,
@@ -1695,8 +1695,8 @@ export async function uploadFortnoxOrderConfirmation(
 
 
 /**
- * Skapa order i Fortnox (v2) och ladda direkt upp orderbekrÃ¤ftelse till S3,
- * samt skapa File-rad sÃ¥ den visas i UI:t.
+ * Skapa order i Fortnox (v2) och ladda direkt upp orderbekräftelse till S3,
+ * samt skapa File-rad så den visas i UI:t.
  */
 export async function createFortnoxOrderAndSync(
   payload: any,
@@ -1709,12 +1709,12 @@ export async function createFortnoxOrderAndSync(
   // 1) Skapa ordern i Fortnox
   const { documentNumber } = await createFortnoxOrder(payload, tenantId);
 
-  // 2) FÃ¶rsÃ¶k hÃ¤mta/printa PDF:n och lÃ¤gga den i S3 + DB
+  // 2) Försök hämta/printa PDF:n och lägga den i S3 + DB
   try {
     const { key, fileId } = await uploadFortnoxOrderConfirmation(documentNumber, tenantId);
     return { documentNumber, fileKey: key, fileId };
   } catch (err) {
-    // GÃ¶r inte hela orderflÃ¶det rÃ¶tt bara fÃ¶r att PDF:en fallerar â€“ returnera Ã¤ndÃ¥
+    // Gör inte hela orderflödet rött bara för att PDF:en fallerar â€“ returnera ändå
     console.warn("Fortnox PDF sync misslyckades:", err);
     return { documentNumber };
   }
@@ -1724,7 +1724,7 @@ export async function createFortnoxOrderAndSync(
 
 
 /* =======================================================================================
-   Orders v2 / okÃ¤nd tenant-konfiguration: fÃ¶rsÃ¶k flera vÃ¤gar och spara fÃ¶rsta PDF vi hittar
+   Orders v2 / okänd tenant-konfiguration: försök flera vägar och spara första PDF vi hittar
    ======================================================================================= */
 
 async function fxFetch(url: string, accessToken: string, init?: RequestInit) {
@@ -1765,10 +1765,10 @@ async function savePdfAndUpsertFile(documentNumber: string, pdf: Buffer, name: s
 }
 
 /**
- * FÃ¶rsÃ¶k:
- * 1) Legacy print (om ordern Ã¤r skapad via legacy API)
+ * Försök:
+ * 1) Legacy print (om ordern är skapad via legacy API)
  * 2) v2 subroutes: /orders-v2/{doc}/attachments eller /documents
- * 3) Arkiv-sÃ¶kning efter PDF som innehÃ¥ller ordernumret
+ * 3) Arkiv-sökning efter PDF som innehåller ordernumret
  */
 export async function uploadFortnoxOrderConfirmationAuto(
   documentNumber: string,
@@ -1836,7 +1836,7 @@ export async function uploadFortnoxOrderConfirmationAuto(
     }
   }
 
-  // Try 3: Arkiv-sÃ¶k (leta PDF vars namn innehÃ¥ller ordernumret)
+  // Try 3: Arkiv-sök (leta PDF vars namn innehåller ordernumret)
   for (const q of [
     `searchstring=${encodeURIComponent(documentNumber)}`,
     `q=${encodeURIComponent(documentNumber)}`,
@@ -1884,8 +1884,8 @@ export async function uploadFortnoxOrderConfirmationAuto(
   }
 
   throw new Error(
-    `Kunde inte hitta nÃ¥gon orderbekrÃ¤ftelse fÃ¶r order ${documentNumber}. ` +
-    `Ingen legacy print, inga v2-attachments/documents och ingen trÃ¤ff i arkivet.`
+    `Kunde inte hitta någon orderbekräftelse för order ${documentNumber}. ` +
+    `Ingen legacy print, inga v2-attachments/documents och ingen träff i arkivet.`
   );
 }
 

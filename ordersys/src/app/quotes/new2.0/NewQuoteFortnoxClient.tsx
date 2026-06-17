@@ -2247,7 +2247,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
 
                                       className="h-6 w-6 rounded-full bg-[#f7bf25] text-[#1f2d20] shadow hover:bg-[#f5b407]"
 
-                                      aria-label="LÃ¤gg till ny kund"
+                                      aria-label="Lägg till ny kund"
 
                                     >
 
@@ -2269,7 +2269,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
 
                               <td colSpan={5} className="px-3 py-4 text-center text-[12px] text-[#7c8276]">
 
-                                Inga kunder hittades. Justera sÃ¶kningen.
+                                Inga kunder hittades. Justera sökningen.
 
                               </td>
 
@@ -2351,7 +2351,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
 
 
 
-              <FortnoxField label="VÃ¥r referens" className="md:col-span-4">
+              <FortnoxField label="Vår referens" className="md:col-span-4">
 
                 <FortnoxInput value={ourReference} onChange={(e) => setOurReference(e.target.value)} />
 
@@ -2592,11 +2592,11 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
               <FortnoxField label="Ort" className="md:col-span-2">
                 <FortnoxInput value={deliveryCity} onChange={(e) => setDeliveryCity(e.target.value)} />
               </FortnoxField>
-              <FortnoxField label="LeveranssÃ¤tt" className="md:col-span-4 ml-12">
+              <FortnoxField label="Leveranssätt" className="md:col-span-4 ml-12">
                 <AnimatedSelect
                   value={wayOfDelivery}
                   onChange={setWayOfDelivery}
-                  placeholder="VÃ¤lj leveranssÃ¤tt"
+                  placeholder="Välj leveranssätt"
                   options={wayOfDeliveryOptions.map((option) => ({
                     value: option.code,
                     label: option.code,
@@ -2619,7 +2619,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
               <div className="relative rounded-md border border-[#d9ddd4]">
                 <div className="grid grid-cols-35 divide-x divide-[#d9ddd4] border-b border-[#d9ddd4] bg-[#f1f3ee] text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4f5a49]">
                   <div className="col-span-2 flex items-center justify-center px-3 py-2">Artikelnr</div>
-                  <div className="col-span-12 flex items-center justify-center px-3 py-2">BenÃ¤mning</div>
+                  <div className="col-span-12 flex items-center justify-center px-3 py-2">Benämning</div>
                   <div className="col-span-2 flex items-center justify-center px-3 py-2">Antal</div>
                   <div className="col-span-1 flex items-center justify-center px-3 py-2">Enhet</div>
                   <div className="col-span-2 flex items-center justify-center px-3 py-2">Ã€-pris</div>
@@ -2665,7 +2665,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                     <>
                       <DropZone id="gap-0" isActive={Boolean(activeRowId)} />
                       <div className="px-4 py-6 text-center text-[12px] text-[#6b7165]">
-                        Inga offertrader tillagda Ã¤nnu.
+                        Inga offertrader tillagda ännu.
                       </div>
                     </>
                   )}
@@ -2679,7 +2679,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                     onClick={addRow}
                     className="inline-flex items-center gap-2 rounded-full bg-[#8ebe3f] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[#7cab38]"
                   >
-                    + LÃ¤gg till rad
+                    + Lägg till rad
                   </button>
                 </div>
               </div>
@@ -2710,7 +2710,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                     <FortnoxField label="Fakturarabatt (%)">
                       <FortnoxInput value={invoiceDiscount} onChange={(e) => setInvoiceDiscount(e.target.value)} />
                     </FortnoxField>
-                    <FortnoxField label="SprÃ¥k">
+                    <FortnoxField label="Språk">
                       <select
                         className="h-9 rounded-md border border-[#cbcfc4] bg-white px-3 text-[13px]"
                         defaultValue="Svenska"
@@ -2752,7 +2752,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                       </div>
 
                       <div className="col-start-2">
-                        <div>Ã–resutjÃ¤mning</div>
+                        <div>Ã–resutjämning</div>
                         <div className="mt-1 text-[14px] font-semibold text-[#2f4d1f]">
                           {formatCurrency(oreAdjustment)}
                         </div>
@@ -2766,7 +2766,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                       </div>
 
                       <div>
-                        <div>OffertvÃ¤rde</div>
+                        <div>Offertvärde</div>
                         <div className="mt-1 text-[14px] font-semibold text-[#2f4d1f]">
                           {formatCurrency(netExcludingVat)}
                         </div>
@@ -2787,7 +2787,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
 
           <div className="flex justify-end">
             <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#6b7165]">
-              <span>DistributionssÃ¤tt</span>
+              <span>Distributionssätt</span>
               <div className="flex overflow-hidden rounded-full border border-[#1f7a44]">
                 <select
                   value={distributionMethod}

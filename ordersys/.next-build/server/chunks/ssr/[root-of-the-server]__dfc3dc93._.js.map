@@ -1,0 +1,1 @@
+{"version":3,"sources":["turbopack:///[project]/src/app/test/page.tsx"],"sourcesContent":["import type { Metadata } from \"next\";\n\nexport const metadata: Metadata = {\n  title: \"Test | Ordexa\",\n};\n\nexport default function TestPage() {\n  return null;\n}\n"],"names":[],"mappings":"wRAEO,IAAM,EAAqB,CAChC,MAAO,eACT,EAEe,SAAS,IACtB,OAAO,IACT"}

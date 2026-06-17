@@ -1,0 +1,3 @@
+module.exports=[193695,(a,b,c)=>{b.exports=a.x("next/dist/shared/lib/no-fallback-error.external.js",()=>require("next/dist/shared/lib/no-fallback-error.external.js"))},262212,a=>{a.n(a.i(866114))},45101,a=>{a.n(a.i(656552))},512127,(a,b,c)=>{},948881,a=>{"use strict";a.s(["default",()=>c]);var b=a.i(907997);function c(){return(0,b.jsxs)("div",{className:"p-6",children:[(0,b.jsx)("h1",{className:"text-xl font-semibold",children:"Ordern är redan fakturerad"}),(0,b.jsx)("p",{className:"text-neutral-600 mt-2",children:"Den här ordern har markerats som fakturerad och kan inte längre visas i detta läge."})]})}}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__36c9d2cd._.js.map

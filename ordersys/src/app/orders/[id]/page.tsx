@@ -1210,7 +1210,7 @@ export default function OrderPage() {
       const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
       if (!res.ok) {
         const msg = await res.text();
-        setErr(`Kunde inte hÃ¤mta order (${res.status}): ${msg}`);
+        setErr(`Kunde inte hämta order (${res.status}): ${msg}`);
         setData(null);
         return;
       }
@@ -1236,7 +1236,7 @@ export default function OrderPage() {
       setOrderLinesError(order.fortnoxRowsError ?? null);
     } catch (e: any) {
       console.error(e);
-      setErr("Tekniskt fel nÃ¤r order skulle hÃ¤mtas.");
+      setErr("Tekniskt fel när order skulle hämtas.");
     }
   }
 
@@ -1319,7 +1319,7 @@ export default function OrderPage() {
     if (!orderId) return;
     if (
       !confirm(
-        `Ã„r du sÃ¤ker pÃ¥ att du vill ta bort filen "${filename}"? Detta gÃ¥r inte att Ã¥ngra.`
+        `Ã„r du säker på att du vill ta bort filen "${filename}"? Detta går inte att ångra.`
       )
     )
       return;
@@ -1530,9 +1530,9 @@ export default function OrderPage() {
         }
 
         if (res.status === 403) {
-          const trackLabel = TRACK_LABELS[t] ?? `spÃ¥r ${t}`;
+          const trackLabel = TRACK_LABELS[t] ?? `spår ${t}`;
           setStatusError(
-            `Du har inte behÃ¶righet att uppdatera ${trackLabel}. Kontakta en administratÃ¶r om du behÃ¶ver gÃ¶ra Ã¤ndringar.`
+            `Du har inte behörighet att uppdatera ${trackLabel}. Kontakta en administratör om du behöver göra ändringar.`
           );
         } else {
           const readable = (parsed?.error ?? raw) || "Forsok igen om en stund.";

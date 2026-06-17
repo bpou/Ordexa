@@ -1,0 +1,3 @@
+module.exports=[193695,(a,b,c)=>{b.exports=a.x("next/dist/shared/lib/no-fallback-error.external.js",()=>require("next/dist/shared/lib/no-fallback-error.external.js"))},262212,a=>{a.n(a.i(866114))},231339,(a,b,c)=>{},887041,a=>{"use strict";a.s(["default",()=>c,"metadata",()=>b]);let b={title:"Test | Ordexa"};function c(){return null}}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__dfc3dc93._.js.map

@@ -33,107 +33,107 @@ const FEATURE_SETS: Feature[] = [
   {
     title: "Ã–verblick i realtid",
     description:
-      "Samla varje order, spÃ¥r och fil i samma vy. Filtrera pÃ¥ AteljÃ© eller Verkstad och fÃ¥ ett kontrollrum fÃ¶r vardagens beslut.",
+      "Samla varje order, spår och fil i samma vy. Filtrera på Ateljé eller Verkstad och få ett kontrollrum för vardagens beslut.",
     benefits: [
       "Dashboard som summerar kommande leveranser",
       "Statuschip som lyfter fram flaskhalsar",
-      "Delade filer och kommentarer i samma flÃ¶de",
+      "Delade filer och kommentarer i samma flöde",
     ],
     accent: "from-brand-200/60 to-brand-400/50",
   },
   {
-    title: "Planering som hÃ¥ller",
+    title: "Planering som håller",
     description:
-      "SchemalÃ¤gg spÃ¥r A och B med drag-and-drop eller lÃ¥t Ordina fÃ¶reslÃ¥ luckor automatiskt baserat pÃ¥ kapacitet och Ã¶ppettider.",
+      "Schemalägg spår A och B med drag-and-drop eller låt Ordina föreslå luckor automatiskt baserat på kapacitet och öppettider.",
     benefits: [
-      "Automatiska slotfÃ¶rslag nÃ¤r kalendern Ã¤r tight",
-      "Tidslinje med fÃ¤rger per team och status",
-      "Pushnotiser via Pusher nÃ¤r filer lÃ¤ggs till",
+      "Automatiska slotförslag när kalendern är tight",
+      "Tidslinje med färger per team och status",
+      "Pushnotiser via Pusher när filer läggs till",
     ],
     accent: "from-info-200/60 to-info-400/50",
   },
   {
     title: "Trygg fakturering",
     description:
-      "FÃ¶lj upp avslutade ordrar och markera dem fÃ¶r fakturering nÃ¤r bÃ¥da spÃ¥r Ã¤r klara. Kopplingen mot Fortnox sparar dubbelarbete.",
+      "Följ upp avslutade ordrar och markera dem för fakturering när båda spår är klara. Kopplingen mot Fortnox sparar dubbelarbete.",
     benefits: [
-      "Klarmarkera spÃ¥r A/B individuellt",
-      "BekrÃ¤fta flera ordrar Ã¥t gÃ¥ngen",
-      "DirektlÃ¤nk tillbaka till Fortnox-dokumentet",
+      "Klarmarkera spår A/B individuellt",
+      "Bekräfta flera ordrar åt gången",
+      "Direktlänk tillbaka till Fortnox-dokumentet",
     ],
     accent: "from-warning-200/60 to-warning-400/50",
   },
 ];
 
 const METRICS = [
-  { label: "+40% snabbare upplÃ¤gg", note: "med fÃ¤rdiga mallar och smidig Fortnox-export" },
-  { label: "97% fÃ¤rre missade filer", note: "tack vare notifieringar och delad dokumentyta" },
-  { label: "< 2 min", note: "att hitta status pÃ¥ vilken order som helst" },
+  { label: "+40% snabbare upplägg", note: "med färdiga mallar och smidig Fortnox-export" },
+  { label: "97% färre missade filer", note: "tack vare notifieringar och delad dokumentyta" },
+  { label: "< 2 min", note: "att hitta status på vilken order som helst" },
 ] as const;
 
 const SOLUTIONS: Persona[] = [
   {
     key: "project",
-    heading: "FÃ¶r projektledare",
+    heading: "För projektledare",
     body:
-      "Planera kapacitet, synka teamen och ge svar direkt till kund. Du ser vilket spÃ¥r som ligger efter och kan omplanera pÃ¥ sekunder.",
-    link: { href: "/orders/overview", label: "Utforska orderÃ¶versikten" },
-    highlights: ["KapacitetsÃ¶versikt", "Filtrering pÃ¥ status", "Leveransprognoser"],
+      "Planera kapacitet, synka teamen och ge svar direkt till kund. Du ser vilket spår som ligger efter och kan omplanera på sekunder.",
+    link: { href: "/orders/overview", label: "Utforska orderöversikten" },
+    highlights: ["Kapacitetsöversikt", "Filtrering på status", "Leveransprognoser"],
   },
   {
     key: "workshop",
-    heading: "FÃ¶r verkstad och montage",
+    heading: "För verkstad och montage",
     body:
-      "Visualisera dagens arbete, ladda upp foton frÃ¥n mobilen och fÃ¶lj checklistor per order. Allt uppdateras i realtid.",
-    link: { href: "/orders/track/A", label: "GÃ¥ till spÃ¥rvyn" },
-    highlights: ["Drag-and-drop i spÃ¥r", "Fildelning pÃ¥ minuten", "Notiser nÃ¤r ordern Ã¤ndras"],
+      "Visualisera dagens arbete, ladda upp foton från mobilen och följ checklistor per order. Allt uppdateras i realtid.",
+    link: { href: "/orders/track/A", label: "Gå till spårvyn" },
+    highlights: ["Drag-and-drop i spår", "Fildelning på minuten", "Notiser när ordern ändras"],
   },
   {
     key: "sales",
-    heading: "FÃ¶r ekonomi och sÃ¤lj",
+    heading: "För ekonomi och sälj",
     body:
-      "FÃ¥ full kontroll Ã¶ver vad som Ã¤r redo att faktureras och vad som blockerar. Kvittera avslutade ordrar och skicka direkt till Fortnox.",
+      "Få full kontroll över vad som är redo att faktureras och vad som blockerar. Kvittera avslutade ordrar och skicka direkt till Fortnox.",
     link: { href: "/orders/completed", label: "Se avslutade ordrar" },
-    highlights: ["Faktureringslista", "Fortnox-lÃ¤nkar", "Historik per order"],
+    highlights: ["Faktureringslista", "Fortnox-länkar", "Historik per order"],
   },
 ];
 
 const JOURNEY: JourneyStep[] = [
   {
     id: "create",
-    title: "1. Skapa ordning pÃ¥ minuter",
+    title: "1. Skapa ordning på minuter",
     text:
-      "SÃ¶k upp kunden i Fortnox, importera artikelrader och komplettera med leveransadress. Ordina fyller i spÃ¥r, fÃ¤rger och planering Ã¥t dig.",
+      "Sök upp kunden i Fortnox, importera artikelrader och komplettera med leveransadress. Ordina fyller i spår, färger och planering åt dig.",
   },
   {
     id: "track",
-    title: "2. FÃ¶lj jobbet i realtid",
+    title: "2. Följ jobbet i realtid",
     text:
-      "Verkstad och ateljÃ© markerar status, laddar upp filer och loggar hÃ¤ndelser. Du ser tidslinjen fylld av fÃ¤rger i stÃ¤llet fÃ¶r gissningar.",
+      "Verkstad och ateljé markerar status, laddar upp filer och loggar händelser. Du ser tidslinjen fylld av färger i stället för gissningar.",
   },
   {
     id: "invoice",
     title: "3. Leverera och fakturera",
     text:
-      "NÃ¤r bÃ¥da spÃ¥r Ã¤r avslutade ligger ordern redo fÃ¶r fakturering. Ett klick skickar kvittens till ekonomiavdelningen.",
+      "När båda spår är avslutade ligger ordern redo för fakturering. Ett klick skickar kvittens till ekonomiavdelningen.",
   },
 ];
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "Kan vi anvÃ¤nda vÃ¥ra egna Fortnox-mallar?",
+    question: "Kan vi använda våra egna Fortnox-mallar?",
     answer:
-      "Ja. Ordina hÃ¤mtar prislistor, kunder och artiklar frÃ¥n Fortnox. Ordern skapas med samma mallar som ni anvÃ¤nder idag.",
+      "Ja. Ordina hämtar prislistor, kunder och artiklar från Fortnox. Ordern skapas med samma mallar som ni använder idag.",
   },
   {
-    question: "BehÃ¶ver verkstaden installera en app?",
+    question: "Behöver verkstaden installera en app?",
     answer:
-      "Nej. Allt kÃ¶rs i webblÃ¤saren och Ã¤r optimerat fÃ¶r surfplattor och mobiler. Filuppladdning och statusÃ¤ndring fungerar direkt.",
+      "Nej. Allt körs i webbläsaren och är optimerat för surfplattor och mobiler. Filuppladdning och statusändring fungerar direkt.",
   },
   {
-    question: "Hur snabbt kommer vi igÃ¥ng?",
+    question: "Hur snabbt kommer vi igång?",
     answer:
-      "Vi sÃ¤tter upp er miljÃ¶ pÃ¥ under en timme: koppling till Fortnox, spÃ¥r, fÃ¤rger och de fÃ¶rsta anvÃ¤ndarna. Resten kan ni styra sjÃ¤lva.",
+      "Vi sätter upp er miljö på under en timme: koppling till Fortnox, spår, färger och de första användarna. Resten kan ni styra själva.",
   },
 ];
 
@@ -173,14 +173,14 @@ export default function HomeLandingPage() {
             <div className="mx-auto flex w-full flex-col items-center gap-6 text-center lg:w-[min(75vw,60rem)]">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/85 px-4 py-1.5 text-xs font-medium text-brand-700 shadow-sm sm:text-sm">
                 <span>Ordinas ordersystem</span>
-                <span className="text-neutral-500">â€“ byggt fÃ¶r fÃ¶nster & montage</span>
+                <span className="text-neutral-500">â€“ byggt för fönster & montage</span>
               </div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                HÃ¥ll ihop hela orderresan frÃ¥n offert till montage
+                Håll ihop hela orderresan från offert till montage
               </h1>
               <p className="max-w-2xl text-base text-neutral-600 sm:text-lg">
-                Ordina samlar planering, filer, statusar och Fortnox-koppling i ett mobilvÃ¤nligt
-                flÃ¶de. SÃ¤lj, ateljÃ©, verkstad och ekonomi jobbar i samma vy och kunden fÃ¥r besked
+                Ordina samlar planering, filer, statusar och Fortnox-koppling i ett mobilvänligt
+                flöde. Sälj, ateljé, verkstad och ekonomi jobbar i samma vy och kunden får besked
                 snabbare.
               </p>
               <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
@@ -188,13 +188,13 @@ export default function HomeLandingPage() {
                   href="/login"
                   className="inline-flex h-12 items-center justify-center rounded-full bg-brand-600 px-6 text-sm font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-700"
                 >
-                  Logga in och bÃ¶rja planera
+                  Logga in och börja planera
                 </Link>
                 <Link
                   href="/orders/overview"
                   className="inline-flex h-12 items-center justify-center rounded-full border border-brand-600/40 px-6 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
                 >
-                  Se orderÃ¶versikten
+                  Se orderöversikten
                 </Link>
               </div>
               <div className="grid w-full gap-3 sm:grid-cols-3">
@@ -262,7 +262,7 @@ export default function HomeLandingPage() {
                   <div className="rounded-3xl border border-brand-200 bg-brand-50/85 p-6 shadow-lg shadow-brand-100 sm:p-8">
                     <h3 className="text-lg font-semibold text-brand-800">Rollbaserad vy</h3>
                     <p className="mt-2 text-sm text-brand-900/80">
-                      VÃ¤lj din roll fÃ¶r att se hur Ordina hjÃ¤lper just dig. Kortet uppdateras direkt.
+                      Välj din roll för att se hur Ordina hjälper just dig. Kortet uppdateras direkt.
                     </p>
                     <div className="mt-4 flex snap-x gap-2 overflow-x-auto pb-1">
                       {SOLUTIONS.map((solution) => {
@@ -362,7 +362,7 @@ export default function HomeLandingPage() {
               </div>
 
               <div className="rounded-3xl border border-brand-100 bg-white/95 p-6 shadow-lg shadow-brand-100/40 sm:p-8">
-                <h2 className="text-2xl font-semibold">Vanliga frÃ¥gor</h2>
+                <h2 className="text-2xl font-semibold">Vanliga frågor</h2>
                 <div className="mt-5 space-y-3">
                   {FAQ_ITEMS.map((item, index) => {
                     const open = openFaq === index;
@@ -390,10 +390,10 @@ export default function HomeLandingPage() {
 
           <section className="bg-brand-700 px-4 py-16 text-white sm:px-6 lg:px-12 lg:py-20">
             <div className="mx-auto flex w-full flex-col items-center gap-6 text-center lg:w-[min(75vw,60rem)]">
-              <h2 className="text-2xl font-semibold sm:text-3xl">Redo att fÃ¶renkla din ordervardag?</h2>
+              <h2 className="text-2xl font-semibold sm:text-3xl">Redo att förenkla din ordervardag?</h2>
               <p className="text-base text-brand-50/90 sm:text-lg">
-                Boka en demo med Ordina-teamet eller logga in och bÃ¶rja dÃ¤r du stÃ¥r. PÃ¥ under en timme
-                sÃ¤tter vi upp spÃ¥ren, Fortnox-kopplingen och hjÃ¤lper dig importera dina fÃ¶rsta ordrar.
+                Boka en demo med Ordina-teamet eller logga in och börja där du står. På under en timme
+                sätter vi upp spåren, Fortnox-kopplingen och hjälper dig importera dina första ordrar.
               </p>
               <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
                 <Link
