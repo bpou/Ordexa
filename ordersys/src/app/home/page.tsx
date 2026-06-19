@@ -31,7 +31,7 @@ type FaqItem = {
 
 const FEATURE_SETS: Feature[] = [
   {
-    title: "Ã–verblick i realtid",
+    title: "Överblick i realtid",
     description:
       "Samla varje order, spår och fil i samma vy. Filtrera på Ateljé eller Verkstad och få ett kontrollrum för vardagens beslut.",
     benefits: [

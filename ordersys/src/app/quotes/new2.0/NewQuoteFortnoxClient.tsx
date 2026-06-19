@@ -2752,7 +2752,7 @@ export default function NewQuoteFortnoxClient({ defaultOurReference = "" }: { de
                       </div>
 
                       <div className="col-start-2">
-                        <div>Ã–resutjämning</div>
+                        <div>Öresutjämning</div>
                         <div className="mt-1 text-[14px] font-semibold text-[#2f4d1f]">
                           {formatCurrency(oreAdjustment)}
                         </div>
