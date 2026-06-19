@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { sendNotificationEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { canSendNotification, notificationPreferenceDefaults } from "@/lib/notification-preferences";
+import { Track } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -13,9 +14,21 @@ const preferenceKeys = [
   "orderUpdates",
   "calendarDigest",
   "securityAlerts",
+  "trackFilters",
+  "userFilters",
 ] as const;
 
 type PreferenceKey = (typeof preferenceKeys)[number];
+type BooleanPreferenceKey = "desktopEnabled" | "emailEnabled" | "orderUpdates" | "calendarDigest" | "securityAlerts";
+const preferenceSelect = {
+  desktopEnabled: true,
+  emailEnabled: true,
+  orderUpdates: true,
+  calendarDigest: true,
+  securityAlerts: true,
+  trackFilters: true,
+  userFilters: true,
+} as const;
 
 function sessionUserId(session: unknown) {
   const id = (
@@ -31,7 +44,12 @@ function sessionUserEmail(session: unknown) {
   return typeof email === "string" && email.trim() ? email : null;
 }
 
-function responseBody(preferences: Record<PreferenceKey, boolean>) {
+function responseBody(
+  preferences: Record<BooleanPreferenceKey, boolean> & {
+    trackFilters: Track[];
+    userFilters: string[];
+  }
+) {
   return {
     preferences: {
       desktopEnabled: preferences.desktopEnabled,
@@ -39,6 +57,8 @@ function responseBody(preferences: Record<PreferenceKey, boolean>) {
       orderUpdates: preferences.orderUpdates,
       calendarDigest: preferences.calendarDigest,
       securityAlerts: preferences.securityAlerts,
+      trackFilters: preferences.trackFilters,
+      userFilters: preferences.userFilters,
     },
   };
 }
@@ -53,6 +73,7 @@ export async function GET() {
 
   const preferences = await prisma.notificationPreference.upsert({
     where: { userId },
+    select: preferenceSelect,
     update: {},
     create: { userId, ...notificationPreferenceDefaults },
   });
@@ -73,13 +94,27 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid preferences." }, { status: 400 });
   }
 
-  const data: Partial<Record<PreferenceKey, boolean>> = {};
+  const data: Partial<Record<BooleanPreferenceKey, boolean> & { trackFilters: Track[]; userFilters: string[] }> = {};
   for (const key of preferenceKeys) {
     if (key in body) {
+      if (key === "trackFilters") {
+        if (!Array.isArray(body[key]) || body[key].some((value) => !Object.values(Track).includes(value as Track))) {
+          return NextResponse.json({ error: `Invalid value for ${key}.` }, { status: 400 });
+        }
+        data[key] = [...new Set((body[key] as Track[]).map((value) => value as Track))];
+        continue;
+      }
+      if (key === "userFilters") {
+        if (!Array.isArray(body[key]) || body[key].some((value) => typeof value !== "string")) {
+          return NextResponse.json({ error: `Invalid value for ${key}.` }, { status: 400 });
+        }
+        data[key] = [...new Set((body[key] as string[]).map((value) => value.trim()).filter(Boolean))];
+        continue;
+      }
       if (typeof body[key] !== "boolean") {
         return NextResponse.json({ error: `Invalid value for ${key}.` }, { status: 400 });
       }
-      data[key] = body[key];
+      data[key] = body[key] as boolean;
     }
   }
 
@@ -89,6 +124,7 @@ export async function PATCH(req: Request) {
 
   const preferences = await prisma.notificationPreference.upsert({
     where: { userId },
+    select: preferenceSelect,
     update: data,
     create: { userId, ...notificationPreferenceDefaults, ...data },
   });
@@ -110,6 +146,7 @@ export async function POST() {
 
   const preferences = await prisma.notificationPreference.upsert({
     where: { userId },
+    select: preferenceSelect,
     update: {},
     create: { userId, ...notificationPreferenceDefaults },
   });

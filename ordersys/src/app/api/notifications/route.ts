@@ -3,7 +3,11 @@ import { getServerSession } from "next-auth";
 import { Prisma, Role, Track } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
-import { getNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
+import {
+  getNotificationPreferences,
+  matchesNotificationFilters,
+  type NotificationPreferences,
+} from "@/lib/notification-preferences";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -18,6 +22,9 @@ type NotificationItem = {
   tone: NotificationTone;
   kind: "order" | "planning" | "file" | "billing" | "calendar";
   createdAt: string;
+  tracks?: Track[];
+  actorUserId?: string | null;
+  ownerUserId?: string | null;
 };
 
 const ROLE_TRACK: Partial<Record<Role, Track>> = {
@@ -132,6 +139,7 @@ export async function GET() {
       tone: "critical",
       kind: "calendar",
       createdAt: iso(outlookConnection.updatedAt),
+      tracks: [],
     });
   }
 
@@ -152,6 +160,8 @@ export async function GET() {
         tone: "warning",
         kind: "order",
         createdAt: iso(order.updatedAt),
+        tracks: blocked.map((track) => track.track),
+        ownerUserId: order.createdById,
       });
     }
 
@@ -164,6 +174,8 @@ export async function GET() {
         tone: "warning",
         kind: "planning",
         createdAt: iso(order.updatedAt),
+        tracks: unplanned.map((track) => track.track),
+        ownerUserId: order.createdById,
       });
     }
 
@@ -178,6 +190,8 @@ export async function GET() {
           tone: due < now ? "critical" : "info",
           kind: "planning",
           createdAt: iso(order.dueDate),
+          tracks: order.tracks.map((track) => track.track),
+          ownerUserId: order.createdById,
         });
       }
     }
@@ -191,6 +205,8 @@ export async function GET() {
         tone: "success",
         kind: "billing",
         createdAt: iso(order.updatedAt),
+        tracks: order.tracks.map((track) => track.track),
+        ownerUserId: order.createdById,
       });
     }
 
@@ -203,12 +219,24 @@ export async function GET() {
         tone: "info",
         kind: "file",
         createdAt: iso(file.createdAt),
+        tracks: [file.track],
+        actorUserId: file.uploadedById,
+        ownerUserId: order.createdById,
       });
     }
   }
 
   const sorted = items
     .filter((item) => (preferences ? isKindEnabled(item.kind, preferences) : true))
+    .filter((item) =>
+      preferences
+        ? matchesNotificationFilters(preferences, {
+            tracks: item.tracks ?? [],
+            actorUserId: item.actorUserId ?? null,
+            ownerUserId: item.ownerUserId ?? null,
+          })
+        : true
+    )
     .filter((item) => !dismissedIds.has(item.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 12);

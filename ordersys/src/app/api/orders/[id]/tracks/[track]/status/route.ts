@@ -6,7 +6,11 @@ import type { Role, Track, TrackStatus } from "@prisma/client";
 import { normalizeTrack } from "@/lib/tracks";
 import { authOptions } from "@/lib/auth";
 import { sendOrderCompletionNotification } from "@/lib/email";
-import { canSendNotification, getNotificationPreferences } from "@/lib/notification-preferences";
+import {
+  canSendNotification,
+  getNotificationPreferences,
+  matchesNotificationFilters,
+} from "@/lib/notification-preferences";
 import { sendWebPushToUser } from "@/lib/web-push";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyActiveOrders } from "@/lib/filters";
@@ -157,16 +161,24 @@ export async function POST(
         if (orderDetails?.createdBy) {
           const preferences = await getNotificationPreferences(orderDetails.createdBy.id);
           const viewLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/orders/${orderDetails.orderNumber}`;
+          const matchesFilters = matchesNotificationFilters(preferences, {
+            tracks: [normalizedTrack as Track],
+            actorUserId: (session.user as { id?: string | null } | undefined)?.id ?? null,
+            ownerUserId: orderDetails.createdBy.id,
+          });
           console.info("Order completion notification preferences", {
             orderNumber: orderDetails.orderNumber,
             userId: orderDetails.createdBy.id,
             emailEnabled: preferences.emailEnabled,
             desktopEnabled: preferences.desktopEnabled,
             orderUpdates: preferences.orderUpdates,
+            trackFilters: preferences.trackFilters,
+            userFilters: preferences.userFilters,
+            matchesFilters,
             hasEmail: Boolean(orderDetails.createdBy.email),
           });
 
-          if (orderDetails.createdBy.email && canSendNotification(preferences, "orderUpdates", "email")) {
+          if (orderDetails.createdBy.email && canSendNotification(preferences, "orderUpdates", "email") && matchesFilters) {
             try {
               await sendOrderCompletionNotification({
                 orderId: orderDetails.orderNumber,
@@ -192,7 +204,7 @@ export async function POST(
             });
           }
 
-          if (canSendNotification(preferences, "orderUpdates", "desktop")) {
+          if (canSendNotification(preferences, "orderUpdates", "desktop") && matchesFilters) {
             const pushResult = await sendWebPushToUser(orderDetails.createdBy.id, {
               title: "Redo for fakturering",
               body: `Order #${orderDetails.orderNumber} ${orderDetails.title} ar avslutad i alla spar.`,

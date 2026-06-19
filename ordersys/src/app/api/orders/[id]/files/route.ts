@@ -11,7 +11,11 @@ import { normalizeTrack } from "@/lib/tracks";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { sendNotificationEmail } from "@/lib/email";
-import { canSendNotification, getNotificationPreferences } from "@/lib/notification-preferences";
+import {
+  canSendNotification,
+  getNotificationPreferences,
+  matchesNotificationFilters,
+} from "@/lib/notification-preferences";
 import { sendWebPushToUser } from "@/lib/web-push";
 import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 
@@ -150,8 +154,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       const preferences = await getNotificationPreferences(order.createdBy.id);
       const viewLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/orders/${order.orderNumber}`;
       const notificationBody = `${saved.filename} lades till pa order #${order.orderNumber} ${order.title}.`;
+      const matchesFilters = matchesNotificationFilters(preferences, {
+        tracks: [trackForSave],
+        actorUserId: uploadedById,
+        ownerUserId: order.createdBy.id,
+      });
 
-      if (order.createdBy.email && canSendNotification(preferences, "orderUpdates", "email")) {
+      if (order.createdBy.email && canSendNotification(preferences, "orderUpdates", "email") && matchesFilters) {
         await sendNotificationEmail({
           to: order.createdBy.email,
           subject: `Ny fil uppladdad pa order ${order.orderNumber}`,
@@ -164,7 +173,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         });
       }
 
-      if (canSendNotification(preferences, "orderUpdates", "desktop")) {
+      if (canSendNotification(preferences, "orderUpdates", "desktop") && matchesFilters) {
         await sendWebPushToUser(order.createdBy.id, {
           title: "Ny fil uppladdad",
           body: notificationBody,

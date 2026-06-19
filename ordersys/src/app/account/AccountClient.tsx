@@ -23,6 +23,7 @@ import {
 import Button from "@/components/ui/button";
 import { OrdinaLogoSpinner } from "@/components/OrdinaLoader";
 import { Switch } from "@/components/unlumen-ui/switch";
+import type { Track } from "@prisma/client";
 import {
   applyThemePreference,
   isThemePreference,
@@ -47,6 +48,15 @@ type NotificationPrefs = {
   orderUpdates: boolean;
   calendarDigest: boolean;
   securityAlerts: boolean;
+  trackFilters: Track[];
+  userFilters: string[];
+};
+
+type UserOption = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
 };
 
 type TotpSetupState = {
@@ -89,7 +99,17 @@ const notificationDefaults = {
   orderUpdates: true,
   calendarDigest: true,
   securityAlerts: true,
+  trackFilters: [] as Track[],
+  userFilters: [] as string[],
 };
+
+const notificationTrackOptions: Array<{ value: Track; label: string }> = [
+  { value: "A", label: "Spår A" },
+  { value: "B", label: "Spår B" },
+  { value: "C", label: "Spår C" },
+  { value: "D", label: "Spår D" },
+  { value: "SHARED", label: "Delad" },
+];
 
 const notificationChannelCopy = [
   {
@@ -143,6 +163,7 @@ function urlBase64ToUint8Array(value: string) {
 export default function AccountClient({ user }: AccountClientProps) {
   const router = useRouter();
   const [prefs, setPrefs] = useState<NotificationPrefs>(notificationDefaults);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [theme, setTheme] = useState<ThemePreference>("light");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState(user.image || "/default-avatar.png");
@@ -225,6 +246,24 @@ export default function AccountClient({ user }: AccountClientProps) {
         setPrefs({ ...notificationDefaults, ...(data?.preferences ?? {}) });
       } catch (error) {
         console.error("Kunde inte ladda notisinställningar", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/users", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setUsers(Array.isArray(data?.users) ? data.users : []);
+      } catch (error) {
+        console.error("Kunde inte ladda användare för notisfilter", error);
       }
     })();
     return () => {
@@ -328,6 +367,7 @@ export default function AccountClient({ user }: AccountClientProps) {
   }, [user.role]);
 
   function togglePref(key: keyof NotificationPrefs) {
+    if (key === "trackFilters" || key === "userFilters") return;
     setPrefs((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       void fetch("/api/account/notification-preferences", {
@@ -339,6 +379,34 @@ export default function AccountClient({ user }: AccountClientProps) {
       });
       return next;
     });
+  }
+
+  function updateNotificationFilters(patch: Partial<Pick<NotificationPrefs, "trackFilters" | "userFilters">>) {
+    setPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      void fetch("/api/account/notification-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      }).catch((error) => {
+        console.error("Kunde inte spara notisfilter", error);
+      });
+      return next;
+    });
+  }
+
+  function toggleTrackFilter(track: Track) {
+    const next = prefs.trackFilters.includes(track)
+      ? prefs.trackFilters.filter((value) => value !== track)
+      : [...prefs.trackFilters, track];
+    updateNotificationFilters({ trackFilters: next });
+  }
+
+  function toggleUserFilter(userId: string) {
+    const next = prefs.userFilters.includes(userId)
+      ? prefs.userFilters.filter((value) => value !== userId)
+      : [...prefs.userFilters, userId];
+    updateNotificationFilters({ userFilters: next });
   }
 
   async function refreshPushStatus() {
@@ -1092,6 +1160,50 @@ export default function AccountClient({ user }: AccountClientProps) {
                 </div>
               );
             })}
+            <div className="space-y-3 rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Spårfilter</p>
+                <p className="text-xs text-muted-foreground">Tomt val betyder alla spår. Välj spåren du vill få notiser för.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {notificationTrackOptions.map((option) => {
+                  const active = prefs.trackFilters.includes(option.value);
+                  return (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={active ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleTrackFilter(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Användarfilter</p>
+                <p className="text-xs text-muted-foreground">Tomt val betyder alla användare. Välj vilka personer som ska kunna trigga dina notiser.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {users.map((option) => {
+                  const active = prefs.userFilters.includes(option.id);
+                  return (
+                    <Button
+                      key={option.id}
+                      type="button"
+                      variant={active ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleUserFilter(option.id)}
+                    >
+                      {option.name || option.email}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">Dina val sparas på kontot och styr både e-post och desktopnotiser.</p>
         </section>

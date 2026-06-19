@@ -1,3 +1,4 @@
+import { Track } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const notificationPreferenceDefaults = {
@@ -6,6 +7,8 @@ export const notificationPreferenceDefaults = {
   orderUpdates: true,
   calendarDigest: true,
   securityAlerts: true,
+  trackFilters: [] as Track[],
+  userFilters: [] as string[],
 };
 
 export type NotificationPreferences = typeof notificationPreferenceDefaults;
@@ -21,6 +24,8 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
       orderUpdates: true,
       calendarDigest: true,
       securityAlerts: true,
+      trackFilters: true,
+      userFilters: true,
     },
   });
 
@@ -34,4 +39,33 @@ export function canSendNotification(
 ) {
   const channelEnabled = channel === "desktop" ? preferences.desktopEnabled : preferences.emailEnabled;
   return channelEnabled && preferences[category];
+}
+
+export function matchesNotificationFilters(
+  preferences: NotificationPreferences,
+  context: {
+    tracks?: Track[] | null;
+    actorUserId?: string | null;
+    ownerUserId?: string | null;
+  }
+) {
+  const trackFilters = preferences.trackFilters ?? [];
+  if (trackFilters.length > 0) {
+    const tracks = context.tracks ?? [];
+    if (!tracks.some((track) => trackFilters.includes(track))) {
+      return false;
+    }
+  }
+
+  const userFilters = preferences.userFilters ?? [];
+  if (userFilters.length > 0) {
+    const candidates = [context.actorUserId, context.ownerUserId].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+    if (!candidates.some((value) => userFilters.includes(value))) {
+      return false;
+    }
+  }
+
+  return true;
 }
