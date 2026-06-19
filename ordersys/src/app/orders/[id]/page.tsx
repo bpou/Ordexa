@@ -467,40 +467,64 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
         />
       </button>
 
-      {open ? (
-        <div className="p-4 sm:p-5">
-          {items.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
-              Inga händelser att visa ännu.
-            </div>
-          ) : (
-            <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[18px] before:top-4 before:w-px before:bg-neutral-200">
-              {items.map((item) => (
-                <div key={item.id} className="relative grid grid-cols-[38px_minmax(0,1fr)] gap-3">
-                  <span className={`relative z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border ${item.accent}`}>
-                    {auditIcon(item.icon)}
-                  </span>
-
-                  <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-sm font-semibold text-neutral-900">
-                        {item.title}
-                      </h3>
-                      <span className="text-xs font-medium text-neutral-500">
-                        {formatAuditDate(item.at)}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-sm leading-5 text-neutral-600">
-                      {item.description}
-                    </p>
-                  </div>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="order-history-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <motion.div
+              initial={{ y: -8 }}
+              animate={{ y: 0 }}
+              exit={{ y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="p-4 sm:p-5"
+            >
+              {items.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
+                  Inga händelser att visa ännu.
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+              ) : (
+                <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[18px] before:top-4 before:w-px before:bg-neutral-200">
+                  {items.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18, delay: index * 0.02, ease: "easeOut" }}
+                      className="relative grid grid-cols-[38px_minmax(0,1fr)] gap-3"
+                    >
+                      <span className={`relative z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border ${item.accent}`}>
+                        {auditIcon(item.icon)}
+                      </span>
+
+                      <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <h3 className="text-sm font-semibold text-neutral-900">
+                            {item.title}
+                          </h3>
+                          <span className="text-xs font-medium text-neutral-500">
+                            {formatAuditDate(item.at)}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-sm leading-5 text-neutral-600">
+                          {item.description}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }
