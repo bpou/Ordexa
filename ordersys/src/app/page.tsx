@@ -10,7 +10,7 @@ export default async function HomePage() {
 
   if (!session) {
     return (
-      <div className="-mx-4 -my-4 sm:-mx-6 sm:-my-6">
+      <div className="marketing-landing-page -mx-4 -my-4 sm:-mx-6 sm:-my-6">
         <MarketingLanding />
       </div>
     );

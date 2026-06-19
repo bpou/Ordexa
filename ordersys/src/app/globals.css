@@ -57,6 +57,15 @@
     color-scheme: light;
   }
 
+  #top:has(.marketing-landing-page) > main > header,
+  #top:has(.marketing-landing-page) > footer {
+    display: none;
+  }
+
+  #top:has(.marketing-landing-page) > main > div {
+    padding: 0;
+  }
+
   .dark {
     color-scheme: dark;
     --color-background: #0b1220;
