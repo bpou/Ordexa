@@ -7,6 +7,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyActiveOrders } from "@/lib/filters";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
+import { formatMinutesLabel } from "@/lib/time";
 
 type Params = { id: string; track: string };
 
@@ -215,6 +217,22 @@ export async function POST(
           DELETE FROM "OrderTrackTimeEntry"
           WHERE "id" IN (${Prisma.join(duplicateIds)})
         `;
+      }
+
+      if (appliedDelta !== 0) {
+        await createOrderHistoryEvent({
+          db: tx,
+          orderId: order.orderNumber,
+          type: "time",
+          title: "Tid uppdaterad",
+          description: `${createdByName} ${appliedDelta > 0 ? "lade till" : "tog bort"} ${formatMinutesLabel(Math.abs(appliedDelta))} på ${trackHistoryLabel(trackKey)} för ${targetUser.name ?? targetUser.email}.`,
+          actor: sessionUser,
+          metadata: {
+            track: trackKey,
+            minutesDelta: appliedDelta,
+            userId: targetUser.id,
+          },
+        });
       }
 
       return { track, entry, appliedDelta, replacedEntryIds: duplicateIds };

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
 import { pusherServer } from "@/lib/pusher-server";
 import { upsertTrackEventToOutlook } from "@/lib/outlook";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           track: event.track,
           plannedStartAt: start,
           plannedEndAt: end,
+        },
+      });
+
+      const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
+      await createOrderHistoryEvent({
+        db: tx,
+        orderId: event.orderId,
+        type: "order",
+        title: `${trackHistoryLabel(event.track)} planering ändrad`,
+        description: `${sessionUser.name || sessionUser.email || "Okänd användare"} flyttade planeringen till ${start.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}.`,
+        actor: sessionUser,
+        metadata: {
+          calendarEventId: event.id,
+          track: event.track,
+          start: start.toISOString(),
+          end: end.toISOString(),
         },
       });
     }

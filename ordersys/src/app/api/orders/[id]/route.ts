@@ -7,6 +7,7 @@ import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { getStoredFileUrl } from "@/lib/file-storage";
 import { getFortnoxOrder, updateFortnoxOrder } from "@/lib/fortnox";
+import { createOrderHistoryEvent } from "@/lib/order-history";
 
 export const runtime = "nodejs";
 const FILE_URL_TTL_SEC = 600;
@@ -140,6 +141,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       tracks: true,
       events: { orderBy: { start: "asc" } },
       fortnox: true,
+      historyEvents: { orderBy: { createdAt: "desc" } },
       createdBy: { select: { name: true, email: true, image: true } },
       files: { orderBy: { createdAt: "desc" } },
     },
@@ -289,6 +291,16 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         title: event.title,
         notes: event.notes ?? null,
       })),
+      historyEvents: order.historyEvents.map((event) => ({
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        description: event.description,
+        actorId: event.actorId ?? null,
+        actorName: event.actorName ?? null,
+        metadata: event.metadata ?? null,
+        createdAt: event.createdAt.toISOString(),
+      })),
       notes: order.notes ?? null,
       tracks,
       timeEntries: serializedTimeEntries,
@@ -329,6 +341,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Anteckningarna är för långa." }, { status: 400 });
   }
 
+  const existing = await prisma.order.findUnique({
+    where: { orderNumber: orderId },
+    select: { notes: true },
+  });
+
   const updated = await prisma.order.update({
     where: { orderNumber: orderId },
     data: { notes: notes || null },
@@ -338,6 +355,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       updatedAt: true,
     },
   });
+
+  if ((existing?.notes ?? "") !== (updated.notes ?? "")) {
+    await createOrderHistoryEvent({
+      orderId,
+      type: "notes",
+      title: "Anteckningar uppdaterade",
+      description: `${(session.user as { name?: string | null; email?: string | null } | undefined)?.name ?? (session.user as { email?: string | null } | undefined)?.email ?? "Okänd användare"} uppdaterade orderns anteckningar.`,
+      actor: session.user as { id?: string | null; name?: string | null; email?: string | null },
+    });
+  }
 
   return NextResponse.json({
     ok: true,
@@ -349,7 +376,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   });
 }
 
-async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: { id?: string; role?: Role }) {
+async function updateOrderMasterData(
+  orderId: string,
+  rawPatch: unknown,
+  user: { id?: string; role?: Role; name?: string | null; email?: string | null }
+) {
   if (typeof rawPatch !== "object" || rawPatch === null || Array.isArray(rawPatch)) {
     return NextResponse.json({ error: "Orderuppdatering måste vara ett objekt." }, { status: 400 });
   }
@@ -455,6 +486,15 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
     deliveryMethod: deliveryMethod !== undefined ? deliveryMethod : existing.deliveryMethod,
   };
 
+  const changedFields = [
+    title !== undefined && title !== existing.title ? "titel" : null,
+    customerName !== undefined && customerName !== existing.customerName ? "kund" : null,
+    dueDate !== undefined && (dueDate?.toISOString() ?? null) !== (existing.dueDate?.toISOString() ?? null) ? "leveransdatum" : null,
+    deliveryAddress !== undefined && deliveryAddress !== existing.deliveryAddress ? "leveransadress" : null,
+    deliveryMethod !== undefined && deliveryMethod !== existing.deliveryMethod ? "leveranssätt" : null,
+    orderRows !== undefined ? "orderrader" : null,
+  ].filter(Boolean) as string[];
+
   const fortnoxPayload: Record<string, unknown> = {
     Remarks: next.title,
     YourReference: next.customerName ?? next.title,
@@ -506,6 +546,17 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
     },
   });
 
+  if (changedFields.length > 0) {
+    await createOrderHistoryEvent({
+      orderId,
+      type: orderRows ? "fortnox" : "order",
+      title: orderRows ? "Orderrader uppdaterade" : "Order uppdaterad",
+      description: `${orderHistoryUserName(user)} ändrade ${changedFields.join(", ")}.`,
+      actor: user,
+      metadata: { changedFields },
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     order: {
@@ -523,4 +574,8 @@ async function updateOrderMasterData(orderId: string, rawPatch: unknown, user: {
       updatedAt: updated.updatedAt.toISOString(),
     },
   });
+}
+
+function orderHistoryUserName(user: { name?: string | null; email?: string | null }) {
+  return user.name || user.email || "Okänd användare";
 }

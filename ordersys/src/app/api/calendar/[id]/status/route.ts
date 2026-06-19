@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { TrackStatus, Track } from "@prisma/client";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
+import {
+  createOrderHistoryEvent,
+  statusHistoryLabel,
+  trackHistoryLabel,
+} from "@/lib/order-history";
 
-const ALLOWED: TrackStatus[] = ["PAGAENDE", "PALACK", "LEVERANS", "AVSLUTAD"]; // Calendar-compatible
+const ALLOWED: TrackStatus[] = ["PAGAENDE", "PALACK", "LEVERANS", "AVSLUTAD"];
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -33,13 +38,11 @@ export async function PATCH(req: NextRequest, ctx: { params: ParamsPromise }) {
   let orderId: string;
   let eventTrack: Track;
 
-  // Check if it's a synthetic event id
   const syntheticMatch = id.match(/^pending-([^-]+)-([^-]+)$/);
   if (syntheticMatch) {
     orderId = syntheticMatch[1];
     eventTrack = syntheticMatch[2] as Track;
   } else {
-    // Real calendar event
     const evt = await prisma.calendarEvent.findUnique({
       where: { id },
       select: { orderId: true, track: true },
@@ -58,15 +61,38 @@ export async function PATCH(req: NextRequest, ctx: { params: ParamsPromise }) {
     return NextResponse.json({ error: "Track mismatch for this event" }, { status: 400 });
   }
 
-  // Byt status och rensa kalenderetikett på OrderTrack
-  await prisma.orderTrack.update({
-  where: { orderId_track: { orderId, track: eventTrack } },
-  data: {
-    status,
-    calendarLabel: null,   // ⬅️ rensa etiketten i DB
-  },
-});
+  const previous = await prisma.orderTrack.findUnique({
+    where: { orderId_track: { orderId, track: eventTrack } },
+    select: { status: true },
+  });
+  const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
 
+  await prisma.$transaction(async (tx) => {
+    await tx.orderTrack.update({
+      where: { orderId_track: { orderId, track: eventTrack } },
+      data: {
+        status,
+        calendarLabel: null,
+      },
+    });
+
+    if (previous?.status !== status) {
+      const trackLabel = trackHistoryLabel(eventTrack);
+      await createOrderHistoryEvent({
+        db: tx,
+        orderId,
+        type: "status",
+        title: `${trackLabel} status ändrad`,
+        description: `${sessionUser.name || sessionUser.email || "Okänd användare"} ändrade ${trackLabel} från ${previous?.status ? statusHistoryLabel(previous.status) : "Ingen status"} till ${statusHistoryLabel(status)}.`,
+        actor: sessionUser,
+        metadata: {
+          track: eventTrack,
+          previousStatus: previous?.status ?? null,
+          status,
+        },
+      });
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }

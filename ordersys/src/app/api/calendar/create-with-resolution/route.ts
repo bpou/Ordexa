@@ -9,6 +9,7 @@ import {
   ensureTrackOutlookSubscription,
   upsertTrackEventToOutlook,
 } from "@/lib/outlook";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 import type {
   EventCreationData,
   EventConflict,
@@ -200,21 +201,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const calendarEvent = await prisma.calendarEvent.create({
-      data: {
-        title,
-        start,
-        end,
-        track: normalizedTrack as Track,
-        orderId: targetOrderId,
-        notes: description || location ? `${description ? description + '\n' : ''}${location ? 'Plats: ' + location : ''}` : undefined,
-      },
-    });
+    const calendarEvent = await prisma.$transaction(async (tx) => {
+      const created = await tx.calendarEvent.create({
+        data: {
+          title,
+          start,
+          end,
+          track: normalizedTrack as Track,
+          orderId: targetOrderId,
+          notes: description || location ? `${description ? description + '\n' : ''}${location ? 'Plats: ' + location : ''}` : undefined,
+        },
+      });
 
-    // If this is linked to an order, update the order track with planned times
-    if (orderId) {
-      try {
-        await prisma.orderTrack.upsert({
+      if (orderId) {
+        await tx.orderTrack.upsert({
           where: {
             orderId_track: {
               orderId,
@@ -233,11 +233,26 @@ export async function POST(req: NextRequest) {
             status: 'PAGAENDE',
           },
         });
-      } catch (orderTrackError) {
-        console.error('Failed to update order track:', orderTrackError);
-        warnings.push('Kunde inte koppla till ordern');
+
+        const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
+        await createOrderHistoryEvent({
+          db: tx,
+          orderId,
+          type: "order",
+          title: `${trackHistoryLabel(normalizedTrack as Track)} planerad`,
+          description: `${sessionUser.name || sessionUser.email || "Okänd användare"} planerade ${trackHistoryLabel(normalizedTrack as Track)} till ${start.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}.`,
+          actor: sessionUser,
+          metadata: {
+            calendarEventId: created.id,
+            track: normalizedTrack,
+            start: start.toISOString(),
+            end: end.toISOString(),
+          },
+        });
       }
-    }
+
+      return created;
+    });
 
     try {
       await upsertTrackEventToOutlook(calendarEvent.id);

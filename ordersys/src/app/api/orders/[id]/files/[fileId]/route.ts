@@ -6,6 +6,7 @@ import { canDeleteOrderFiles } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { deleteStoredFile } from "@/lib/file-storage";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 
 export const runtime = "nodejs";
 
@@ -38,6 +39,20 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     }
 
     await prisma.file.delete({ where: { id: fileId } });
+
+    const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
+    await createOrderHistoryEvent({
+      orderId,
+      type: "file",
+      title: "Fil borttagen",
+      description: `${sessionUser.name || sessionUser.email || "Okänd användare"} tog bort ${file.filename} från ${trackHistoryLabel(file.track)}.`,
+      actor: sessionUser,
+      metadata: {
+        fileId,
+        filename: file.filename,
+        track: file.track,
+      },
+    });
 
     await pusherServer.trigger(`order-${orderId}`, "file:deleted", { id: fileId });
 

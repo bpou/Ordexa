@@ -90,8 +90,24 @@ model Order {
   files              File[]
   fortnox            FortnoxOrderLink?
   createdBy          User?                 @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  historyEvents      OrderHistoryEvent[]
   tracks             OrderTrack[]
   timeEntries        OrderTrackTimeEntry[]
+}
+
+model OrderHistoryEvent {
+  id            String   @id @default(cuid())
+  orderId       String
+  type          String
+  title         String
+  description   String
+  actorId       String?
+  actorName     String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  order         Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
 }
 
 model OrderTrack {

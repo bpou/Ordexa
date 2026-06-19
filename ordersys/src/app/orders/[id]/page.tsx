@@ -25,6 +25,7 @@ import {
   Activity,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   History,
   Link2,
@@ -98,6 +99,17 @@ type FortnoxOrderLine = {
   costCenter?: string | null;
 };
 
+type OrderHistoryEventItem = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  actorId?: string | null;
+  actorName?: string | null;
+  metadata?: unknown;
+  createdAt: string;
+};
+
 type OrderData = {
   orderNumber: string | number;
   title: string;
@@ -111,6 +123,7 @@ type OrderData = {
   createdByEmail?: string | null;
   createdByImage?: string | null;
   fortnox?: { documentNumber: string; createdAt: string } | null;
+  historyEvents?: OrderHistoryEventItem[];
   events?: CalendarEventItem[];
   notes?: string | null;
   tracks: {
@@ -284,10 +297,41 @@ function auditIcon(icon: AuditItem["icon"]) {
   return <History className={className} aria-hidden />;
 }
 
+function historyAccent(type: string) {
+  if (type === "status") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (type === "file") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (type === "time") return "border-neutral-200 bg-neutral-50 text-neutral-700";
+  if (type === "billing") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (type === "fortnox") return "border-sky-200 bg-sky-50 text-sky-700";
+  if (type === "order" || type === "notes") return "border-violet-200 bg-violet-50 text-violet-700";
+  return "border-brand-200 bg-brand-50 text-brand-700";
+}
+
+function historyIcon(type: string): AuditItem["icon"] {
+  if (type === "status") return "status";
+  if (type === "file") return "file";
+  if (type === "time") return "time";
+  if (type === "billing") return "billing";
+  if (type === "fortnox") return "fortnox";
+  if (type === "order" || type === "notes") return "delivery";
+  return "created";
+}
+
 function buildAuditTrail(order: OrderData): AuditItem[] {
   const items: AuditItem[] = [];
   const orderNumber = String(order.orderNumber);
   const creator = order.createdByName ?? order.createdByEmail ?? "Okänd användare";
+
+  for (const event of order.historyEvents ?? []) {
+    items.push({
+      id: `history-${event.id}`,
+      at: event.createdAt,
+      title: event.title,
+      description: event.description,
+      icon: historyIcon(event.type),
+      accent: historyAccent(event.type),
+    });
+  }
 
   if (order.createdAt) {
     items.push({
@@ -387,12 +431,12 @@ function buildAuditTrail(order: OrderData): AuditItem[] {
 
   return items
     .filter((item) => Boolean(parseDate(item.at)))
-    .sort((a, b) => (parseDate(b.at)?.getTime() ?? 0) - (parseDate(a.at)?.getTime() ?? 0))
-    .slice(0, 14);
+    .sort((a, b) => (parseDate(b.at)?.getTime() ?? 0) - (parseDate(a.at)?.getTime() ?? 0));
 }
 
 function OrderAuditTimeline({ order }: { order: OrderData }) {
   const items = buildAuditTrail(order);
+  const [open, setOpen] = useState(false);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-38px_rgba(15,23,42,0.55)]">
@@ -405,6 +449,15 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
           <p className="mt-2 text-sm leading-6 text-white/70">
             En samlad tidslinje från order, kalender, filer och tidrapportering.
           </p>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            aria-expanded={open}
+          >
+            {open ? "Dölj historik" : "Visa historik"}
+            <ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} aria-hidden />
+          </button>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-white/10 bg-white/10 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Händelser</div>
@@ -417,6 +470,7 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
           </div>
         </div>
 
+        {open ? (
         <div className="p-4 sm:p-5">
           {items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
@@ -441,6 +495,7 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
             </div>
           )}
         </div>
+        ) : null}
       </div>
     </section>
   );
@@ -1218,6 +1273,7 @@ export default function OrderPage() {
       const json = await res.json();
       const order = json.order as OrderData;
       order.timeEntries = Array.isArray(order.timeEntries) ? order.timeEntries : [];
+      order.historyEvents = Array.isArray(order.historyEvents) ? order.historyEvents : [];
       order.fortnoxOrderRows = normalizeFortnoxLines(order.fortnoxOrderRows);
 
       // Check if order is archived (billed)
@@ -1308,6 +1364,7 @@ export default function OrderPage() {
       }
       await res.json();
       setFile(null);
+      await load();
     } catch (e) {
       console.error(e);
       alert("Tekniskt fel vid uppladdning.");
@@ -1335,6 +1392,7 @@ export default function OrderPage() {
     setData((prev) =>
       prev ? { ...prev, files: prev.files.filter((f) => f.id !== fileId) } : prev
     );
+    await load();
   }
 
   async function saveNotes(nextNotes: string) {
@@ -1360,6 +1418,7 @@ export default function OrderPage() {
       lastSavedNotesRef.current = savedNotes;
       setData((prev) => (prev ? { ...prev, notes: savedNotes } : prev));
       setNotesSavedAt(payload?.order?.updatedAt ?? new Date().toISOString());
+      await load();
     } catch {
       setNotesError("Tekniskt fel vid sparande av anteckningarna.");
     } finally {
@@ -1427,6 +1486,7 @@ export default function OrderPage() {
         deliveryMethod: updated.deliveryMethod ?? "",
       }));
       setOrderEditOpen(false);
+      await load();
     } catch {
       setOrderEditError("Tekniskt fel vid uppdatering av ordern.");
     } finally {
@@ -1493,6 +1553,7 @@ export default function OrderPage() {
             }
           : prev
       );
+      await load();
     } catch {
       setOrderLinesError("Tekniskt fel vid sparande av orderrader.");
     } finally {
@@ -1636,6 +1697,7 @@ export default function OrderPage() {
           timeEntries: nextEntry ? [nextEntry, ...remainingEntries] : remainingEntries,
         };
       });
+      await load();
     } catch {
       setTimeErrorsByTrack((prev) => ({ ...prev, [track]: "Tekniskt fel vid sparande av tid." }));
     } finally {
@@ -1965,5 +2027,3 @@ export default function OrderPage() {
     </div>
   );
 }
-
-

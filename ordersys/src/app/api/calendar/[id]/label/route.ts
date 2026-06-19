@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { CalendarLabel, Track } from "@prisma/client";
 import { getSessionAndRole, canAccessCalendarTrack } from "@/lib/calendar-access";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 
 type ParamsPromise = Promise<{ id: string }>;
 
@@ -18,6 +19,16 @@ const ALLOWED_LABELS = [
   "UNDER_VECKAN",
   "UTFORT_ARBETE",
 ] as const;
+
+const LABELS: Record<CalendarLabel, string> = {
+  BOKAD_TID: "Bokad tid",
+  KAN_FLYTTAS: "Kan flyttas",
+  LUNCH: "Lunch",
+  SEMESTER: "Semester",
+  TRAFIKVERKET: "Trafikverket",
+  UNDER_VECKAN: "Under veckan",
+  UTFORT_ARBETE: "Utfört arbete",
+};
 
 export async function PATCH(
   req: NextRequest,
@@ -75,9 +86,33 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid label" }, { status: 400 });
   }
 
-  await prisma.orderTrack.update({
+  const previous = await prisma.orderTrack.findUnique({
     where: { orderId_track: { orderId, track: eventTrack } },
-    data: { calendarLabel: label },
+    select: { calendarLabel: true },
+  });
+  const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.orderTrack.update({
+      where: { orderId_track: { orderId, track: eventTrack } },
+      data: { calendarLabel: label },
+    });
+
+    if ((previous?.calendarLabel ?? null) !== label) {
+      await createOrderHistoryEvent({
+        db: tx,
+        orderId,
+        type: "order",
+        title: `${trackHistoryLabel(eventTrack)} kalenderetikett ändrad`,
+        description: `${sessionUser.name || sessionUser.email || "Okänd användare"} ändrade kalenderetikett från ${previous?.calendarLabel ? LABELS[previous.calendarLabel] : "ingen etikett"} till ${label ? LABELS[label] : "ingen etikett"}.`,
+        actor: sessionUser,
+        metadata: {
+          track: eventTrack,
+          previousLabel: previous?.calendarLabel ?? null,
+          label,
+        },
+      });
+    }
   });
 
   return NextResponse.json({ ok: true });

@@ -13,6 +13,7 @@ import { onlyRealFortnoxOrders } from "@/lib/filters";
 import { sendNotificationEmail } from "@/lib/email";
 import { canSendNotification, getNotificationPreferences } from "@/lib/notification-preferences";
 import { sendWebPushToUser } from "@/lib/web-push";
+import { createOrderHistoryEvent, trackHistoryLabel } from "@/lib/order-history";
 
 export const runtime = "nodejs";
 
@@ -116,6 +117,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         "uploadedByImage" = ${uploadedByImage}
       WHERE "id" = ${saved.id}
     `;
+
+    await createOrderHistoryEvent({
+      orderId,
+      type: "file",
+      title: "Fil uppladdad",
+      description: `${uploadedByName ?? "Okänd användare"} laddade upp ${saved.filename} på ${trackHistoryLabel(trackForSave)}.`,
+      actor: sessionUser,
+      metadata: {
+        fileId: saved.id,
+        filename: saved.filename,
+        track: trackForSave,
+      },
+    });
 
     const payload = {
       id: saved.id,

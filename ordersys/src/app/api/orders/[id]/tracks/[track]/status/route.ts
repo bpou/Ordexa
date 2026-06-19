@@ -10,6 +10,11 @@ import { canSendNotification, getNotificationPreferences } from "@/lib/notificat
 import { sendWebPushToUser } from "@/lib/web-push";
 import { canManageTrack } from "@/lib/permissions";
 import { onlyActiveOrders } from "@/lib/filters";
+import {
+  createOrderHistoryEvent,
+  statusHistoryLabel,
+  trackHistoryLabel,
+} from "@/lib/order-history";
 
 type Params = { id: string; track: string };
 
@@ -78,6 +83,13 @@ export async function POST(
       );
     }
 
+    const previous = await prisma.orderTrack.findUnique({
+      where: {
+        orderId_track: { orderId: order.orderNumber, track: normalizedTrack as Track },
+      },
+      select: { status: true },
+    });
+
     const updated = await prisma.orderTrack.upsert({
       where: {
         orderId_track: { orderId: order.orderNumber, track: normalizedTrack as Track },
@@ -97,6 +109,26 @@ export async function POST(
         plannedEndAt: true,
       },
     });
+
+    if (previous?.status !== status) {
+      const sessionUser = session.user as { id?: string | null; name?: string | null; email?: string | null };
+      const trackLabel = trackHistoryLabel(normalizedTrack as Track);
+      const fromStatus = previous?.status ? statusHistoryLabel(previous.status) : "Ingen status";
+      const toStatus = statusHistoryLabel(status);
+
+      await createOrderHistoryEvent({
+        orderId: order.orderNumber,
+        type: "status",
+        title: `${trackLabel} status ändrad`,
+        description: `${sessionUser.name || sessionUser.email || "Okänd användare"} ändrade ${trackLabel} från ${fromStatus} till ${toStatus}.`,
+        actor: sessionUser,
+        metadata: {
+          track: normalizedTrack,
+          previousStatus: previous?.status ?? null,
+          status,
+        },
+      });
+    }
 
     if (status === "AVSLUTAD") {
       const allTracks = await prisma.orderTrack.findMany({
