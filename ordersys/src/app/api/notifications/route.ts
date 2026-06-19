@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Prisma, Role, Track } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
@@ -76,17 +76,20 @@ function isKindEnabled(kind: NotificationItem["kind"], preferences: Notification
   return preferences.securityAlerts;
 }
 
-export async function GET() {
+async function getSessionUser() {
   const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as
+  return session?.user as
     | { id?: string | null; email?: string | null; role?: Role | string }
     | undefined;
+}
 
+export async function GET() {
+  const sessionUser = await getSessionUser();
   if (!sessionUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [orders, outlookConnection, preferences] = await Promise.all([
+  const [orders, outlookConnection, preferences, dismissals] = await Promise.all([
     prisma.order.findMany({
       where: {
         ...orderVisibilityWhere(sessionUser),
@@ -107,11 +110,18 @@ export async function GET() {
         })
       : Promise.resolve(null),
     sessionUser.id ? getNotificationPreferences(sessionUser.id) : Promise.resolve(null),
+    sessionUser.id
+      ? prisma.notificationDismissal.findMany({
+          where: { userId: sessionUser.id },
+          select: { notificationId: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const now = Date.now();
   const soon = now + 3 * 24 * 60 * 60 * 1000;
   const items: NotificationItem[] = [];
+  const dismissedIds = new Set(dismissals.map((item) => item.notificationId));
 
   if (outlookConnection?.syncError) {
     items.push({
@@ -199,6 +209,7 @@ export async function GET() {
 
   const sorted = items
     .filter((item) => (preferences ? isKindEnabled(item.kind, preferences) : true))
+    .filter((item) => !dismissedIds.has(item.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 12);
 
@@ -207,4 +218,46 @@ export async function GET() {
     unreadCount: sorted.filter((item) => item.tone === "critical" || item.tone === "warning").length,
     generatedAt: new Date().toISOString(),
   });
+}
+
+export async function POST(request: NextRequest) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const rawIds = Array.isArray((body as { ids?: unknown }).ids)
+    ? (body as { ids: unknown[] }).ids
+    : typeof (body as { id?: unknown }).id === "string"
+      ? [(body as { id: string }).id]
+      : [];
+
+  const ids = [...new Set(rawIds.filter((id): id is string => typeof id === "string").map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) {
+    return NextResponse.json({ error: "No notification ids supplied" }, { status: 400 });
+  }
+
+  await prisma.$transaction(
+    ids.map((notificationId) =>
+      prisma.notificationDismissal.upsert({
+        where: {
+          userId_notificationId: {
+            userId: sessionUser.id!,
+            notificationId,
+          },
+        },
+        update: { dismissedAt: new Date() },
+        create: { userId: sessionUser.id!, notificationId },
+      })
+    )
+  );
+
+  return NextResponse.json({ dismissedIds: ids });
 }

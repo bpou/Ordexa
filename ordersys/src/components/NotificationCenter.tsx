@@ -11,6 +11,7 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -63,8 +64,50 @@ export default function NotificationCenter({
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+
+  function visibleUnread(nextItems: NotificationItem[]) {
+    return nextItems.filter((item) => item.tone === "critical" || item.tone === "warning").length;
+  }
+
+  async function persistDismissed(ids: string[], keepalive = false) {
+    if (!ids.length) return;
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+      keepalive,
+    });
+  }
+
+  function dismissNotification(id: string) {
+    setItems((current) => {
+      const next = current.filter((item) => item.id !== id);
+      setUnreadCount(visibleUnread(next));
+      return next;
+    });
+    void persistDismissed([id], true);
+  }
+
+  async function clearNotifications() {
+    const ids = items.map((item) => item.id);
+    if (!ids.length) return;
+
+    setClearing(true);
+    setItems([]);
+    setUnreadCount(0);
+    setError(null);
+    try {
+      await persistDismissed(ids);
+    } catch {
+      setError("Kunde inte rensa notiser.");
+      await load();
+    } finally {
+      setClearing(false);
+    }
+  }
 
   async function load() {
     if (!isLoggedIn) return;
@@ -163,6 +206,16 @@ export default function NotificationCenter({
               <div className="relative flex items-center gap-1">
                 <button
                   type="button"
+                  onClick={() => void clearNotifications()}
+                  disabled={!items.length || clearing}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-45"
+                  aria-label="Rensa notiser"
+                >
+                  {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Trash2 className="h-3.5 w-3.5" aria-hidden />}
+                  Rensa
+                </button>
+                <button
+                  type="button"
                   onClick={() => void load()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   aria-label="Uppdatera notiser"
@@ -216,7 +269,10 @@ export default function NotificationCenter({
                 >
                   <Link
                     href={item.href}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      dismissNotification(item.id);
+                      setOpen(false);
+                    }}
                     className="group grid grid-cols-[36px_minmax(0,1fr)_auto] gap-3 rounded-xl px-3 py-3 transition duration-200 hover:-translate-y-0.5 hover:bg-muted/70 hover:shadow-[0_16px_42px_-34px_rgba(15,23,42,0.75)]"
                   >
                     <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition group-hover:scale-105 ${toneClass(item.tone)}`}>

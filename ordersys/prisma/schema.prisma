@@ -26,6 +26,7 @@ model User {
   timeEntriesCreated        OrderTrackTimeEntry[]      @relation("TimeEntryCreatedBy")
   timeEntries               OrderTrackTimeEntry[]      @relation("TimeEntryUser")
   outlookCalendarConnection OutlookCalendarConnection?
+  notificationDismissals     NotificationDismissal[]
   notificationPreference    NotificationPreference?
   pushSubscriptions         WebPushSubscription[]
   sessions                  Session[]
@@ -56,6 +57,17 @@ model NotificationPreference {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationDismissal {
+  id             String   @id @default(cuid())
+  userId         String
+  notificationId String
+  dismissedAt    DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId, dismissedAt])
 }
 
 model Order {
