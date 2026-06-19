@@ -117,14 +117,14 @@ export default function NotificationCenter({
         whileTap={{ scale: 0.965 }}
         transition={{ type: "spring", stiffness: 520, damping: 32 }}
         className={[
-          "group relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-full border px-3 text-sm font-semibold shadow-sm backdrop-blur-xl transition",
+          "group relative inline-flex h-10 items-center justify-center gap-2 overflow-visible rounded-full border px-3 text-sm font-semibold shadow-sm backdrop-blur-xl transition",
           open
             ? "border-brand-300 bg-brand-50 text-brand-800 shadow-[0_16px_42px_-28px_rgba(16,185,129,0.85)]"
             : "border-border bg-card/85 text-foreground hover:border-brand-200 hover:bg-card",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
         ].join(" ")}
       >
-        <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.9),transparent_34%),linear-gradient(135deg,rgba(16,185,129,0.12),transparent_46%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+        <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-full bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.9),transparent_34%),linear-gradient(135deg,rgba(16,185,129,0.12),transparent_46%)] opacity-0 transition duration-300 group-hover:opacity-100" />
         <motion.span
           animate={unreadCount > 0 ? { rotate: [0, -10, 8, -4, 0] } : { rotate: 0 }}
           transition={{ duration: 0.9, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 5 }}
