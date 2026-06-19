@@ -1405,7 +1405,7 @@ export default function OrderPage() {
     if (!orderId) return;
     if (
       !confirm(
-        `Ã„r du säker på att du vill ta bort filen "${filename}"? Detta går inte att ångra.`
+        `Är du säker på att du vill ta bort filen "${filename}"? Detta går inte att ångra.`
       )
     )
       return;
