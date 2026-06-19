@@ -440,37 +440,34 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
 
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-38px_rgba(15,23,42,0.55)]">
-      <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="border-b border-neutral-200 bg-gradient-to-br from-neutral-950 via-neutral-900 to-brand-950 p-5 text-white lg:border-b-0 lg:border-r">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 bg-gradient-to-r from-neutral-950 via-neutral-900 to-brand-950 px-5 py-4 text-left text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        aria-expanded={open}
+      >
+        <span className="inline-flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10">
             <History className="h-5 w-5" aria-hidden />
-          </div>
-          <h2 className="mt-4 text-lg font-semibold">Orderhistorik</h2>
-          <p className="mt-2 text-sm leading-6 text-white/70">
-            En samlad tidslinje från order, kalender, filer och tidrapportering.
-          </p>
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-            aria-expanded={open}
-          >
-            {open ? "Dölj historik" : "Visa historik"}
-            <ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} aria-hidden />
-          </button>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Händelser</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</div>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Filer</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{order.files.length}</div>
-            </div>
-          </div>
-        </div>
+          </span>
 
-        {open ? (
+          <span>
+            <span className="block text-sm font-semibold">Orderhistorik</span>
+            <span className="block text-xs text-white/60">
+              {items.length} händelser · {order.files.length} filer
+            </span>
+          </span>
+        </span>
+
+        <ChevronDown
+          className={`h-5 w-5 shrink-0 text-white/80 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
+      </button>
+
+      {open ? (
         <div className="p-4 sm:p-5">
           {items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
@@ -483,20 +480,27 @@ function OrderAuditTimeline({ order }: { order: OrderData }) {
                   <span className={`relative z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border ${item.accent}`}>
                     {auditIcon(item.icon)}
                   </span>
+
                   <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-sm font-semibold text-neutral-900">{item.title}</h3>
-                      <span className="text-xs font-medium text-neutral-500">{formatAuditDate(item.at)}</span>
+                      <h3 className="text-sm font-semibold text-neutral-900">
+                        {item.title}
+                      </h3>
+                      <span className="text-xs font-medium text-neutral-500">
+                        {formatAuditDate(item.at)}
+                      </span>
                     </div>
-                    <p className="mt-1 text-sm leading-5 text-neutral-600">{item.description}</p>
+
+                    <p className="mt-1 text-sm leading-5 text-neutral-600">
+                      {item.description}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-        ) : null}
-      </div>
+      ) : null}
     </section>
   );
 }
