@@ -16,11 +16,7 @@ import { cn } from "@/lib/utils";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -46,9 +42,9 @@ function AppShellFrame({
   if (!authenticated) return children;
 
   return (
-    <SidebarProvider className="min-h-full">
+    <SidebarProvider className="block min-h-full">
       <AppSidebar />
-      <SidebarInset>{children}</SidebarInset>
+      {children}
     </SidebarProvider>
   );
 }
@@ -103,11 +99,7 @@ export default async function RootLayout({
                 >
                   <div className="hidden h-18 items-center justify-between px-6 sm:flex">
                     <div className="flex items-center gap-2">
-                      {session ? (
-                        <SidebarTrigger aria-label="Visa eller dölj navigering" />
-                      ) : (
-                        <MobileMenu />
-                      )}
+                      {!session ? <MobileMenu /> : null}
                       <Link
                         href="/"
                         className="inline-flex items-center leading-none transition hover:opacity-90"

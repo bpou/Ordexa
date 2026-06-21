@@ -13,10 +13,12 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { SidebarRevealText } from "@/components/sidebar-reveal-text";
@@ -45,10 +47,13 @@ export function AppSidebar({
       collapsible="icon"
       {...props}
       className={cn(
-        "top-16 h-[calc(100svh-4rem)] sm:top-18 sm:h-[calc(100svh-4.5rem)]",
+        "top-16 z-[60] h-[calc(100svh-4rem)] sm:top-18 sm:h-[calc(100svh-4.5rem)]",
         className,
       )}
     >
+      <SidebarHeader className="flex-row items-center justify-end">
+        <SidebarTrigger aria-label="Visa eller dölj navigering" />
+      </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
       </SidebarContent>
