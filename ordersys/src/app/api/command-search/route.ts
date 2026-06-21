@@ -65,6 +65,14 @@ function baseActions(role: Role | string | undefined): CommandItem[] {
   const tracks = visibleTracks(role);
   const actions: CommandItem[] = [
     {
+      id: "field-mode",
+      type: "action",
+      title: "Öppna fältläge",
+      subtitle: "Dagens jobb med stora mobila åtgärder",
+      href: "/field",
+      keywords: "fält fältläge mobil dagens jobb foto status",
+    },
+    {
       id: "new-order",
       type: "action",
       title: "Skapa ny order",

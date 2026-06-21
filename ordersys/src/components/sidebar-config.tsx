@@ -78,6 +78,7 @@ const sectionMap: Record<
           { title: "Hem", url: "/" },
           { title: "Orderöversikt", url: "/orders/overview" },
           { title: "Kalender", url: "/personal-calendar" },
+          { title: "Fältläge", url: "/field" },
         ],
       },
       {
@@ -300,6 +301,7 @@ function withActiveState(navMain: SidebarMainItem[], pathname: string) {
 }
 
 function getSectionKey(pathname: string) {
+  if (pathname.startsWith("/field")) return "orders";
   if (pathname.startsWith("/supplier-invoices")) return "orders";
   if (pathname.startsWith("/orders")) return "orders";
   if (pathname.startsWith("/customers")) return "customers";

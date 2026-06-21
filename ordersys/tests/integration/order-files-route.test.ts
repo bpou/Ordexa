@@ -22,6 +22,10 @@ const {
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
+vi.mock("@/lib/order-history", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/order-history")>();
+  return { ...actual, createOrderHistoryEvent: vi.fn(async () => undefined) };
+});
 vi.mock("next-auth", () => ({
   getServerSession: getServerSessionMock,
 }));

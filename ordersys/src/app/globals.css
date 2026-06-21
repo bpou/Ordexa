@@ -103,6 +103,29 @@
 
 /* Utilities */
 @layer utilities {
+  #top:has(.field-mode-page) > footer {
+    display: none;
+  }
+
+  .product-grid-bg {
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--border) 42%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--border) 42%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 82%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   .animate-shimmer {
     background-image: linear-gradient(
       90deg,

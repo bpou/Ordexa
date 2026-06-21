@@ -102,7 +102,7 @@ export default async function DashboardQuickActions({
     >
       <CardHeader className="border-neutral-200 px-6 py-5">
         <h2 className="text-lg font-semibold text-neutral-900">
-          Snabb\u00e5tg\u00e4rder
+          Snabbåtgärder
         </h2>
       </CardHeader>
       <CardContent className="flex-1 px-4 pb-5 pt-4 sm:px-6">

@@ -16,6 +16,8 @@ import { APP_TRACKS, TRACK_NAMES, type AppTrack } from "@/lib/tracks";
 import FileUploadButton from '../../../components/FileUploadButton';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Button from "@/components/ui/button";
+import OrderWorkspace from "@/components/OrderWorkspace";
+import { ProductHeader } from "@/components/product-ui";
 
 import { OrdinaLogoSpinner } from "@/components/OrdinaLoader";
 import { formatMinutesLabel } from "@/lib/time";
@@ -1759,26 +1761,21 @@ export default function OrderPage() {
     );
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Order #{data.orderNumber} - {data.title}
-            </h1>
-            <p className="text-gray-600">Kund: {data.customerName ?? "-"}</p>
-          </div>
-          {canEditOrder ? (
+    <div className="mx-auto max-w-7xl space-y-6 p-2 sm:p-6">
+      <ProductHeader
+        eyebrow={`Order #${data.orderNumber}`}
+        title={data.title}
+        description={`Kund: ${data.customerName ?? "–"}${data.dueDate ? ` · Leverans ${new Date(data.dueDate).toLocaleDateString("sv-SE")}` : ""}`}
+        actions={canEditOrder ? (
             <Link
               href={`/orders/${encodeURIComponent(String(data.orderNumber))}/edit`}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/35 hover:bg-primary/5"
             >
               <PencilLine className="h-4 w-4" aria-hidden />
               Redigera order
             </Link>
           ) : null}
-        </div>
-      </div>
+      />
 
       {statusError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
@@ -1819,6 +1816,33 @@ export default function OrderPage() {
         </div>
      
       <OrderAuditTimeline order={data} />
+
+      <OrderWorkspace orderId={orderId} />
+
+      {canEditOrder ? (
+        <>
+          <OrderEditPanel
+            order={data}
+            draft={orderEditDraft}
+            open={orderEditOpen}
+            saving={savingOrderEdit}
+            error={orderEditError}
+            onOpenChange={setOrderEditOpen}
+            onDraftChange={setOrderEditDraft}
+            onSave={() => void saveOrderEdit()}
+            onReset={resetOrderEditDraft}
+          />
+          <FortnoxOrderLinesPanel
+            rows={orderLines}
+            saving={savingOrderLines}
+            error={orderLinesError}
+            syncedAt={data.fortnoxOrderRowsSyncedAt}
+            onRowsChange={setOrderLines}
+            onSave={() => void saveOrderLines()}
+            onReset={resetOrderLines}
+          />
+        </>
+      ) : null}
 
       <form
         onSubmit={upload}

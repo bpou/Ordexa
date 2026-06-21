@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Command,
   FilePlus2,
+  HardHat,
   LayoutDashboard,
   ListChecks,
   Loader2,
@@ -28,6 +29,7 @@ type CommandItem = {
 function iconFor(type: CommandItem["type"], id: string) {
   const className = "h-4 w-4";
   if (id === "new-order") return <FilePlus2 className={className} aria-hidden />;
+  if (id === "field-mode") return <HardHat className={className} aria-hidden />;
   if (type === "calendar") return <CalendarDays className={className} aria-hidden />;
   if (type === "board") return <ListChecks className={className} aria-hidden />;
   if (type === "order") return <Command className={className} aria-hidden />;

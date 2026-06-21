@@ -11,11 +11,13 @@ type HistoryActor = {
 
 export type OrderHistoryType =
   | "billing"
+  | "comment"
   | "file"
   | "fortnox"
   | "notes"
   | "order"
   | "status"
+  | "task"
   | "time";
 
 const TRACK_LABELS: Record<Track, string> = {

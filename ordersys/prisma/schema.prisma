@@ -95,6 +95,37 @@ model Order {
   historyEvents      OrderHistoryEvent[]
   tracks             OrderTrack[]
   timeEntries        OrderTrackTimeEntry[]
+  workspaceTasks     OrderWorkspaceTask[]
+  comments           OrderComment[]
+}
+
+model OrderWorkspaceTask {
+  id            String   @id @default(cuid())
+  orderId       String
+  title         String
+  completed     Boolean  @default(false)
+  completedAt   DateTime?
+  createdById   String?
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  order         Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+
+  @@index([orderId, completed, createdAt])
+}
+
+model OrderComment {
+  id          String   @id @default(cuid())
+  orderId     String
+  body        String
+  authorId    String?
+  authorName  String
+  authorImage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  order       Order    @relation(fields: [orderId], references: [orderNumber], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
 }
 
 model OrderHistoryEvent {
