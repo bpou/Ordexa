@@ -1769,7 +1769,7 @@ export default function OrderPage() {
         actions={canEditOrder ? (
             <Link
               href={`/orders/${encodeURIComponent(String(data.orderNumber))}/edit`}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/35 hover:bg-primary/5"
+              className="hidden h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/35 hover:bg-primary/5 sm:inline-flex"
             >
               <PencilLine className="h-4 w-4" aria-hidden />
               Redigera order
@@ -1820,7 +1820,7 @@ export default function OrderPage() {
       <OrderWorkspace orderId={orderId} />
 
       {canEditOrder ? (
-        <>
+        <div className="hidden space-y-6 sm:block">
           <OrderEditPanel
             order={data}
             draft={orderEditDraft}
@@ -1841,7 +1841,7 @@ export default function OrderPage() {
             onSave={() => void saveOrderLines()}
             onReset={resetOrderLines}
           />
-        </>
+        </div>
       ) : null}
 
       <form
