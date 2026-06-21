@@ -36,8 +36,7 @@ export function AppSidebar({
         ...item,
         items: item.items?.filter(
           (subItem) =>
-            subItem.url !== "/customers/new" &&
-            subItem.url !== "/articles/new"
+            subItem.url !== "/customers/new" && subItem.url !== "/articles/new",
         ),
       }));
 
@@ -45,7 +44,10 @@ export function AppSidebar({
     <Sidebar
       collapsible="icon"
       {...props}
-      className={cn("top-18", className)}
+      className={cn(
+        "top-16 h-[calc(100svh-4rem)] sm:top-18 sm:h-[calc(100svh-4.5rem)]",
+        className,
+      )}
     >
       <SidebarContent>
         <NavMain items={navMain} />
