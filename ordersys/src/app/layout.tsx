@@ -179,7 +179,7 @@ export default async function RootLayout({
               <div className="px-4 py-4 sm:p-6">{children}</div>
             </main>
 
-            <Footer />
+            {!session ? <Footer /> : null}
           </div>
         </AppSessionProvider>
         <SpeedInsights />

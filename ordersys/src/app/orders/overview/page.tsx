@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { useSession } from "next-auth/react";
 import { APP_TRACKS, isAppTrack, type AppTrack } from "@/lib/tracks";
-import { STATUS_COLORS } from "@/lib/orderStatus";
 import { Shimmer } from "@/components/Shimmer";
 import CalendarModal from "@/components/calendar/CalendarModal";
 import {
@@ -91,10 +90,10 @@ const STATUS_TITLES: Record<TrackStatus, string> = {
 };
 
 const STATUS_STYLES: Record<TrackStatus, string> = {
-  INKOMMANDE: STATUS_COLORS.INKOMMANDE,
-  PAGAENDE: STATUS_COLORS.PAGAENDE,
-  LEVERANS: STATUS_COLORS.LEVERANS,
-  AVSLUTAD: STATUS_COLORS.AVSLUTAD,
+  INKOMMANDE: "border-blue-200 bg-blue-50 text-blue-700",
+  PAGAENDE: "border-amber-200 bg-amber-50 text-amber-700",
+  LEVERANS: "border-violet-200 bg-violet-50 text-violet-700",
+  AVSLUTAD: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
 const STATUS_SEQUENCE: TrackStatus[] = ["INKOMMANDE", "PAGAENDE", "LEVERANS", "AVSLUTAD"];
@@ -395,6 +394,7 @@ const OrderCard = memo(function OrderCard({
 }) {
   const creatorLabel = order.createdByName ?? order.createdByEmail ?? "Okänd";
   const plannedTracks = order.tracks.filter((track) => Boolean(track.plannedStartAt));
+  const visibleTracks = order.tracks.filter((track) => track.status !== null);
   const completedTracks = order.tracks.filter((track) => track.status === "AVSLUTAD").length;
   const primaryStatus = getOverallStatus(order);
   const primaryAccent = primaryStatus ? STATUS_ACCENTS[primaryStatus] : null;
@@ -402,7 +402,7 @@ const OrderCard = memo(function OrderCard({
 
   return (
     <Card
-      className={`overflow-hidden rounded-xl border border-l-4 border-neutral-200 bg-gradient-to-r ${primaryAccent?.line ?? "border-l-neutral-300"} ${primaryAccent?.wash ?? "from-neutral-50"} via-white to-white shadow-[0_14px_42px_-34px_rgba(15,23,42,0.55)] transition duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_20px_50px_-34px_rgba(15,23,42,0.62)]`}
+      className={`cursor-pointer overflow-hidden rounded-xl border border-l-4 border-neutral-200 bg-gradient-to-r ${primaryAccent?.line ?? "border-l-neutral-300"} ${primaryAccent?.wash ?? "from-neutral-50"} via-white to-white shadow-[0_14px_42px_-34px_rgba(15,23,42,0.55)] transition duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_20px_50px_-34px_rgba(15,23,42,0.62)]`}
     >
       <div className="relative min-h-[136px] p-4 sm:px-5 sm:py-4">
         <Link
@@ -426,8 +426,8 @@ const OrderCard = memo(function OrderCard({
               ) : null}
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500 sm:text-sm">
-              <span>{order.customerName ?? "Okänd kund"}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600 sm:text-sm">
+              <span><span className="font-medium text-neutral-700">Kund:</span> {order.customerName ?? "Okänd kund"}</span>
               <span className="inline-flex items-center gap-1">
                 <UserRound className="h-3.5 w-3.5" aria-hidden />
                 {creatorLabel}
@@ -436,13 +436,15 @@ const OrderCard = memo(function OrderCard({
               <span>Deadline {order.dueDate ? formatDate(order.dueDate) : "saknas"}</span>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {order.tracks.map(({ track, status }) => (
-                <TrackBadge key={track} track={track} status={status} />
-              ))}
-            </div>
+            {visibleTracks.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {visibleTracks.map(({ track, status }) => (
+                  <TrackBadge key={track} track={track} status={status} />
+                ))}
+              </div>
+            ) : null}
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600">
               <span className="inline-flex items-center gap-1.5 font-medium text-neutral-700">
                 <CalendarClock className="h-3.5 w-3.5 text-brand-600" aria-hidden />
                 {plannedTracks.length}/{order.tracks.length} planerade
@@ -900,7 +902,7 @@ export default function OrdersOverviewPage() {
           </div>
         </header>
 
-        <section className="border-b border-neutral-200 py-4">
+        <section className="sticky top-16 z-30 -mx-2 border-b border-neutral-200 bg-neutral-50/95 px-2 py-4 backdrop-blur sm:top-18">
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_180px_180px_220px_40px]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden />

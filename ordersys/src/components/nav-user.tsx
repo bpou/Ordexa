@@ -65,6 +65,7 @@ export function NavUser({
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
+            tooltip="Logga in"
             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             onClick={() => signIn()}
           >
@@ -95,6 +96,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
+              tooltip={user.name || user.email || "Användare"}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
