@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useOrderRealtime } from "@/lib/useOrderRealtime";
@@ -32,7 +31,6 @@ import {
   History,
   Link2,
   MapPin,
-  PackageCheck,
   PencilLine,
   Plus,
   RotateCcw,
@@ -572,11 +570,11 @@ function OrderEditPanel({
   const patchDraft = (patch: Partial<OrderEditDraft>) => onDraftChange({ ...draft, ...patch });
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-40px_rgba(15,23,42,0.55)]">
-      <div className="flex flex-col gap-4 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 via-white to-brand-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-none">
+      <div className="flex flex-col gap-4 border-b border-neutral-100 bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           
-          <h2 className="mt-3 text-lg font-semibold text-neutral-950">Orderuppgifter</h2>
+          <h2 className="text-lg font-semibold text-neutral-950">Orderuppgifter</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Ändringar sparas först i Fortnox och därefter lokalt i Ordexa.
           </p>
@@ -732,15 +730,11 @@ function FortnoxOrderLinesPanel({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_24px_70px_-44px_rgba(15,23,42,0.65)]">
-      <div className="border-b border-neutral-100 bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_48%,#eef6ff_100%)] p-4 sm:p-5">
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-none">
+      <div className="border-b border-neutral-100 bg-neutral-50 p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-              <PackageCheck className="h-3.5 w-3.5" aria-hidden />
-              Fortnox orderrader
-            </div>
-            <h2 className="mt-3 text-lg font-semibold text-neutral-950">Radredigering</h2>
+            <h2 className="text-lg font-semibold text-neutral-950">Orderrader</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Redigera artikel, beskrivning, antal, pris och rabatt. Sparas i Fortnox och Ordexa samtidigt.
             </p>
@@ -1763,15 +1757,7 @@ export default function OrderPage() {
         eyebrow={`Order #${data.orderNumber}`}
         title={data.title}
         description={`Kund: ${data.customerName ?? "–"}${data.dueDate ? ` · Leverans ${new Date(data.dueDate).toLocaleDateString("sv-SE")}` : ""}`}
-        actions={canEditOrder ? (
-            <Link
-              href={`/orders/${encodeURIComponent(String(data.orderNumber))}/edit`}
-              className="hidden h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/35 hover:bg-primary/5 sm:inline-flex"
-            >
-              <PencilLine className="h-4 w-4" aria-hidden />
-              Redigera order
-            </Link>
-          ) : null}
+        className="rounded-2xl shadow-none"
       />
 
       {statusError ? (
@@ -1780,6 +1766,30 @@ export default function OrderPage() {
         </div>
       ) : null}
 
+      <nav
+        className="sticky top-16 z-30 flex gap-1 overflow-x-auto rounded-xl border border-neutral-200 bg-white/95 p-1 shadow-sm backdrop-blur sm:top-18"
+        aria-label="Ordersektioner"
+        role="tablist"
+      >
+        {ORDER_DETAIL_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setActiveTab(tab.value)}
+            className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              activeTab === tab.value
+                ? "bg-neutral-900 text-white"
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+            }`}
+            role="tab"
+            aria-selected={activeTab === tab.value}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "overview" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {APP_TRACKS.map((t) => {
             const trackRow = data.tracks.find((x) => x.track === t);
@@ -1811,13 +1821,14 @@ export default function OrderPage() {
             );
           })}
         </div>
-     
-      <OrderAuditTimeline order={data} />
+      ) : null}
 
-      <OrderWorkspace orderId={orderId} />
+      {activeTab === "overview" ? <OrderAuditTimeline order={data} /> : null}
 
-      {canEditOrder ? (
-        <div className="hidden space-y-6 sm:block">
+      {activeTab === "communication" ? <OrderWorkspace orderId={orderId} /> : null}
+
+      {activeTab === "overview" && canEditOrder ? (
+        <div className="hidden sm:block">
           <OrderEditPanel
             order={data}
             draft={orderEditDraft}
@@ -1829,6 +1840,11 @@ export default function OrderPage() {
             onSave={() => void saveOrderEdit()}
             onReset={resetOrderEditDraft}
           />
+        </div>
+      ) : null}
+
+      {activeTab === "economy" ? (
+        canEditOrder ? (
           <FortnoxOrderLinesPanel
             rows={orderLines}
             saving={savingOrderLines}
@@ -1838,19 +1854,21 @@ export default function OrderPage() {
             onSave={() => void saveOrderLines()}
             onReset={resetOrderLines}
           />
-        </div>
+        ) : (
+          <section className="rounded-2xl border border-dashed border-neutral-300 bg-white px-5 py-8 text-center text-sm text-neutral-500">
+            Ekonomiinformation är endast tillgänglig för administratörer och säljare.
+          </section>
+        )
       ) : null}
 
-      <form
-        onSubmit={upload}
-        className="rounded-2xl border border-neutral-200/90 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]"
-      >
-        <div className="mb-3 border-b border-neutral-100 pb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.26em] text-neutral-600">
-            Filuppladdning
-          </h2>
+      {activeTab === "files" ? (
+      <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-none sm:p-5">
+        <div className="mb-4 border-b border-neutral-100 pb-3">
+          <h2 className="text-lg font-semibold text-neutral-900">Filer</h2>
+          <p className="mt-1 text-sm text-neutral-500">Ladda upp och hantera orderns filer på samma plats.</p>
         </div>
 
+      <form onSubmit={upload} className="border-b border-neutral-100 pb-4">
         <div className="flex flex-wrap items-end gap-2">
           <FileUploadButton onFileSelect={(file) => setFile(file)} />
 
@@ -1909,12 +1927,8 @@ export default function OrderPage() {
         </div>
       </form>
 
-      <section className="rounded-2xl border border-neutral-200/90 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]">
-        <div className="mb-3 border-b border-neutral-100 pb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.26em] text-neutral-600">
-            Uppladdade filer
-          </h2>
-        </div>
+        <div className="pt-4">
+          <h3 className="mb-3 text-sm font-semibold text-neutral-800">Uppladdade filer</h3>
 
         {data.files.length === 0 ? (
           <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/70 px-4 py-6 text-sm text-neutral-500">
@@ -1925,7 +1939,7 @@ export default function OrderPage() {
             {data.files.map((f) => (
               <article
                 key={f.id}
-                className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]"
+                className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3 shadow-none"
               >
                 <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500">
                   {trackNames[f.track] || f.track}
@@ -1964,13 +1978,14 @@ export default function OrderPage() {
             ))}
           </div>
         )}
+        </div>
       </section>
+      ) : null}
 
-      <section className="rounded-2xl border border-neutral-200/90 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]">
+      {activeTab === "notes" ? (
+      <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-none sm:p-5">
         <div className="mb-3 border-b border-neutral-100 pb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.26em] text-neutral-600">
-            Anteckningar
-          </h2>
+          <h2 className="text-lg font-semibold text-neutral-900">Anteckningar</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Extra kostnader, tillägg och intern information för ordern.
           </p>
@@ -2003,6 +2018,7 @@ export default function OrderPage() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       <AnimatePresence>
         {previewFile ? (

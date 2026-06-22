@@ -7,7 +7,13 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition, Variants } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import NavLinks from "./NavLinks";
 import { getSidebarConfig } from "./sidebar-config";
 
@@ -66,6 +72,30 @@ export default function MobileMenu() {
     if (!open) return;
     const timeout = setTimeout(() => closeBtnRef.current?.focus(), 0);
     return () => clearTimeout(timeout);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeWhenPointerIsOutside(event: PointerEvent) {
+      const target = event.target as Node;
+      if (
+        panelRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeWhenPointerIsOutside, true);
+    return () =>
+      document.removeEventListener(
+        "pointerdown",
+        closeWhenPointerIsOutside,
+        true,
+      );
   }, [open]);
 
   function trapFocus(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -145,7 +175,7 @@ export default function MobileMenu() {
             <motion.button
               type="button"
               aria-label="Stäng meny"
-              className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"
+              className="absolute inset-0 bg-background/35 backdrop-blur-md"
               onClick={() => setOpen(false)}
               initial="hidden"
               animate="visible"
@@ -211,40 +241,50 @@ export default function MobileMenu() {
               >
                 {session ? (
                   navigation.map((item) => (
-                    <section key={`${item.title}-${item.url}`}>
-                      <div className="flex items-center gap-2 px-3 pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        <span className="[&_svg]:h-4 [&_svg]:w-4" aria-hidden>
-                          {item.icon}
-                        </span>
-                        {item.title}
-                      </div>
-                      <div className="grid gap-1">
-                        {item.items?.length ? (
-                          item.items.map((subItem) => {
-                            const active =
-                              pathname === subItem.url ||
-                              pathname.startsWith(`${subItem.url}/`);
-                            return (
-                              <Link
-                                key={`${subItem.title}-${subItem.url}`}
-                                href={subItem.url}
-                                aria-current={active ? "page" : undefined}
-                                className="rounded-xl px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-brand-50 hover:text-brand-700 aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-700 dark:hover:bg-brand-950/50 dark:aria-[current=page]:bg-brand-950/50"
-                              >
-                                {subItem.title}
-                              </Link>
-                            );
-                          })
-                        ) : (
-                          <Link
-                            href={item.url}
-                            className="rounded-xl px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-brand-50 hover:text-brand-700"
-                          >
-                            {item.title}
-                          </Link>
-                        )}
-                      </div>
-                    </section>
+                    <Collapsible
+                      key={`${item.title}-${item.url}`}
+                      defaultOpen={item.isActive}
+                      className="group/nav-section"
+                    >
+                      <section>
+                        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                          <span className="[&_svg]:h-4 [&_svg]:w-4" aria-hidden>
+                            {item.icon}
+                          </span>
+                          <span className="flex-1">{item.title}</span>
+                          <ChevronDown
+                            className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/nav-section:rotate-180"
+                            aria-hidden
+                          />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="grid gap-1 pt-1">
+                          {item.items?.length ? (
+                            item.items.map((subItem) => {
+                              const active =
+                                pathname === subItem.url ||
+                                pathname.startsWith(`${subItem.url}/`);
+                              return (
+                                <Link
+                                  key={`${subItem.title}-${subItem.url}`}
+                                  href={subItem.url}
+                                  aria-current={active ? "page" : undefined}
+                                  className="rounded-xl px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-brand-50 hover:text-brand-700 aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-700 dark:hover:bg-brand-950/50 dark:aria-[current=page]:bg-brand-950/50"
+                                >
+                                  {subItem.title}
+                                </Link>
+                              );
+                            })
+                          ) : (
+                            <Link
+                              href={item.url}
+                              className="rounded-xl px-3 py-2 text-sm font-medium text-foreground/90 transition hover:bg-brand-50 hover:text-brand-700"
+                            >
+                              {item.title}
+                            </Link>
+                          )}
+                        </CollapsibleContent>
+                      </section>
+                    </Collapsible>
                   ))
                 ) : (
                   <NavLinks />

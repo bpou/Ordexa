@@ -96,7 +96,7 @@ export default function OrderWorkspace({ orderId }: { orderId: string }) {
 
   return (
     <section className="grid gap-4 lg:grid-cols-[1fr_1.08fr]">
-      <ProductSection className="overflow-hidden">
+      <ProductSection className="overflow-hidden shadow-none">
         <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -129,7 +129,7 @@ export default function OrderWorkspace({ orderId }: { orderId: string }) {
 
           {loading ? <div className="mt-4 h-24 animate-pulse rounded-xl bg-muted" /> : null}
           {!loading && tasks.length === 0 ? (
-            <ProductEmptyState icon={CheckCircle2} title="Ingen checklista ännu" description="Lägg till konkreta nästa steg så att alla vet vad som återstår." />
+            <ProductEmptyState className="py-5" icon={CheckCircle2} title="Ingen checklista ännu" description="Lägg till konkreta nästa steg så att alla vet vad som återstår." />
           ) : null}
           <div className="mt-4 space-y-2">
             {tasks.map((task) => (
@@ -150,7 +150,7 @@ export default function OrderWorkspace({ orderId }: { orderId: string }) {
         </div>
       </ProductSection>
 
-      <ProductSection className="overflow-hidden">
+      <ProductSection className="overflow-hidden shadow-none">
         <div className="border-b border-border px-4 py-4 sm:px-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <MessageSquareText className="h-4 w-4 text-primary" aria-hidden /> Teamdialog
@@ -181,7 +181,7 @@ export default function OrderWorkspace({ orderId }: { orderId: string }) {
           {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
 
           {!loading && comments.length === 0 ? (
-            <ProductEmptyState icon={MessageSquareText} title="Dialogen är tom" description="Skriv den första uppdateringen eller frågan om ordern." />
+            <ProductEmptyState className="py-5" icon={MessageSquareText} title="Dialogen är tom" description="Skriv den första uppdateringen eller frågan om ordern." />
           ) : null}
           <div className="mt-4 max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {comments.map((comment) => (
