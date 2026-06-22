@@ -119,15 +119,6 @@ export default async function RootLayout({
                       <GlobalCommandMenu isLoggedIn={!!session} />
                       <NotificationCenter isLoggedIn={!!session} />
                       <RegisterMenu />
-                      <HeaderUserMenu
-                        isLoggedIn={!!session}
-                        name={session?.user?.name ?? ""}
-                        email={session?.user?.email ?? ""}
-                        image={
-                          session?.user?.image ??
-                          "/uploads/profiles/default-avatar.png"
-                        }
-                      />
                     </div>
                   </div>
 

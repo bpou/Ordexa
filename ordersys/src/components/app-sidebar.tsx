@@ -29,6 +29,8 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname() ?? "/dashboard";
   const { data: session } = useSession();
+  const isTrackCalendar =
+    pathname === "/calendar" || pathname.startsWith("/calendar/");
   const data = getSidebarConfig(pathname);
   const role = (session?.user as { role?: string } | undefined)?.role;
   const canCreateRegisters = role === "ADMIN" || role === "SALJARE";
@@ -41,6 +43,10 @@ export function AppSidebar({
             subItem.url !== "/customers/new" && subItem.url !== "/articles/new",
         ),
       }));
+
+  if (isTrackCalendar) {
+    return null;
+  }
 
   return (
     <Sidebar

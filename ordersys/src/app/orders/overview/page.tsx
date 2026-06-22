@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { MuseoModerno } from "next/font/google";
 import { useSession } from "next-auth/react";
 import { APP_TRACKS, isAppTrack, type AppTrack } from "@/lib/tracks";
 import { STATUS_COLORS } from "@/lib/orderStatus";
@@ -13,17 +12,16 @@ import { Shimmer } from "@/components/Shimmer";
 import CalendarModal from "@/components/calendar/CalendarModal";
 import {
   CalendarClock,
+  ChevronDown,
   ChevronRight,
-  CircleDollarSign,
   ExternalLink,
   FileText,
   FolderOpen,
-  Layers3,
+  RotateCcw,
   Search,
-  SlidersHorizontal,
-  Sparkles,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SALJARE" | "A_TEAM" | "B_TEAM" | "C_TEAM" | "D_TEAM";
@@ -66,11 +64,6 @@ type SummaryMap = Record<TrackStatus, number>;
 type OwnerFilter = "all" | "mine";
 type SellerFilter = "ALL" | string;
 
-const museoModerno = MuseoModerno({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
-
 const TRACK_LABELS: Record<FileTrack, string> = {
   A: "Ateljé",
   B: "Verkstad",
@@ -84,13 +77,6 @@ const STATUS_TITLES: Record<TrackStatus, string> = {
   PAGAENDE: "Pågående",
   LEVERANS: "Leverans",
   AVSLUTAD: "Avslutad",
-};
-
-const STATUS_DESCRIPTIONS: Record<TrackStatus, string> = {
-  INKOMMANDE: "Nyligen inkomna uppdrag redo att planeras",
-  PAGAENDE: "Spår där arbetet är igång",
-  LEVERANS: "Ordrar på väg till kund",
-  AVSLUTAD: "Färdigställda ordrar som väntar på fakturering",
 };
 
 const STATUS_STYLES: Record<TrackStatus, string> = {
@@ -112,7 +98,7 @@ const TRACK_SCOPE: Record<Role, Track[]> = {
 };
 
 const actionButton =
-  "inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300";
+  "inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300";
 
 const STATUS_ACCENTS: Record<TrackStatus, { ring: string; dot: string; wash: string }> = {
   INKOMMANDE: {
@@ -341,57 +327,6 @@ const FilesList = memo(function FilesList({
   );
 });
 
-const SummaryTile = memo(function SummaryTile({
-  status,
-  total,
-}: {
-  status: TrackStatus;
-  total: number;
-}) {
-  const accent = STATUS_ACCENTS[status];
-  return (
-    <Card className={`relative flex min-h-[132px] overflow-hidden rounded-2xl border-neutral-200 bg-gradient-to-br ${accent.wash} via-white to-white p-5 shadow-[0_22px_58px_-42px_rgba(15,23,42,0.55)]`}>
-      <div className="absolute -right-8 -top-10 h-24 w-24 rounded-full bg-white/70 blur-2xl" />
-      <div className="relative flex h-full flex-col justify-between">
-        <div className="flex items-center justify-between gap-3">
-          <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border ${accent.ring}`}>
-            <span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} />
-          </div>
-          <div className="text-3xl font-semibold tabular-nums text-neutral-950">{total}</div>
-        </div>
-        <div className="mt-4">
-          <div className="text-xs font-semibold text-neutral-900">{STATUS_TITLES[status]}</div>
-          <p className="mt-1 text-xs leading-relaxed text-neutral-500">{STATUS_DESCRIPTIONS[status]}</p>
-        </div>
-      </div>
-    </Card>
-  );
-});
-
-const FilterPill = memo(function FilterPill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex h-9 items-center rounded-lg border px-3 text-xs font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 ${
-        active
-          ? "border-neutral-900 bg-neutral-950 text-white shadow-[0_16px_34px_-26px_rgba(15,23,42,0.9)]"
-          : "border-neutral-200 bg-white text-neutral-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-800"
-      }`}
-    >
-      {label}
-    </button>
-  );
-});
-
 const OrderCard = memo(function OrderCard({
   order,
   open,
@@ -400,8 +335,6 @@ const OrderCard = memo(function OrderCard({
   onToggle,
   onDeleteFile,
   onOpenCalendar,
-  activeTrack,
-  activeStatus,
   canDeleteFiles,
 }: {
   order: OrderRow;
@@ -414,153 +347,126 @@ const OrderCard = memo(function OrderCard({
     track: Track,
     initialRange: { start?: string; end?: string },
   ) => void;
-  activeTrack: Track | "ALL";
-  activeStatus: TrackStatus | "ALL";
   canDeleteFiles: boolean;
 }) {
   const creatorLabel = order.createdByName ?? order.createdByEmail ?? "Okänd";
-  const hasCreator = Boolean(order.createdByName ?? order.createdByEmail);
   const plannedTracks = order.tracks.filter((track) => Boolean(track.plannedStartAt));
+  const completedTracks = order.tracks.filter((track) => track.status === "AVSLUTAD").length;
   const primaryStatus = order.tracks.find((track) => track.status)?.status ?? null;
   const primaryAccent = primaryStatus ? STATUS_ACCENTS[primaryStatus] : null;
 
   return (
-    <Card className="group relative overflow-hidden rounded-2xl border-neutral-200 bg-white shadow-[0_24px_80px_-58px_rgba(15,23,42,0.65)] transition duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[0_30px_90px_-54px_rgba(15,23,42,0.58)]">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-500 via-sky-400 to-amber-400" />
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0 p-5 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
-                  #{order.orderNumber}
+    <Card className="overflow-hidden rounded-xl border-neutral-200 bg-white shadow-none transition-colors hover:border-neutral-300">
+      <div className="p-4 sm:px-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <h2 className="min-w-0 text-base font-semibold text-neutral-950">
+                <span className="text-neutral-500">#{order.orderNumber}</span>
+                <span className="px-1.5 text-neutral-300">·</span>
+                {order.title}
+              </h2>
+              {primaryStatus ? (
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${primaryAccent?.ring}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${primaryAccent?.dot}`} />
+                  {STATUS_TITLES[primaryStatus]}
                 </span>
-                {primaryStatus ? (
-                  <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${primaryAccent?.ring}`}>
-                    <span className={`h-2 w-2 rounded-full ${primaryAccent?.dot}`} />
-                    {STATUS_TITLES[primaryStatus]}
-                  </span>
-                ) : null}
-              </div>
-              <h2 className="mt-3 text-xl font-semibold leading-tight text-neutral-950">{order.title}</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <UserRound className="h-4 w-4" aria-hidden />
-                  {order.customerName ?? "Okänd kund"}
-                </span>
-                <span>Skapad {formatDate(order.createdAt)}</span>
-                {order.dueDate ? <span>Leverans {formatDate(order.dueDate)}</span> : null}
-              </div>
+              ) : null}
+              <span className="inline-flex items-center gap-1 text-xs text-neutral-500">
+                <UserRound className="h-3.5 w-3.5" aria-hidden />
+                {creatorLabel}
+              </span>
+              <span className="text-xs font-medium text-neutral-600">
+                {completedTracks}/{order.tracks.length} spår klara
+              </span>
+              <span className="text-xs text-neutral-400">
+                {plannedTracks.length}/{order.tracks.length} planerade
+              </span>
             </div>
-
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Link href={`/orders/${encodeURIComponent(order.orderNumber)}`} className={actionButton}>
-                Öppna
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </Link>
-              <button
-                type="button"
-                aria-expanded={open}
-                aria-controls={`files-${order.orderNumber}`}
-                onClick={() => onToggle(order.orderNumber)}
-                className={actionButton}
-              >
-                <FolderOpen className="h-4 w-4" aria-hidden />
-                {open ? "Dölj filer" : "Filer"}
-              </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+              <span>{order.customerName ?? "Okänd kund"}</span>
+              <span>Skapad {formatDate(order.createdAt)}</span>
+              <span>Deadline {order.dueDate ? formatDate(order.dueDate) : "saknas"}</span>
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            {order.tracks.map(({ track, status }) => {
-              const muted =
-                (activeTrack !== "ALL" && track !== activeTrack) ||
-                (activeStatus !== "ALL" && status !== activeStatus);
-              return (
-                <TrackBadge key={track} track={track} status={status} muted={muted} />
-              );
-            })}
-          </div>
-
-          <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                <CalendarClock className="h-4 w-4 text-brand-600" aria-hidden />
-                Planering
-              </div>
-              <span className="text-xs tabular-nums text-neutral-500">{plannedTracks.length}/{order.tracks.length} planerade</span>
-            </div>
-            {plannedTracks.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-500">
-                Ingen planerad tid i kalendern.
-              </div>
-            ) : (
-              <div className="grid gap-2 md:grid-cols-2">
-                {plannedTracks.map((trackRow) => (
-                  <button
-                    key={`${order.orderNumber}-${trackRow.track}`}
-                    type="button"
-                    onClick={() =>
-                      onOpenCalendar(trackRow.track, {
-                        start: trackRow.plannedStartAt ?? undefined,
-                        end: trackRow.plannedEndAt ?? undefined,
-                      })
-                    }
-                    className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-brand-200 hover:bg-brand-50"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold text-neutral-800">
-                        {TRACK_LABELS[trackRow.track]}
-                      </span>
-                      <span className="block truncate text-xs text-neutral-500">
-                        {formatPlannedRange(trackRow.plannedStartAt, trackRow.plannedEndAt)}
-                      </span>
-                    </span>
-                    <ExternalLink className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href={`/orders/${encodeURIComponent(order.orderNumber)}`} className={actionButton}>
+              Öppna
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={`details-${order.orderNumber}`}
+              onClick={() => onToggle(order.orderNumber)}
+              className={actionButton}
+            >
+              {open ? "Dölj detaljer" : "Visa detaljer"}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+            </button>
           </div>
         </div>
-
-        <aside className="border-t border-neutral-200 bg-gradient-to-br from-neutral-50 via-white to-brand-50/70 p-5 lg:border-l lg:border-t-0">
-          <div className="grid gap-3 text-sm">
-            <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                <UserRound className="h-4 w-4" aria-hidden />
-                Säljare
-              </div>
-              <p className={`mt-2 truncate text-sm font-semibold ${hasCreator ? "text-neutral-900" : "italic text-neutral-400"}`}>
-                {creatorLabel}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Spår</div>
-                <p className="mt-2 text-2xl font-semibold text-neutral-950">{order.tracks.length}</p>
-              </div>
-              <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Plan</div>
-                <p className="mt-2 text-2xl font-semibold text-neutral-950">{plannedTracks.length}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
 
       {open && (
         <div
-          id={`files-${order.orderNumber}`}
-          className="border-t border-neutral-200 bg-neutral-50/80 p-4 sm:p-5"
+          id={`details-${order.orderNumber}`}
+          className="border-t border-neutral-200 bg-neutral-50/60 p-4 sm:p-5"
         >
-          <FilesList
-            orderNumber={order.orderNumber}
-            files={files}
-            loading={loadingFiles}
-            onDelete={onDeleteFile}
-            canDeleteFiles={canDeleteFiles}
-          />
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {order.tracks.map(({ track, status }) => (
+                  <TrackBadge key={track} track={track} status={status} />
+                ))}
+              </div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-neutral-700">
+                <CalendarClock className="h-4 w-4 text-brand-600" aria-hidden />
+                Planering
+              </div>
+              {plannedTracks.length === 0 ? (
+                <p className="text-sm text-neutral-500">Ingen planerad tid i kalendern.</p>
+              ) : (
+                <div className="divide-y divide-neutral-200 border-y border-neutral-200">
+                  {plannedTracks.map((trackRow) => (
+                    <button
+                      key={`${order.orderNumber}-${trackRow.track}`}
+                      type="button"
+                      onClick={() =>
+                        onOpenCalendar(trackRow.track, {
+                          start: trackRow.plannedStartAt ?? undefined,
+                          end: trackRow.plannedEndAt ?? undefined,
+                        })
+                      }
+                      className="flex w-full min-w-0 items-center justify-between gap-3 py-2 text-left transition hover:text-brand-700"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold">{TRACK_LABELS[trackRow.track]}</span>
+                        <span className="block truncate text-xs text-neutral-500">
+                          {formatPlannedRange(trackRow.plannedStartAt, trackRow.plannedEndAt)}
+                        </span>
+                      </span>
+                      <ExternalLink className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-neutral-700">
+                <FolderOpen className="h-4 w-4 text-brand-600" aria-hidden />
+                Filer
+              </div>
+              <FilesList
+                orderNumber={order.orderNumber}
+                files={files}
+                loading={loadingFiles}
+                onDelete={onDeleteFile}
+                canDeleteFiles={canDeleteFiles}
+              />
+            </div>
+          </div>
         </div>
       )}
     </Card>
@@ -640,7 +546,7 @@ export default function OrdersOverviewPage() {
 
   const sellerOptions = useMemo(() => {
     const sellers = new Map<string, string>();
-    for (const order of orders) {
+    for (const order of filtered) {
       const key = getSellerKey(order);
       if (!key) continue;
       if (!sellers.has(key)) {
@@ -651,7 +557,7 @@ export default function OrdersOverviewPage() {
     return Array.from(sellers.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label, "sv"));
-  }, [orders]);
+  }, [filtered]);
 
   useEffect(() => {
     let cancelled = false;
@@ -844,6 +750,7 @@ export default function OrdersOverviewPage() {
   }
 
   function clearFilters() {
+    setQuery("");
     setTrackFilter("ALL");
     setStatusFilter("ALL");
     setSellerFilter("ALL");
@@ -851,22 +758,6 @@ export default function OrdersOverviewPage() {
       setOwnerFilter("all");
     }
   }
-
-  const activeFilters = useMemo(() => {
-    const list: string[] = [];
-    if (trackFilter !== "ALL") list.push(`Spår ${TRACK_LABELS[trackFilter]}`);
-    if (statusFilter !== "ALL") list.push(STATUS_TITLES[statusFilter]);
-    if (sellerFilter !== "ALL") {
-      const seller = sellerOptions.find((option) => option.value === sellerFilter);
-      list.push(`Säljare ${seller?.label ?? sellerFilter}`);
-    }
-    if (effectiveOwnerFilter === "mine") list.push("Mina ordrar");
-    if (deferredQuery) list.push("Sökning aktiv");
-    if (list.length === 0) list.push("Inget filter aktivt");
-
-    return list;
-  }, [trackFilter, statusFilter, sellerFilter, sellerOptions, effectiveOwnerFilter, deferredQuery]);
-  
 
   const hasResults = filtered.length > 0;
 

@@ -566,10 +566,7 @@ function OrderEditPanel({
     <section className="overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-[0_22px_54px_-40px_rgba(15,23,42,0.55)]">
       <div className="flex flex-col gap-4 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 via-white to-brand-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-700">
-            <PencilLine className="h-3.5 w-3.5" aria-hidden />
-            Fortnox + lokalt
-          </div>
+          
           <h2 className="mt-3 text-lg font-semibold text-neutral-950">Orderuppgifter</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Ändringar sparas först i Fortnox och därefter lokalt i Ordexa.
