@@ -971,9 +971,6 @@ function TrackCard({
     <div className="group rounded-2xl border border-neutral-200/90 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-32px_rgba(15,23,42,0.55)]">
       <div className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-neutral-500">
-            Spår {track}
-          </p>
           <h3 className="mt-1 text-base font-semibold text-neutral-900">
             {TRACK_LABELS[track]}
           </h3>

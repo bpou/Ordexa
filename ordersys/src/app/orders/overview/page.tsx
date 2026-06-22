@@ -281,7 +281,7 @@ const FilesList = memo(function FilesList({
       {files.map((file) => (
         <div
           key={file.id}
-          className="group rounded-xl border border-neutral-200 bg-white p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.55)] transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[0_24px_58px_-34px_rgba(15,23,42,0.45)]"
+          className="group rounded-lg border border-neutral-200 bg-white p-3 transition hover:border-brand-200"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
@@ -479,7 +479,7 @@ const LoadingList = memo(function LoadingList() {
       {Array.from({ length: 3 }).map((_, idx) => (
         <div
           key={idx}
-          className="h-64 animate-pulse rounded-2xl border border-neutral-200 bg-gradient-to-br from-white via-neutral-50 to-brand-50/60 shadow-[0_22px_70px_-56px_rgba(15,23,42,0.6)]"
+          className="h-24 animate-pulse rounded-xl border border-neutral-200 bg-white"
         />
       ))}
     </div>
@@ -496,7 +496,7 @@ const EmptyState = memo(function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border-dashed border-neutral-300 bg-white/90 p-10 text-center text-neutral-600 shadow-[0_22px_70px_-56px_rgba(15,23,42,0.6)]">
+    <Card className="rounded-xl border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-600 shadow-none">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500">
         <Search className="h-5 w-5" aria-hidden />
       </div>
@@ -546,7 +546,7 @@ export default function OrdersOverviewPage() {
 
   const sellerOptions = useMemo(() => {
     const sellers = new Map<string, string>();
-    for (const order of filtered) {
+    for (const order of orders) {
       const key = getSellerKey(order);
       if (!key) continue;
       if (!sellers.has(key)) {
@@ -557,7 +557,7 @@ export default function OrdersOverviewPage() {
     return Array.from(sellers.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label, "sv"));
-  }, [filtered]);
+  }, [orders]);
 
   useEffect(() => {
     let cancelled = false;
@@ -683,7 +683,7 @@ export default function OrdersOverviewPage() {
       LEVERANS: 0,
       AVSLUTAD: 0,
     };
-    for (const order of orders) {
+    for (const order of filtered) {
       const orderStatuses = new Set<TrackStatus>();
       for (const t of order.tracks) {
         if (t.status) {
@@ -695,7 +695,7 @@ export default function OrdersOverviewPage() {
       });
     }
     return totals;
-  }, [orders]);
+  }, [filtered]);
 
   async function toggleFiles(orderNumber: string) {
     setOpenRows((prev) => ({ ...prev, [orderNumber]: !prev[orderNumber] }));
@@ -768,181 +768,111 @@ export default function OrdersOverviewPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f7f9f8]">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,#ffffff_0%,#f7f9f8_42%,#eef4f1_100%)]" />
-      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[420px] w-[min(980px,92vw)] -translate-x-1/2 rounded-b-[48px] bg-[radial-gradient(circle_at_18%_12%,rgba(5,150,105,0.18),transparent_28%),radial-gradient(circle_at_78%_20%,rgba(14,165,233,0.14),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.95),rgba(217,243,227,0.72))] shadow-[0_40px_120px_-90px_rgba(15,23,42,0.75)]" />
-
-      <div className="mx-auto w-full max-w-7xl space-y-7 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.7)] backdrop-blur">
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_520px]">
-            <div className="p-6 sm:p-8">
-              <span className={`${museoModerno.className} inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-brand-700 shadow-sm`}>
-                <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                Ordersammanställning
-              </span>
-              <h1 className="mt-5 max-w-3xl text-4xl font-semibold leading-tight text-neutral-950 sm:text-5xl">
-                Aktiva ordrar
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-                Visar {filtered.length} av {orders.length} ordrar med status, spår, säljare, planering och filer i samma arbetsyta.
-              </p>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-neutral-200 bg-white/90 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    <Layers3 className="h-4 w-4 text-brand-600" aria-hidden />
-                    Matchar
-                  </div>
-                  <p className="mt-2 text-3xl font-semibold tabular-nums text-neutral-950">{filtered.length}</p>
-                </div>
-                <div className="rounded-xl border border-neutral-200 bg-white/90 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden />
-                    Totalt
-                  </div>
-                  <p className="mt-2 text-3xl font-semibold tabular-nums text-neutral-950">{orders.length}</p>
-                </div>
-                <div className="rounded-xl border border-neutral-200 bg-white/90 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    <SlidersHorizontal className="h-4 w-4 text-sky-600" aria-hidden />
-                    Urval
-                  </div>
-                  <p className="mt-2 truncate text-sm font-semibold text-neutral-900">{activeFilters.join(", ")}</p>
-                </div>
+    <div className="min-h-screen bg-neutral-50">
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
+        <header className="border-b border-neutral-200 pb-4">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight text-neutral-950">Aktiva ordrar</h1>
+                <span className="text-sm font-medium text-neutral-500">
+                  {filtered.length} av {orders.length}
+                </span>
               </div>
+              <p className="mt-1 text-sm text-neutral-500">Sök, filtrera och öppna orderdetaljer.</p>
             </div>
-
-            <div className="grid grid-cols-2 gap-3 border-t border-neutral-200 bg-white/70 p-4 lg:border-l lg:border-t-0 sm:p-6">
-              {STATUS_SEQUENCE.map((status) => (
-                <SummaryTile key={status} status={status} total={statusTotals[status]} />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600 sm:text-sm">
+              {STATUS_SEQUENCE.map((status, index) => (
+                <span key={status} className="inline-flex items-center gap-3">
+                  {index > 0 ? <span className="text-neutral-300">·</span> : null}
+                  <span>
+                    {status === "AVSLUTAD" ? "Avslutade" : STATUS_TITLES[status]}{" "}
+                    <strong className="font-semibold text-neutral-900">{statusTotals[status]}</strong>
+                  </span>
+                </span>
               ))}
             </div>
           </div>
-        </section>
+        </header>
 
-        <section className="sticky top-[5rem] z-20 rounded-2xl border border-neutral-200 bg-white/92 p-4 shadow-[0_18px_60px_-46px_rgba(15,23,42,0.75)] backdrop-blur">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex h-9 items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  <SlidersHorizontal className="h-4 w-4" aria-hidden />
-                  Spår
-                </span>
-                <FilterPill
-                  label="Alla spår"
-                  active={trackFilter === "ALL"}
-                  onClick={() => setTrackFilter("ALL")}
-                />
-                {availableTracks.map((track) => (
-                  <FilterPill
-                    key={track}
-                    label={TRACK_LABELS[track]}
-                    active={trackFilter === track}
-                    onClick={() => setTrackFilter((prev) => (prev === track ? "ALL" : track))}
-                  />
-                ))}
-              </div>
-              <div className="relative w-full xl:w-[340px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden />
-                <label className="sr-only" htmlFor="order-search">
-                  Sök ordernummer eller kund
-                </label>
-                <input
-                  id="order-search"
-                  type="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Sök ordernummer eller kund"
-                  className="h-11 w-full rounded-xl border border-neutral-200 bg-white pl-9 pr-4 text-sm text-neutral-700 shadow-sm placeholder:text-neutral-400 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-300"
-                />
-              </div>
+        <section className="border-b border-neutral-200 py-4">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_180px_180px_220px_40px]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden />
+              <label className="sr-only" htmlFor="order-search">Sök ordernummer, titel eller kund</label>
+              <input
+                id="order-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Sök ordernummer, titel eller kund"
+                className="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-9 pr-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-brand-300"
+              />
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex h-9 items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Status
-                </span>
-                <FilterPill
-                  label="Alla statusar"
-                  active={statusFilter === "ALL"}
-                  onClick={() => setStatusFilter("ALL")}
-                />
-                {STATUS_SEQUENCE.map((status) => (
-                  <FilterPill
-                    key={status}
-                    label={STATUS_TITLES[status]}
-                    active={statusFilter === status}
-                    onClick={() => setStatusFilter((prev) => (prev === status ? "ALL" : status))}
-                  />
-                ))}
-              </div>
-
-              <div className="relative min-w-[220px]">
-                <label className="sr-only" htmlFor="seller-filter">
-                  Filtrera på säljare
-                </label>
-                <select
-                  id="seller-filter"
-                  value={sellerFilter}
-                  onChange={(event) => setSellerFilter(event.target.value)}
-                  className="h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 pr-8 text-xs font-semibold text-neutral-700 shadow-sm transition focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={sellerOptions.length === 0}
-                >
-                  <option value="ALL">Alla säljare</option>
-                  {sellerOptions.map((seller) => (
-                    <option key={seller.value} value={seller.value}>
-                      {seller.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {showOwnerFilter && (
-                <div
-                  role="group"
-                  aria-label="Filtrera ägande"
-                  className="inline-flex overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOwnerFilter("all")}
-                    className={`px-3 py-1.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 ${
-                      effectiveOwnerFilter === "all"
-                        ? "bg-brand-600 text-white"
-                        : "text-neutral-600 hover:bg-brand-50/60"
-                    }`}
-                  >
-                    Alla ordrar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOwnerFilter("mine")}
-                    aria-disabled={mineDisabled}
-                    disabled={mineDisabled}
-                    className={`px-3 py-1.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 ${
-                      effectiveOwnerFilter === "mine"
-                        ? "bg-brand-600 text-white"
-                        : "text-neutral-600 hover:bg-brand-50/60"
-                    } disabled:cursor-not-allowed disabled:opacity-60`}
-                  >
-                    Mina ordrar
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="ml-auto inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-600 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-              >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden />
-                Nollställ filter
-              </button>
-            </div>
+            <label className="sr-only" htmlFor="track-filter">Filtrera på spår</label>
+            <select
+              id="track-filter"
+              value={trackFilter}
+              onChange={(event) => setTrackFilter(event.target.value as Track | "ALL")}
+              className="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-700 focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-brand-300"
+            >
+              <option value="ALL">Alla spår</option>
+              {availableTracks.map((track) => <option key={track} value={track}>{TRACK_LABELS[track]}</option>)}
+            </select>
+            <label className="sr-only" htmlFor="status-filter">Filtrera på status</label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as TrackStatus | "ALL")}
+              className="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-700 focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-brand-300"
+            >
+              <option value="ALL">Alla statusar</option>
+              {STATUS_SEQUENCE.map((status) => <option key={status} value={status}>{STATUS_TITLES[status]}</option>)}
+            </select>
+            <label className="sr-only" htmlFor="seller-filter">Filtrera på säljare</label>
+            <select
+              id="seller-filter"
+              value={effectiveOwnerFilter === "mine" ? "MINE" : sellerFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "MINE") {
+                  setOwnerFilter("mine");
+                  setSellerFilter("ALL");
+                } else {
+                  setOwnerFilter("all");
+                  setSellerFilter(value);
+                }
+              }}
+              className="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-700 focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-brand-300 disabled:opacity-60"
+              disabled={sellerOptions.length === 0 && !showOwnerFilter}
+            >
+              <option value="ALL">Alla säljare</option>
+              {showOwnerFilter ? <option value="MINE" disabled={mineDisabled}>Mina ordrar</option> : null}
+              {sellerOptions.map((seller) => <option key={seller.value} value={seller.value}>{seller.label}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+              aria-label="Nollställ sökning och filter"
+              title="Nollställ filter"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+            </button>
           </div>
+
+          {query || trackFilter !== "ALL" || statusFilter !== "ALL" || sellerFilter !== "ALL" || effectiveOwnerFilter === "mine" ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {query ? <button type="button" onClick={() => setQuery("")} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 px-2.5 py-1 text-xs text-neutral-700">Sök: {query}<X className="h-3 w-3" aria-hidden /></button> : null}
+              {trackFilter !== "ALL" ? <button type="button" onClick={() => setTrackFilter("ALL")} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 px-2.5 py-1 text-xs text-neutral-700">{TRACK_LABELS[trackFilter]}<X className="h-3 w-3" aria-hidden /></button> : null}
+              {statusFilter !== "ALL" ? <button type="button" onClick={() => setStatusFilter("ALL")} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 px-2.5 py-1 text-xs text-neutral-700">{STATUS_TITLES[statusFilter]}<X className="h-3 w-3" aria-hidden /></button> : null}
+              {sellerFilter !== "ALL" ? <button type="button" onClick={() => setSellerFilter("ALL")} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 px-2.5 py-1 text-xs text-neutral-700">{sellerOptions.find((seller) => seller.value === sellerFilter)?.label ?? "Säljare"}<X className="h-3 w-3" aria-hidden /></button> : null}
+              {effectiveOwnerFilter === "mine" ? <button type="button" onClick={() => setOwnerFilter("all")} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 px-2.5 py-1 text-xs text-neutral-700">Mina ordrar<X className="h-3 w-3" aria-hidden /></button> : null}
+            </div>
+          ) : null}
         </section>
-        <div className="space-y-6">
+
+        <div className="pt-4">
           {loading && <LoadingList />}
 
           {!loading && err && (
@@ -963,7 +893,7 @@ export default function OrdersOverviewPage() {
                 onClick={clearFilters}
                 className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
               >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                 <RotateCcw className="h-4 w-4" aria-hidden />
                 Nollställ filter
               </button>
               <Link href="/orders/new" className={actionButton}>
@@ -974,7 +904,7 @@ export default function OrdersOverviewPage() {
           )}
 
           {!loading && !err && hasResults && (
-            <div className="space-y-5">
+            <div className="space-y-2">
               {filtered.map((order) => (
                 <OrderCard
                   key={order.orderNumber}
@@ -985,8 +915,6 @@ export default function OrdersOverviewPage() {
                   onToggle={toggleFiles}
                   onDeleteFile={deleteFile}
                   onOpenCalendar={openCalendarForTrack}
-                  activeTrack={trackFilter}
-                  activeStatus={statusFilter}
                   canDeleteFiles={canDeleteFiles}
                 />
               ))}
