@@ -1,7 +1,3 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-
 import UserMenu from "@/components/UserMenu";
 
 export default function HeaderUserMenu(props: {
@@ -10,11 +6,5 @@ export default function HeaderUserMenu(props: {
   image?: string;
   isLoggedIn: boolean;
 }) {
-  const pathname = usePathname();
-
-  if (pathname?.startsWith("/dashboard")) {
-    return null;
-  }
-
   return <UserMenu {...props} />;
 }
