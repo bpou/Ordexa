@@ -78,7 +78,7 @@ export function NavUser({
                 revealClassName="truncate text-sm font-medium"
               />
               <SidebarRevealText
-                text="Oppna ditt konto"
+                text="Öppna ditt konto"
                 revealClassName="truncate text-xs text-muted-foreground"
               />
             </div>

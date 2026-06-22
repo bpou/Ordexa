@@ -187,7 +187,7 @@ export default function DashboardRecentOrders({
 
         {!loading && !recentOpenedOrders.length ? (
           <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
-            Inga nyligen oppnade ordrar an.
+            Inga nyligen Öppnade ordrar an.
           </div>
         ) : null}
 
@@ -212,7 +212,7 @@ export default function DashboardRecentOrders({
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-neutral-600">
-                  Oppna
+                  Öppna
                   <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                 </span>
               </Link>

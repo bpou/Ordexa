@@ -4,7 +4,6 @@ import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { useSidebar } from "@/components/ui/sidebar";
-import { TextReveal } from "@/components/unlumen-ui/text-reveal";
 import { cn } from "@/lib/utils";
 
 export function SidebarRevealText({
@@ -37,15 +36,11 @@ export function SidebarRevealText({
           }}
           className={cn("min-w-0 overflow-hidden whitespace-nowrap", className)}
         >
-          <TextReveal
-            text={text}
-            as="span"
-            splitBy="characters"
-            staggerDelay={reduceMotion ? 0 : 0.008}
-            duration={reduceMotion ? 0 : 0.16}
-            once={false}
-            className={cn("block whitespace-nowrap leading-none", revealClassName)}
-          />
+          <span
+            className={cn("block whitespace-nowrap leading-normal", revealClassName)}
+          >
+            {text}
+          </span>
         </motion.span>
       ) : null}
     </AnimatePresence>

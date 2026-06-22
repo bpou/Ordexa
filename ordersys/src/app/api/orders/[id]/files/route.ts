@@ -167,7 +167,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           title: "Ny fil uppladdad",
           body: notificationBody,
           actionUrl: viewLink,
-          actionLabel: "Oppna order",
+          actionLabel: "Öppna order",
         }).catch((error) => {
           console.error("Failed to send file upload email notification:", error);
         });

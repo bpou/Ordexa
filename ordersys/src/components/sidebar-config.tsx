@@ -95,6 +95,18 @@ const sectionMap: Record<
         ],
       },
       {
+        title: "Kalender",
+        url: "/calendar",
+        icon: <CalendarIcon />,
+        items: [
+          { title: "Ateljé", url: "/calendar/A_TEAM" },
+          { title: "Verkstad", url: "/calendar/B_TEAM" },
+          { title: "Montage", url: "/calendar/C_TEAM" },
+          { title: "Bilmontage", url: "/calendar/D_TEAM" },
+          { title: "Personlig kalender", url: "/personal-calendar" },
+        ],
+      },
+      {
         title: "Kunder",
         url: "/customers",
         icon: <UsersIcon />,
@@ -223,11 +235,14 @@ const sectionMap: Record<
     navMain: [
       {
         title: "Kalender",
-        url: "/personal-calendar",
+        url: "/calendar",
         icon: <CalendarIcon />,
         items: [
+          { title: "Ateljé", url: "/calendar/A_TEAM" },
+          { title: "Verkstad", url: "/calendar/B_TEAM" },
+          { title: "Montage", url: "/calendar/C_TEAM" },
+          { title: "Bilmontage", url: "/calendar/D_TEAM" },
           { title: "Personlig kalender", url: "/personal-calendar" },
-          { title: "Spårkalender", url: "/calendar/B_TEAM" },
         ],
       },
       {
